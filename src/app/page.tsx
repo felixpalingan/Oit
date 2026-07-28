@@ -2,13 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { User, Lock, LogIn, UserPlus, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { User, Lock, LogIn, UserPlus, PhoneCall, AlertCircle, CheckCircle2 } from 'lucide-react';
 import TopNavbar from '@/components/chat/TopNavbar';
 import ChatSidebar from '@/components/chat/ChatSidebar';
 import ChatWindow from '@/components/chat/ChatWindow';
 import ProfileModal from '@/components/profile/ProfileModal';
 import AddFriendModal from '@/components/friends/AddFriendModal';
 import VideoRoom from '@/components/chat/VideoRoom';
+import IncomingCallModal from '@/components/call/IncomingCallModal';
 import { User as UserType, Message } from '@/types';
 
 export default function Page() {
@@ -30,10 +31,11 @@ export default function Page() {
   const [lastMessagesMap, setLastMessagesMap] = useState<Record<string, Message>>({});
   const [unreadCountsMap, setUnreadCountsMap] = useState<Record<string, number>>({});
 
-  // Modals & Calls
+  // Modals & Realtime Call State
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showAddFriendModal, setShowAddFriendModal] = useState(false);
-  const [callState, setCallState] = useState<{ active: boolean; roomName: string } | null>(null);
+  const [callState, setCallState] = useState<{ active: boolean; roomName: string; isVideo: boolean } | null>(null);
+  const [incomingCallPrompt, setIncomingCallPrompt] = useState<{ caller: UserType; roomName: string; isVideo: boolean } | null>(null);
 
   const supabase = createClient();
 
@@ -106,11 +108,12 @@ export default function Page() {
     };
   }, [supabase]);
 
-  // Real-time listener for updating last messages in sidebar
+  // Real-time Listener for Messages Previews & Realtime Incoming Call Signaling
   useEffect(() => {
     if (!currentUser) return;
 
-    const channel = supabase
+    // 1. Sidebar Messages Realtime Listener
+    const sidebarChannel = supabase
       .channel('global:sidebar_previews')
       .on(
         'postgres_changes',
@@ -123,8 +126,23 @@ export default function Page() {
       )
       .subscribe();
 
+    // 2. Incoming Call Signaling Channel
+    const callSignalingChannel = supabase
+      .channel('global:call_signaling')
+      .on('broadcast', { event: 'incoming_call' }, ({ payload }) => {
+        if (payload?.targetUserId === currentUser.id) {
+          setIncomingCallPrompt({
+            caller: payload.caller,
+            roomName: payload.roomName,
+            isVideo: payload.isVideo,
+          });
+        }
+      })
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(sidebarChannel);
+      supabase.removeChannel(callSignalingChannel);
     };
   }, [currentUser, usersList, supabase]);
 
@@ -184,6 +202,25 @@ export default function Page() {
     } catch (err) {
       console.error('Session user setup error:', err);
     }
+  };
+
+  // Trigger Outgoing Call Signaling to Target User
+  const initiateCall = (chatUser: UserType, isVideo: boolean) => {
+    const roomName = `call_${[currentUser?.id, chatUser.id].sort().join('_')}`;
+
+    // Send Realtime Broadcast Signal
+    supabase.channel('global:call_signaling').send({
+      type: 'broadcast',
+      event: 'incoming_call',
+      payload: {
+        caller: currentUser,
+        targetUserId: chatUser.id,
+        roomName,
+        isVideo,
+      },
+    });
+
+    setCallState({ active: true, roomName, isVideo });
   };
 
   // Login & Register handler
@@ -258,7 +295,7 @@ export default function Page() {
     );
   }
 
-  // --- RENDER AUTH PAGE WITH REAL OIT LOGO ---
+  // --- RENDER AUTH PAGE ---
   if (!currentUser) {
     return (
       <div className="min-h-screen w-full bg-[#000000] flex flex-col items-center justify-center p-4 selection:bg-[#FF5C00] selection:text-white">
@@ -396,7 +433,7 @@ export default function Page() {
     );
   }
 
-  // --- RENDER MAIN OIT DASHBOARD ONCE LOGGED IN ---
+  // --- RENDER MAIN OIT DASHBOARD ---
   return (
     <div className="h-screen w-screen bg-[#000000] flex flex-col overflow-hidden font-sans">
       
@@ -439,10 +476,7 @@ export default function Page() {
               currentUser={currentUser}
               chatUser={activeChatUser}
               onBackMobile={() => setActiveChatUser(null)}
-              onStartCall={(isVideo) => {
-                const roomName = `call_${[currentUser.id, activeChatUser.id].sort().join('_')}`;
-                setCallState({ active: true, roomName });
-              }}
+              onStartCall={(isVideo) => initiateCall(activeChatUser, isVideo)}
             />
           ) : (
             <div className="flex-1 h-full bg-[#000000] flex flex-col items-center justify-center text-center p-8 border-l border-zinc-900">
@@ -456,7 +490,7 @@ export default function Page() {
 
       </div>
 
-      {/* Modals & LiveKit Video Call Modal */}
+      {/* Modals & Realtime Incoming Call Prompt */}
       {showProfileModal && (
         <ProfileModal
           profile={{
@@ -479,10 +513,30 @@ export default function Page() {
         />
       )}
 
+      {/* Incoming Call Ringing Prompt Modal */}
+      {incomingCallPrompt && (
+        <IncomingCallModal
+          caller={incomingCallPrompt.caller}
+          isVideo={incomingCallPrompt.isVideo}
+          onAccept={() => {
+            setCallState({
+              active: true,
+              roomName: incomingCallPrompt.roomName,
+              isVideo: incomingCallPrompt.isVideo,
+            });
+            setIncomingCallPrompt(null);
+          }}
+          onDecline={() => setIncomingCallPrompt(null)}
+        />
+      )}
+
+      {/* Active LiveKit Video / Voice Call Modal */}
       {callState?.active && (
         <VideoRoom
           roomName={callState.roomName}
           currentUser={currentUser}
+          chatUser={activeChatUser}
+          isVideo={callState.isVideo}
           onLeave={() => setCallState(null)}
         />
       )}
