@@ -65,7 +65,51 @@ export default function ChannelSidebar({
   const [voiceChannels, setVoiceChannels] = useState<Channel[]>([]);
   const [serverTitle, setServerTitle] = useState('Server');
 
+  // Supabase Realtime Presence State for Voice Room Participants
+  const [voiceParticipantsMap, setVoiceParticipantsMap] = useState<Record<string, User[]>>({});
+
   const supabase = createClient();
+
+  // Track Realtime Presence of Users in Voice Rooms
+  useEffect(() => {
+    if (!activeCallRoomId || !currentUser) return;
+
+    const presenceChannel = supabase.channel(`presence_${activeCallRoomId}`, {
+      config: { presence: { key: currentUser.id } },
+    });
+
+    presenceChannel
+      .on('presence', { event: 'sync' }, () => {
+        const state = presenceChannel.presenceState();
+        const participants: User[] = [];
+        Object.values(state).forEach((presences: any) => {
+          presences.forEach((p: any) => {
+            if (p.user) participants.push(p.user);
+          });
+        });
+        setVoiceParticipantsMap((prev) => ({
+          ...prev,
+          [activeCallRoomId]: participants,
+        }));
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await presenceChannel.track({
+            user: {
+              id: currentUser.id,
+              username: currentUser.username,
+              display_name: currentUser.display_name || currentUser.username,
+              avatar_url: currentUser.avatar_url,
+            },
+          });
+        }
+      });
+
+    return () => {
+      presenceChannel.untrack();
+      supabase.removeChannel(presenceChannel);
+    };
+  }, [activeCallRoomId, currentUser, supabase]);
 
   const fetchChannels = async () => {
     if (!activeServerId) return;
@@ -146,19 +190,21 @@ export default function ChannelSidebar({
     setTimeout(() => setCopiedInvite(false), 2000);
   };
 
+  // Instant local channel creation fix
   const handleChannelCreatedLocally = (newChan: Channel) => {
     if (newChan.type === 'text') {
       setTextChannels((prev) => {
-        if (prev.some((c) => c.id === newChan.id)) return prev;
-        return [...prev, newChan];
+        const filtered = prev.filter((c) => c.id !== newChan.id);
+        return [...filtered, newChan];
       });
     } else {
       setVoiceChannels((prev) => {
-        if (prev.some((c) => c.id === newChan.id)) return prev;
-        return [...prev, newChan];
+        const filtered = prev.filter((c) => c.id !== newChan.id);
+        return [...filtered, newChan];
       });
     }
-    fetchChannels();
+    setActiveChannel(newChan.id, newChan.name);
+    setTimeout(fetchChannels, 300);
   };
 
   const filteredUsers = usersList.filter((u) => {
@@ -320,7 +366,7 @@ export default function ChannelSidebar({
               })}
             </div>
 
-            {/* VOICE CHANNELS GROUP WITH ACTIVE PARTICIPANTS PREVIEW */}
+            {/* VOICE CHANNELS GROUP WITH REALTIME PARTICIPANTS LIST */}
             <div className="space-y-1 pt-2">
               <div className="flex items-center justify-between px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-zinc-400">
                 <span>VOICE CHANNELS ({voiceChannels.length})</span>
@@ -334,7 +380,9 @@ export default function ChannelSidebar({
 
               {voiceChannels.map((c) => {
                 const isActive = activeChannelId === c.id;
-                const isVoiceActive = activeCallRoomId === `vc_${c.id}`;
+                const vcRoomKey = `vc_${c.id}`;
+                const isVoiceActive = activeCallRoomId === vcRoomKey;
+                const participants = voiceParticipantsMap[vcRoomKey] || (isVoiceActive ? [currentUser] : []);
 
                 return (
                   <div key={c.id} className="space-y-1">
@@ -378,20 +426,25 @@ export default function ChannelSidebar({
                       </div>
                     </div>
 
-                    {/* Active Voice Participants Preview List */}
-                    {isVoiceActive && (
+                    {/* Realtime Participants List (ALL USERS IN VC) */}
+                    {participants.length > 0 && (
                       <div className="pl-6 pr-2 py-1 space-y-1">
-                        <div className="flex items-center gap-2 px-2 py-1 bg-[#121215] border border-zinc-800 rounded-lg text-[11px] font-semibold text-zinc-300">
-                          <div className="w-5 h-5 rounded-full bg-[#FF5C00] text-white flex items-center justify-center text-[10px] font-bold shrink-0">
-                            {currentUser.avatar_url ? (
-                              <img src={currentUser.avatar_url} alt="" className="w-full h-full object-cover rounded-full" />
-                            ) : (
-                              currentUser.username[0]?.toUpperCase()
-                            )}
+                        {participants.map((p, idx) => (
+                          <div
+                            key={p.id || idx}
+                            className="flex items-center gap-2 px-2 py-1 bg-[#121215] border border-zinc-800 rounded-lg text-[11px] font-semibold text-zinc-300"
+                          >
+                            <div className="w-5 h-5 rounded-full bg-[#FF5C00] text-white flex items-center justify-center text-[10px] font-bold shrink-0 overflow-hidden">
+                              {p.avatar_url ? (
+                                <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                (p.username || 'U')[0]?.toUpperCase()
+                              )}
+                            </div>
+                            <span className="truncate">{p.display_name || p.username}</span>
+                            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse ml-auto" />
                           </div>
-                          <span className="truncate">{currentUser.display_name || currentUser.username}</span>
-                          <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse ml-auto" />
-                        </div>
+                        ))}
                       </div>
                     )}
                   </div>
