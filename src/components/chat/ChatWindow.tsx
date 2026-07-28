@@ -15,6 +15,7 @@ import {
   ArrowLeft,
   Download,
   ExternalLink,
+  UploadCloud,
 } from 'lucide-react';
 
 interface ChatWindowProps {
@@ -37,6 +38,10 @@ export default function ChatWindow({
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadFileName, setUploadFileName] = useState('');
+
+  // Drag and Drop State
+  const [isDragging, setIsDragging] = useState(false);
+  const dragCounter = useRef(0);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -156,11 +161,8 @@ export default function ChatWindow({
     }
   };
 
-  // Handle File Upload to Supabase Storage Bucket 'chat-attachments' with Base64 Fallback
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = event.target.files?.[0];
-    if (!selectedFile) return;
-
+  // Upload single file object
+  const processSingleFile = async (selectedFile: File) => {
     setIsUploading(true);
     setUploadFileName(selectedFile.name);
     setUploadProgress(20);
@@ -193,7 +195,7 @@ export default function ChatWindow({
         console.warn('Supabase storage upload notice:', uploadError.message);
       }
 
-      // 2. Base64 Fallback if Storage Bucket is not yet set up or blocked by RLS
+      // 2. Base64 Fallback
       if (!publicUrl || uploadError) {
         try {
           publicUrl = await fileToBase64(selectedFile);
@@ -223,7 +225,6 @@ export default function ChatWindow({
 
       if (insertError) {
         console.error('Database message insert error:', insertError);
-        // Local Fallback Update for immediate rendering
         const tempMsg: Message = {
           id: `temp-${Date.now()}`,
           sender_id: currentUser.id,
@@ -250,15 +251,81 @@ export default function ChatWindow({
         setIsUploading(false);
         setUploadProgress(0);
         setUploadFileName('');
-        if (fileInputRef.current) fileInputRef.current.value = '';
         scrollToBottom();
-      }, 400);
+      }, 300);
+    }
+  };
+
+  // Handle Input File Upload
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    for (let i = 0; i < files.length; i++) {
+      await processSingleFile(files[i]);
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // Drag and Drop Event Handlers
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current += 1;
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current -= 1;
+    if (dragCounter.current === 0) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    dragCounter.current = 0;
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      for (let i = 0; i < files.length; i++) {
+        await processSingleFile(files[i]);
+      }
     }
   };
 
   return (
-    <div className="flex-1 h-full bg-[#000000] flex flex-col relative overflow-hidden select-none">
-      
+    <div
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+      className="flex-1 h-full bg-[#000000] flex flex-col relative overflow-hidden select-none"
+    >
+      {/* Drag & Drop Visual Overlay */}
+      {isDragging && (
+        <div className="absolute inset-0 z-50 bg-[#000000]/90 backdrop-blur-md border-4 border-dashed border-[#FF5C00] m-3 rounded-3xl flex flex-col items-center justify-center pointer-events-none animate-pulse">
+          <div className="w-20 h-20 bg-[#FF5C00]/20 rounded-full flex items-center justify-center mb-4 shadow-xl shadow-[#FF5C00]/30">
+            <UploadCloud className="w-10 h-10 text-[#FF5C00]" />
+          </div>
+          <h3 className="text-xl font-extrabold text-white">Lepaskan File di Sini</h3>
+          <p className="text-xs text-zinc-400 mt-1">
+            File akan otomatis diunggah dan dikirim ke <span className="text-[#FF5C00] font-bold">@{chatUser.username}</span>
+          </p>
+        </div>
+      )}
+
       {/* Top Header Bar */}
       <div className="px-5 py-3.5 bg-[#121215] border-b border-zinc-800/80 flex items-center justify-between z-10">
         <div className="flex items-center gap-3">
@@ -407,7 +474,7 @@ export default function ChatWindow({
                       {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                     {isMe && (
-                      <CheckCheck className="w-3.5 h-3.5 text-[#ff8a65] text-white" />
+                      <CheckCheck className="w-3.5 h-3.5 text-white" />
                     )}
                   </div>
                 </div>
@@ -448,6 +515,7 @@ export default function ChatWindow({
           type="file"
           ref={fileInputRef}
           onChange={handleFileUpload}
+          multiple
           className="hidden"
         />
 
