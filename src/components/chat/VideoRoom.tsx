@@ -16,6 +16,7 @@ import {
   Maximize2,
 } from 'lucide-react';
 import { User } from '@/types';
+import { useAppStore } from '@/store/useAppStore';
 
 interface VideoRoomProps {
   roomName: string;
@@ -76,7 +77,10 @@ export default function VideoRoom({
     fetchToken();
   }, [roomName, currentUser.username]);
 
-  const targetName = chatUser ? (chatUser.display_name || chatUser.username) : 'Panggilan Oit';
+  const { activeChannelName } = useAppStore();
+  const targetName = chatUser
+    ? (chatUser.display_name || chatUser.username)
+    : (activeChannelName ? `# ${activeChannelName}` : 'Voice Room');
   const displayAvatar = chatUser?.avatar_url || currentUser.avatar_url;
   const initial = (chatUser?.username || currentUser.username || 'U')[0].toUpperCase();
 
