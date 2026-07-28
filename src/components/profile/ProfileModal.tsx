@@ -96,16 +96,20 @@ export default function ProfileModal({
         const { data } = supabase.storage.from('chat-attachments').getPublicUrl(filePath);
         if (data?.publicUrl) {
           setAvatarUrl(data.publicUrl);
+          setUploading(false);
+          return;
         }
-      } else {
-        // Fallback to Base64
-        const reader = new FileReader();
-        reader.onload = () => setAvatarUrl(reader.result as string);
-        reader.readAsDataURL(file);
       }
+
+      // Base64 Fallback
+      const reader = new FileReader();
+      reader.onload = () => {
+        setAvatarUrl(reader.result as string);
+        setUploading(false);
+      };
+      reader.readAsDataURL(file);
     } catch (err) {
       console.error('Avatar upload error:', err);
-    } finally {
       setUploading(false);
     }
   };
@@ -134,7 +138,7 @@ export default function ProfileModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 select-none animate-in fade-in duration-200">
       
-      {/* User Settings Modal Container matching image_2.png */}
+      {/* User Settings Modal Container */}
       <div className="w-full max-w-2xl bg-[#161619] border border-zinc-800 rounded-3xl p-7 shadow-2xl flex flex-col space-y-6 text-white max-h-[90vh] overflow-y-auto relative">
         
         {/* Top Header */}
@@ -182,14 +186,14 @@ export default function ProfileModal({
                 </span>
               )}
               <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-[10px] font-bold">
-                Change
+                {uploading ? 'Uploading...' : 'Change'}
               </div>
             </div>
 
             <div className="flex-1">
               <h5 className="text-xs font-bold text-white">Avatar Image</h5>
               <p className="text-[11px] text-zinc-400 mt-1 leading-relaxed">
-                Drag and drop a new image here, or click to browse. We recommend a 256×256px PNG or JPG.
+                Click on the circle to upload a new profile picture. Supports PNG, JPG, WEBP.
               </p>
             </div>
           </div>
@@ -248,7 +252,7 @@ export default function ProfileModal({
                       </option>
                     ))
                   ) : (
-                    <option value="">System Default (Shure SM7B)</option>
+                    <option value="">System Default Microphone</option>
                   )}
                 </select>
               </div>
@@ -281,7 +285,7 @@ export default function ProfileModal({
                       </option>
                     ))
                   ) : (
-                    <option value="">Sony A7IV (Capture Card)</option>
+                    <option value="">System Default Camera</option>
                   )}
                 </select>
               </div>
@@ -334,7 +338,7 @@ export default function ProfileModal({
             className="px-6 py-3 bg-[#FF5C00] hover:bg-[#ff701a] text-white font-extrabold rounded-2xl text-xs shadow-lg shadow-[#FF5C00]/25 transition-all active:scale-[0.98] flex items-center gap-2 disabled:opacity-50"
           >
             <Save className="w-4 h-4" />
-            <span>Save Changes</span>
+            <span>{uploading ? 'Uploading...' : 'Save Changes'}</span>
           </button>
         </div>
 

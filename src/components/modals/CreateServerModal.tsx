@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { X, Upload, Hash, Volume2, Lock } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { X, Upload, Hash, Volume2, Lock, Image as ImageIcon } from 'lucide-react';
 import { User } from '@/types';
 import { createClient } from '@/utils/supabase/client';
 import { useAppStore } from '@/store/useAppStore';
@@ -21,11 +21,42 @@ export default function CreateServerModal({
   const [channelName, setChannelName] = useState('general');
   const [channelType, setChannelType] = useState<'text' | 'voice'>('text');
   const [isPrivate, setIsPrivate] = useState(false);
+  const [iconUrl, setIconUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
   const { setActiveServer, setActiveChannel } = useAppStore();
+
+  const handleIconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const fileExt = file.name.split('.').pop() || 'png';
+      const filePath = `server_icons/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('chat-attachments')
+        .upload(filePath, file, { upsert: true });
+
+      if (!uploadError) {
+        const { data } = supabase.storage.from('chat-attachments').getPublicUrl(filePath);
+        if (data?.publicUrl) {
+          setIconUrl(data.publicUrl);
+          return;
+        }
+      }
+
+      // Base64 Fallback
+      const reader = new FileReader();
+      reader.onload = () => setIconUrl(reader.result as string);
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Server icon upload error:', err);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,12 +70,13 @@ export default function CreateServerModal({
     const fallbackChannelId = `chan-${Date.now()}`;
 
     try {
-      // 1. Insert into servers table with is_private flag
+      // 1. Insert into servers table with icon_url and is_private flag
       const { data: newServer } = await supabase
         .from('servers')
         .insert([
           {
             name: serverName.trim(),
+            icon_url: iconUrl,
             owner_id: currentUser.id,
             is_private: isPrivate,
           },
@@ -130,11 +162,33 @@ export default function CreateServerModal({
           
           {/* Upload Server Icon Area */}
           <div className="flex justify-center">
-            <div className="w-24 h-24 bg-[#1c1c21] border-2 border-dashed border-zinc-700 hover:border-[#FF5C00] rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-colors group">
-              <Upload className="w-6 h-6 text-zinc-400 group-hover:text-[#FF5C00] mb-1" />
-              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 group-hover:text-white">
-                UPLOAD
-              </span>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleIconUpload}
+              accept="image/*"
+              className="hidden"
+            />
+
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="w-24 h-24 bg-[#1c1c21] border-2 border-dashed border-zinc-700 hover:border-[#FF5C00] rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-colors group relative overflow-hidden"
+            >
+              {iconUrl ? (
+                <>
+                  <img src={iconUrl} alt="Server Icon" className="w-full h-full object-cover rounded-2xl" />
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-[10px] font-bold">
+                    Change Icon
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Upload className="w-6 h-6 text-zinc-400 group-hover:text-[#FF5C00] mb-1" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 group-hover:text-white">
+                    UPLOAD ICON
+                  </span>
+                </>
+              )}
             </div>
           </div>
 
