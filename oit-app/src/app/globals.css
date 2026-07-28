@@ -1,23 +1,32 @@
 @import "tailwindcss";
 
+@theme {
+  --color-oit-black: #000000;
+  --color-oit-darkgray: #121212;
+  --color-oit-orange: #FF5C00;
+  --color-oit-darker: #0a0a0a;
+  --color-oit-card: #18181b;
+  --color-oit-border: #27272a;
+}
+
 @layer base {
   :root {
-    --bg-primary: #050505;
-    --bg-secondary: #0f0f11;
+    --bg-primary: #000000;
+    --bg-secondary: #121212;
     --bg-tertiary: #18181b;
     --bg-hover: #27272a;
 
-    --accent-orange: #ff6b00;
-    --accent-orange-hover: #ff8533;
-    --accent-orange-light: rgba(255, 107, 0, 0.15);
-    --accent-orange-glow: rgba(255, 107, 0, 0.4);
+    --accent-orange: #FF5C00;
+    --accent-orange-hover: #ff751a;
+    --accent-orange-light: rgba(255, 92, 0, 0.15);
+    --accent-orange-glow: rgba(255, 92, 0, 0.4);
 
     --text-primary: #f4f4f5;
     --text-secondary: #a1a1aa;
     --text-muted: #71717a;
 
     --border-color: #27272a;
-    --border-highlight: rgba(255, 107, 0, 0.3);
+    --border-highlight: rgba(255, 92, 0, 0.3);
 
     --radius-lg: 16px;
     --radius-md: 12px;
@@ -50,20 +59,20 @@
 
 /* Glassmorphism utility */
 .glass-panel {
-  background: rgba(15, 15, 17, 0.75);
+  background: rgba(18, 18, 18, 0.85);
   backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .glass-panel-orange {
-  background: rgba(255, 107, 0, 0.05);
+  background: rgba(255, 92, 0, 0.08);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 107, 0, 0.2);
+  border: 1px solid rgba(255, 92, 0, 0.25);
 }
 
 /* Glowing Accent Button */
 .btn-orange {
-  background: linear-gradient(135deg, #ff6b00 0%, #ea580c 100%);
+  background: linear-gradient(135deg, #FF5C00 0%, #ea580c 100%);
   color: #ffffff;
   font-weight: 600;
   border-radius: var(--radius-md);
@@ -72,9 +81,9 @@
   box-shadow: 0 4px 14px var(--accent-orange-glow);
 }
 .btn-orange:hover {
-  background: linear-gradient(135deg, #ff7a1a 0%, #f97316 100%);
+  background: linear-gradient(135deg, #ff751a 0%, #f97316 100%);
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(255, 107, 0, 0.5);
+  box-shadow: 0 6px 20px rgba(255, 92, 0, 0.5);
 }
 .btn-orange:active {
   transform: translateY(0);
@@ -89,10 +98,10 @@
 /* Pulse Glow Animation */
 @keyframes pulse-orange {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(255, 107, 0, 0.4);
+    box-shadow: 0 0 0 0 rgba(255, 92, 0, 0.4);
   }
   50% {
-    box-shadow: 0 0 0 8px rgba(255, 107, 0, 0);
+    box-shadow: 0 0 0 8px rgba(255, 92, 0, 0);
   }
 }
 .pulse-glow {
