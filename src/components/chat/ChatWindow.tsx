@@ -11,6 +11,7 @@ import {
   Smile,
   Send,
   CheckCheck,
+  Check,
   FileText,
   ArrowLeft,
   Download,
@@ -71,6 +72,20 @@ export default function ChatWindow({
     });
   };
 
+  // Mark unread messages as read in Supabase
+  const markMessagesAsRead = async () => {
+    try {
+      await supabase
+        .from('messages')
+        .update({ is_read: true })
+        .eq('sender_id', chatUser.id)
+        .eq('receiver_id', currentUser.id)
+        .eq('is_read', false);
+    } catch (err) {
+      console.error('Mark read error:', err);
+    }
+  };
+
   // Fetch Initial Messages & Wire Supabase Realtime Listener
   useEffect(() => {
     async function fetchMessages() {
@@ -83,6 +98,7 @@ export default function ChatWindow({
 
         if (!error && data) {
           setMessages(data as Message[]);
+          await markMessagesAsRead();
         }
       } catch (err) {
         console.error('Fetch messages error:', err);
@@ -93,13 +109,13 @@ export default function ChatWindow({
 
     fetchMessages();
 
-    // Wiring Supabase Realtime Listener on table `messages`
+    // Wiring Supabase Realtime Listener on table `messages` for INSERT & UPDATE (Read Status)
     const channel = supabase
       .channel('public:messages')
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages' },
-        (payload) => {
+        async (payload) => {
           const newMsg = payload.new as Message;
           if (
             (newMsg.sender_id === currentUser.id && newMsg.receiver_id === chatUser.id) ||
@@ -109,8 +125,23 @@ export default function ChatWindow({
               if (prev.some((m) => m.id === newMsg.id)) return prev;
               return [...prev, newMsg];
             });
+
+            if (newMsg.sender_id === chatUser.id) {
+              await markMessagesAsRead();
+            }
+
             setTimeout(scrollToBottom, 100);
           }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'messages' },
+        (payload) => {
+          const updatedMsg = payload.new as Message;
+          setMessages((prev) =>
+            prev.map((m) => (m.id === updatedMsg.id ? { ...m, ...updatedMsg } : m))
+          );
         }
       )
       .subscribe();
@@ -135,6 +166,7 @@ export default function ChatWindow({
             content: contentToSend,
             sender_id: currentUser.id,
             receiver_id: chatUser.id,
+            is_read: false,
           },
         ])
         .select()
@@ -173,10 +205,8 @@ export default function ChatWindow({
       const filePath = `${currentUser.id}/${fileName}`;
 
       setUploadProgress(40);
-
       let publicUrl = '';
 
-      // 1. Attempt Supabase Storage Upload
       const { error: uploadError } = await supabase.storage
         .from('chat-attachments')
         .upload(filePath, selectedFile, {
@@ -195,7 +225,6 @@ export default function ChatWindow({
         console.warn('Supabase storage upload notice:', uploadError.message);
       }
 
-      // 2. Base64 Fallback
       if (!publicUrl || uploadError) {
         try {
           publicUrl = await fileToBase64(selectedFile);
@@ -207,7 +236,6 @@ export default function ChatWindow({
       setUploadProgress(85);
       const fileSizeFormatted = `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`;
 
-      // 3. Insert Message into Database
       const { data: insertedMsg, error: insertError } = await supabase
         .from('messages')
         .insert([
@@ -218,6 +246,7 @@ export default function ChatWindow({
             file_size: fileSizeFormatted,
             sender_id: currentUser.id,
             receiver_id: chatUser.id,
+            is_read: false,
           },
         ])
         .select()
@@ -233,6 +262,7 @@ export default function ChatWindow({
           attachment_url: publicUrl,
           file_name: selectedFile.name,
           file_size: fileSizeFormatted,
+          is_read: false,
           created_at: new Date().toISOString(),
         };
         setMessages((prev) => [...prev, tempMsg]);
@@ -256,7 +286,6 @@ export default function ChatWindow({
     }
   };
 
-  // Handle Input File Upload
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
@@ -267,7 +296,6 @@ export default function ChatWindow({
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // Drag and Drop Event Handlers
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -399,6 +427,7 @@ export default function ChatWindow({
           const isMe = msg.sender_id === currentUser.id;
           const attachUrl = msg.attachment_url || msg.file_url || (msg.content?.startsWith('http') || msg.content?.startsWith('data:') ? msg.content : null);
           const isImg = isImageFile(attachUrl, msg.file_name || msg.content);
+          const isRead = msg.is_read;
 
           return (
             <div
@@ -468,13 +497,17 @@ export default function ChatWindow({
                     <p className="text-xs whitespace-pre-wrap leading-relaxed">{msg.content}</p>
                   )}
 
-                  {/* Timestamp & Double Checkmarks */}
-                  <div className="flex items-center justify-end gap-1 mt-1 text-[9px] opacity-80">
+                  {/* Timestamp & Real-time Read Status Checkmarks */}
+                  <div className="flex items-center justify-end gap-1 mt-1 text-[9px] opacity-90">
                     <span>
                       {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                     {isMe && (
-                      <CheckCheck className="w-3.5 h-3.5 text-white" />
+                      isRead ? (
+                        <CheckCheck className="w-3.5 h-3.5 text-[#FF5C00] stroke-[2.5]" />
+                      ) : (
+                        <Check className="w-3.5 h-3.5 text-white/70" />
+                      )
                     )}
                   </div>
                 </div>

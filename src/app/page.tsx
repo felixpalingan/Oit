@@ -9,7 +9,7 @@ import ChatWindow from '@/components/chat/ChatWindow';
 import ProfileModal from '@/components/profile/ProfileModal';
 import AddFriendModal from '@/components/friends/AddFriendModal';
 import LiveKitCallModal from '@/components/call/LiveKitCallModal';
-import { User as UserType } from '@/types';
+import { User as UserType, Message } from '@/types';
 
 export default function Page() {
   const [mode, setMode] = useState<'login' | 'register'>('login');
@@ -26,12 +26,53 @@ export default function Page() {
   const [searchQuery, setSearchQuery] = useState('');
   const [authChecking, setAuthChecking] = useState(true);
 
+  // Message Previews & Unread Counts Mapping
+  const [lastMessagesMap, setLastMessagesMap] = useState<Record<string, Message>>({});
+  const [unreadCountsMap, setUnreadCountsMap] = useState<Record<string, number>>({});
+
   // Modals & Calls
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showAddFriendModal, setShowAddFriendModal] = useState(false);
   const [callState, setCallState] = useState<{ active: boolean; roomName: string } | null>(null);
 
   const supabase = createClient();
+
+  // Fetch Message Previews for all contacts
+  const fetchMessagePreviews = async (userId: string, targetUsers: UserType[]) => {
+    try {
+      const lastMsgMap: Record<string, Message> = {};
+      const unreadMap: Record<string, number> = {};
+
+      for (const target of targetUsers) {
+        // Fetch last message
+        const { data: lastMsgs } = await supabase
+          .from('messages')
+          .select('*')
+          .or(`and(sender_id.eq.${userId},receiver_id.eq.${target.id}),and(sender_id.eq.${target.id},receiver_id.eq.${userId})`)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (lastMsgs && lastMsgs.length > 0) {
+          lastMsgMap[target.id] = lastMsgs[0] as Message;
+        }
+
+        // Fetch unread count
+        const { count } = await supabase
+          .from('messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('sender_id', target.id)
+          .eq('receiver_id', userId)
+          .eq('is_read', false);
+
+        unreadMap[target.id] = count || 0;
+      }
+
+      setLastMessagesMap(lastMsgMap);
+      setUnreadCountsMap(unreadMap);
+    } catch (err) {
+      console.error('Error fetching message previews:', err);
+    }
+  };
 
   // Load Auth Session & Users Table
   useEffect(() => {
@@ -57,6 +98,8 @@ export default function Page() {
         setCurrentUser(null);
         setActiveChatUser(null);
         setUsersList([]);
+        setLastMessagesMap({});
+        setUnreadCountsMap({});
       }
     });
 
@@ -65,11 +108,32 @@ export default function Page() {
     };
   }, [supabase]);
 
+  // Real-time listener for updating last messages in sidebar
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const channel = supabase
+      .channel('global:sidebar_previews')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'messages' },
+        () => {
+          if (currentUser && usersList.length > 0) {
+            fetchMessagePreviews(currentUser.id, usersList);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUser, usersList, supabase]);
+
   const handleSessionUser = async (sessionUser: { id: string; email?: string }) => {
     const uname = sessionUser.email?.split('@')[0] || 'user';
 
     try {
-      // Check if user exists in `users` table
       let userObj: UserType = {
         id: sessionUser.id,
         username: uname,
@@ -86,7 +150,6 @@ export default function Page() {
       if (dbUser) {
         userObj = dbUser;
       } else {
-        // Insert into public.users
         const { data: newUser } = await supabase
           .from('users')
           .insert({
@@ -102,7 +165,7 @@ export default function Page() {
 
       setCurrentUser(userObj);
 
-      // Load other users for chat list
+      // Load all other users
       const { data: allUsers } = await supabase
         .from('users')
         .select('*')
@@ -111,8 +174,8 @@ export default function Page() {
       if (allUsers && allUsers.length > 0) {
         setUsersList(allUsers as UserType[]);
         setActiveChatUser(allUsers[0] as UserType);
+        await fetchMessagePreviews(sessionUser.id, allUsers as UserType[]);
       } else {
-        // Set default sample chat user if alone
         const sampleUser: UserType = {
           id: 'sample-1',
           username: 'Sarah (26)',
@@ -156,7 +219,6 @@ export default function Page() {
 
         if (error) throw error;
         if (data.user) {
-          // Insert into users table
           await supabase.from('users').insert({
             id: data.user.id,
             username: username.trim().toLowerCase(),
@@ -370,9 +432,14 @@ export default function Page() {
             currentUser={currentUser}
             usersList={usersList}
             activeChatUser={activeChatUser}
-            onSelectUser={(u) => setActiveChatUser(u)}
+            onSelectUser={(u) => {
+              setActiveChatUser(u);
+              fetchMessagePreviews(currentUser.id, usersList);
+            }}
             onOpenNewChatModal={() => setShowAddFriendModal(true)}
             searchQuery={searchQuery}
+            lastMessagesMap={lastMessagesMap}
+            unreadCountsMap={unreadCountsMap}
           />
         </div>
 

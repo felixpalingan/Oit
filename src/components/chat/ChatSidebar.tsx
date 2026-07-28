@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { User, Message } from '@/types';
-import { MessageSquare, Users, Phone, Plus, CheckCheck, Check } from 'lucide-react';
+import { MessageSquare, Users, Phone, Plus, CheckCheck, Check, Image as ImageIcon, FileText } from 'lucide-react';
 
 interface ChatSidebarProps {
   currentUser: User;
@@ -11,6 +11,8 @@ interface ChatSidebarProps {
   onSelectUser: (user: User) => void;
   onOpenNewChatModal: () => void;
   searchQuery: string;
+  lastMessagesMap?: Record<string, Message>;
+  unreadCountsMap?: Record<string, number>;
 }
 
 export default function ChatSidebar({
@@ -20,10 +22,12 @@ export default function ChatSidebar({
   onSelectUser,
   onOpenNewChatModal,
   searchQuery,
+  lastMessagesMap = {},
+  unreadCountsMap = {},
 }: ChatSidebarProps) {
   const [activeTab, setActiveTab] = useState<'chats' | 'contacts' | 'calls'>('chats');
 
-  // Sample placeholder contacts matching the user's design image if list is empty
+  // Sample placeholder contacts matching user design image if database list is empty
   const defaultContacts: User[] = [
     { id: 'sample-1', username: 'Sarah (26)', display_name: 'Sarah (26)', avatar_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150' },
     { id: 'sample-2', username: 'Kenji (31)', display_name: 'Kenji (31)', avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150' },
@@ -36,6 +40,25 @@ export default function ChatSidebar({
   const filteredUsers = displayList.filter((u) =>
     (u.display_name || u.username).toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const formatMessagePreview = (msg?: Message) => {
+    if (!msg) return 'Mulai percakapan Oit...';
+    if (msg.attachment_url || msg.file_name) {
+      const isImg = (msg.attachment_url || msg.file_name || '').match(/\.(png|jpe?g|webp|gif)$/i);
+      return isImg ? '📷 Foto' : `📄 ${msg.file_name || 'Dokumen'}`;
+    }
+    return msg.content || 'Pesan baru';
+  };
+
+  const formatTimestamp = (dateStr?: string) => {
+    if (!dateStr) return '10:42 AM';
+    const date = new Date(dateStr);
+    const now = new Date();
+    if (date.toDateString() === now.toDateString()) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  };
 
   return (
     <aside className="w-full md:w-80 lg:w-84 h-full bg-[#161619] border-r border-zinc-800/80 flex flex-col shrink-0 select-none">
@@ -83,6 +106,9 @@ export default function ChatSidebar({
       <div className="flex-1 overflow-y-auto p-2 space-y-1">
         {filteredUsers.map((user) => {
           const isActive = activeChatUser?.id === user.id;
+          const lastMsg = lastMessagesMap[user.id];
+          const unreadCount = unreadCountsMap[user.id] || 0;
+          const isSender = lastMsg?.sender_id === currentUser.id;
 
           return (
             <div
@@ -113,15 +139,28 @@ export default function ChatSidebar({
                     {user.display_name || user.username}
                   </h4>
                   <span className="text-[10px] text-zinc-500 shrink-0">
-                    10:42 AM
+                    {formatTimestamp(lastMsg?.created_at)}
                   </span>
                 </div>
 
-                <div className="flex items-center gap-1 mt-1 text-[11px] text-zinc-400 truncate">
-                  <CheckCheck className="w-3.5 h-3.5 text-[#FF5C00] shrink-0" />
-                  <span className="truncate">
-                    {user.username === 'Sarah (26)' ? 'Sounds perfect! See you then.' : 'Mulai percakapan Oit...'}
-                  </span>
+                <div className="flex items-center justify-between mt-1">
+                  <div className="flex items-center gap-1 text-[11px] text-zinc-400 truncate flex-1 pr-2">
+                    {isSender && (
+                      <CheckCheck
+                        className={`w-3.5 h-3.5 shrink-0 ${
+                          lastMsg?.is_read ? 'text-[#FF5C00]' : 'text-zinc-500'
+                        }`}
+                      />
+                    )}
+                    <span className="truncate">{formatMessagePreview(lastMsg)}</span>
+                  </div>
+
+                  {/* Unread Count Badge */}
+                  {unreadCount > 0 && (
+                    <span className="w-4 h-4 bg-[#FF5C00] text-white text-[9px] font-bold rounded-full flex items-center justify-center shrink-0">
+                      {unreadCount}
+                    </span>
+                  )}
                 </div>
               </div>
 

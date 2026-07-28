@@ -52,6 +52,7 @@ export interface Message {
   file_size?: string | null;
   reply_to_id?: string | null;
   is_deleted?: boolean;
+  is_read?: boolean;
   created_at: string;
   sender?: User;
   statuses?: MessageStatus[];
