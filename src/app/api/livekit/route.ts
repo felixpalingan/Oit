@@ -9,13 +9,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Missing room or username' }, { status: 400 });
   }
 
-  const apiKey = process.env.LIVEKIT_API_KEY || 'devkey';
-  const apiSecret = process.env.LIVEKIT_API_SECRET || 'secret';
-  const wsUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL || 'wss://demo.livekit.cloud';
-
-  if (!apiKey || !apiSecret || !wsUrl) {
-    return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 });
-  }
+  const apiKey = process.env.LIVEKIT_API_KEY || 'API5AJk4WWX6nnX';
+  const apiSecret = process.env.LIVEKIT_API_SECRET || 'Y5DpGeGCU3fnXf7sIJ60Qdk0OuhPfto1mY36cbitBe9C';
+  const wsUrl = process.env.LIVEKIT_URL || process.env.NEXT_PUBLIC_LIVEKIT_URL || 'wss://oit-8dwd1ca4.livekit.cloud';
 
   try {
     const at = new AccessToken(apiKey, apiSecret, {
