@@ -49,7 +49,21 @@ export default function ChatWindow({
   // Helper function to detect image files
   const isImageFile = (url?: string | null, name?: string | null) => {
     const target = (url || name || '').toLowerCase();
-    return /\.(png|jpe?g|webp|gif|svg|bmp)(\?.*)?$/i.test(target) || target.includes('/image');
+    return (
+      /\.(png|jpe?g|webp|gif|svg|bmp)(\?.*)?$/i.test(target) ||
+      target.startsWith('data:image/') ||
+      target.includes('/image')
+    );
+  };
+
+  // Convert File to Base64 Data URL Helper
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
   };
 
   // Fetch Initial Messages & Wire Supabase Realtime Listener
@@ -142,7 +156,7 @@ export default function ChatWindow({
     }
   };
 
-  // Handle File Upload to Supabase Storage Bucket 'chat-attachments'
+  // Handle File Upload to Supabase Storage Bucket 'chat-attachments' with Base64 Fallback
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
     if (!selectedFile) return;
@@ -152,13 +166,15 @@ export default function ChatWindow({
     setUploadProgress(20);
 
     try {
-      const fileExt = selectedFile.name.split('.').pop();
+      const fileExt = selectedFile.name.split('.').pop() || 'file';
       const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
       const filePath = `${currentUser.id}/${fileName}`;
 
-      setUploadProgress(45);
+      setUploadProgress(40);
 
-      // Upload to Supabase Storage bucket 'chat-attachments'
+      let publicUrl = '';
+
+      // 1. Attempt Supabase Storage Upload
       const { error: uploadError } = await supabase.storage
         .from('chat-attachments')
         .upload(filePath, selectedFile, {
@@ -166,21 +182,30 @@ export default function ChatWindow({
           upsert: true,
         });
 
-      if (uploadError) {
-        console.warn('Storage upload error:', uploadError.message);
+      if (!uploadError) {
+        setUploadProgress(70);
+        const { data: publicUrlData } = supabase.storage
+          .from('chat-attachments')
+          .getPublicUrl(filePath);
+
+        publicUrl = publicUrlData?.publicUrl || '';
+      } else {
+        console.warn('Supabase storage upload notice:', uploadError.message);
       }
 
-      setUploadProgress(75);
+      // 2. Base64 Fallback if Storage Bucket is not yet set up or blocked by RLS
+      if (!publicUrl || uploadError) {
+        try {
+          publicUrl = await fileToBase64(selectedFile);
+        } catch (b64Err) {
+          console.error('Base64 conversion failed:', b64Err);
+        }
+      }
 
-      // Get Public URL
-      const { data: publicUrlData } = supabase.storage
-        .from('chat-attachments')
-        .getPublicUrl(filePath);
-
-      const publicUrl = publicUrlData?.publicUrl || URL.createObjectURL(selectedFile);
+      setUploadProgress(85);
       const fileSizeFormatted = `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`;
 
-      // Insert message record into Supabase messages table
+      // 3. Insert Message into Database
       const { data: insertedMsg, error: insertError } = await supabase
         .from('messages')
         .insert([
@@ -197,8 +222,8 @@ export default function ChatWindow({
         .single();
 
       if (insertError) {
-        console.error('Error inserting attachment message:', insertError);
-        // Local fallback update
+        console.error('Database message insert error:', insertError);
+        // Local Fallback Update for immediate rendering
         const tempMsg: Message = {
           id: `temp-${Date.now()}`,
           sender_id: currentUser.id,
@@ -305,7 +330,7 @@ export default function ChatWindow({
 
         {messages.map((msg) => {
           const isMe = msg.sender_id === currentUser.id;
-          const attachUrl = msg.attachment_url || msg.file_url || (msg.content?.startsWith('http') ? msg.content : null);
+          const attachUrl = msg.attachment_url || msg.file_url || (msg.content?.startsWith('http') || msg.content?.startsWith('data:') ? msg.content : null);
           const isImg = isImageFile(attachUrl, msg.file_name || msg.content);
 
           return (
@@ -340,14 +365,14 @@ export default function ChatWindow({
                       rel="noopener noreferrer"
                       className="block cursor-pointer hover:opacity-90 transition-opacity mb-1"
                     >
-                      <div className="rounded-xl overflow-hidden max-w-sm border border-white/20 relative group">
+                      <div className="rounded-xl overflow-hidden max-w-sm border border-white/20 relative group bg-black/40">
                         <img
                           src={attachUrl}
-                          alt={msg.content || 'Image Attachment'}
+                          alt={msg.file_name || 'Uploaded Image'}
                           className="w-full h-auto object-cover max-h-72 rounded-lg"
                         />
-                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-xs font-bold gap-1">
-                          <ExternalLink className="w-4 h-4" /> Buka Gambar Full
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-xs font-bold gap-1.5">
+                          <ExternalLink className="w-4 h-4" /> Buka Gambar
                         </div>
                       </div>
                     </a>
@@ -367,7 +392,7 @@ export default function ChatWindow({
                         <p className="text-xs font-bold text-white truncate max-w-[180px]">
                           {msg.file_name || msg.content || 'Document'}
                         </p>
-                        <p className="text-[10px] text-white/80">{msg.file_size || 'Klik untuk buka/unduh'}</p>
+                        <p className="text-[10px] text-white/80">{msg.file_size || 'Klik untuk unduh'}</p>
                       </div>
                       <Download className="w-4 h-4 text-white shrink-0" />
                     </a>
@@ -382,7 +407,7 @@ export default function ChatWindow({
                       {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                     {isMe && (
-                      <CheckCheck className="w-3.5 h-3.5 text-white" />
+                      <CheckCheck className="w-3.5 h-3.5 text-[#ff8a65] text-white" />
                     )}
                   </div>
                 </div>
@@ -395,7 +420,7 @@ export default function ChatWindow({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Uploading Progress Bar Container (Matching User's Image Design) */}
+      {/* Uploading Progress Bar Container */}
       {isUploading && (
         <div className="px-6 py-1.5 bg-[#121215] border-t border-zinc-800/80">
           <div className="flex items-center justify-between text-[10px] text-zinc-400 mb-1">
