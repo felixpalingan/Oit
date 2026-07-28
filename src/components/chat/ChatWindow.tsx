@@ -8,7 +8,6 @@ import {
   Phone,
   Video,
   MoreVertical,
-  Paperclip,
   Smile,
   Send,
   CheckCheck,
@@ -35,7 +34,8 @@ export default function ChatWindow({
   onBackMobile,
   onStartCall,
 }: ChatWindowProps) {
-  const { activeChannelName } = useAppStore();
+  // 1. State Management (Zustand)
+  const { activeChannelId, activeChannelName } = useAppStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageText, setMessageText] = useState('');
 
@@ -51,6 +51,8 @@ export default function ChatWindow({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
+
+  const currentChannelId = activeChannelId || 'ui-ux-sync';
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -88,44 +90,72 @@ export default function ChatWindow({
     }
   };
 
-  // Fetch Initial Messages & Wire Supabase Realtime Listener
+  // 2. Fetching & 3. Realtime Subscription with Mandatory Cleanup
   useEffect(() => {
-    async function fetchMessages() {
+    // 2. Clear state on channel change
+    setMessages([]);
+
+    async function fetchChannelMessages() {
       try {
         let query = supabase.from('messages').select('*');
+
         if (chatUser) {
-          query = query.or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${chatUser.id}),and(sender_id.eq.${chatUser.id},receiver_id.eq.${currentUser.id})`);
+          query = query.or(
+            `and(sender_id.eq.${currentUser.id},receiver_id.eq.${chatUser.id}),and(sender_id.eq.${chatUser.id},receiver_id.eq.${currentUser.id})`
+          );
+        } else {
+          // Strict channel matching using activeChannelId
+          query = query.eq('channel_id', currentChannelId);
         }
-        const { data, error } = await query.order('created_at', { ascending: true }).limit(50);
+
+        const { data, error } = await query
+          .order('created_at', { ascending: true })
+          .limit(100);
 
         if (!error && data) {
           setMessages(data as Message[]);
           if (chatUser) await markMessagesAsRead();
         }
       } catch (err) {
-        console.error('Fetch messages error:', err);
+        console.error('Fetch channel messages error:', err);
       } finally {
         setTimeout(scrollToBottom, 100);
       }
     }
 
-    fetchMessages();
+    fetchChannelMessages();
+
+    // 3. Scoped Realtime Subscription
+    const channelName = chatUser
+      ? `dm:${[currentUser.id, chatUser.id].sort().join('_')}`
+      : `channel:${currentChannelId}`;
 
     const channel = supabase
-      .channel('public:messages')
+      .channel(channelName)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages' },
         async (payload) => {
           const newMsg = payload.new as Message;
-          setMessages((prev) => {
-            if (prev.some((m) => m.id === newMsg.id)) return prev;
-            return [...prev, newMsg];
-          });
-          if (chatUser && newMsg.sender_id === chatUser.id) {
-            await markMessagesAsRead();
+
+          // Verify that message belongs to active DM or active channel_id
+          const belongsToCurrentScope = chatUser
+            ? (newMsg.sender_id === currentUser.id && newMsg.receiver_id === chatUser.id) ||
+              (newMsg.sender_id === chatUser.id && newMsg.receiver_id === currentUser.id)
+            : newMsg.channel_id === currentChannelId || (!newMsg.receiver_id && !newMsg.channel_id);
+
+          if (belongsToCurrentScope) {
+            setMessages((prev) => {
+              if (prev.some((m) => m.id === newMsg.id)) return prev;
+              return [...prev, newMsg];
+            });
+
+            if (chatUser && newMsg.sender_id === chatUser.id) {
+              await markMessagesAsRead();
+            }
+
+            setTimeout(scrollToBottom, 100);
           }
-          setTimeout(scrollToBottom, 100);
         }
       )
       .on(
@@ -140,12 +170,13 @@ export default function ChatWindow({
       )
       .subscribe();
 
+    // MANDATORY CLEANUP: Unsubscribe previous WebSocket listener when channel changes
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUser.id, chatUser, supabase]);
+  }, [currentUser.id, chatUser?.id, currentChannelId, supabase]);
 
-  // Handle Send Message
+  // 4. Inserting Message Protocol
   const handleSendMessage = async () => {
     if (!messageText.trim()) return;
 
@@ -153,16 +184,17 @@ export default function ChatWindow({
     setMessageText('');
 
     try {
+      const payload = {
+        content: contentToSend,
+        sender_id: currentUser.id,
+        receiver_id: chatUser ? chatUser.id : null,
+        channel_id: chatUser ? null : currentChannelId,
+        is_read: false,
+      };
+
       const { data, error } = await supabase
         .from('messages')
-        .insert([
-          {
-            content: contentToSend,
-            sender_id: currentUser.id,
-            receiver_id: chatUser ? chatUser.id : null,
-            is_read: false,
-          },
-        ])
+        .insert([payload])
         .select()
         .single();
 
@@ -229,19 +261,20 @@ export default function ChatWindow({
       setUploadProgress(85);
       const fileSizeFormatted = `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`;
 
+      const payload = {
+        content: selectedFile.name,
+        attachment_url: publicUrl,
+        file_name: selectedFile.name,
+        file_size: fileSizeFormatted,
+        sender_id: currentUser.id,
+        receiver_id: chatUser ? chatUser.id : null,
+        channel_id: chatUser ? null : currentChannelId,
+        is_read: false,
+      };
+
       const { data: insertedMsg, error: insertError } = await supabase
         .from('messages')
-        .insert([
-          {
-            content: selectedFile.name,
-            attachment_url: publicUrl,
-            file_name: selectedFile.name,
-            file_size: fileSizeFormatted,
-            sender_id: currentUser.id,
-            receiver_id: chatUser ? chatUser.id : null,
-            is_read: false,
-          },
-        ])
+        .insert([payload])
         .select()
         .single();
 
@@ -251,6 +284,7 @@ export default function ChatWindow({
           id: `temp-${Date.now()}`,
           sender_id: currentUser.id,
           receiver_id: chatUser ? chatUser.id : null,
+          channel_id: chatUser ? null : currentChannelId,
           content: selectedFile.name,
           attachment_url: publicUrl,
           file_name: selectedFile.name,

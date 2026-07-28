@@ -41,6 +41,7 @@ export interface Message {
   id: string;
   sender_id: string;
   receiver_id?: string | null;
+  channel_id?: string | null;
   group_id?: string | null;
   room_id?: string;
   content: string | null;
