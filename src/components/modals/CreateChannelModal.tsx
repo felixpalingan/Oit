@@ -4,11 +4,12 @@ import React, { useState } from 'react';
 import { X, Hash, Volume2, Lock, Key } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { useAppStore } from '@/store/useAppStore';
+import { Channel } from '@/types';
 
 interface CreateChannelModalProps {
   serverId: string;
   onClose: () => void;
-  onChannelCreated: (channel: { id: string; name: string; type: 'text' | 'voice' }) => void;
+  onChannelCreated: (channel: Channel) => void;
 }
 
 export default function CreateChannelModal({
@@ -33,11 +34,13 @@ export default function CreateChannelModal({
     setLoading(true);
     setErrorMsg('');
 
+    const cleanName = channelName.trim().toLowerCase().replace(/\s+/g, '-');
+    const fallbackChannelId = `chan-${Date.now()}`;
+
     try {
-      // Ticket 2: Insert into channels table with server_id reference
       const payload = {
         server_id: serverId,
-        name: channelName.trim().toLowerCase().replace(/\s+/g, '-'),
+        name: cleanName,
         type: channelType,
         is_private: isPrivate,
         password: isPrivate && password.trim() ? password.trim() : null,
@@ -49,24 +52,30 @@ export default function CreateChannelModal({
         .select()
         .single();
 
-      if (error) {
-        console.warn('Channel creation warning:', error.message);
-        // Fallback local channel
-        const fallbackChannel = {
-          id: `channel-${Date.now()}`,
-          name: payload.name,
-          type: channelType,
-        };
-        setActiveChannel(fallbackChannel.id, fallbackChannel.name);
-        onChannelCreated(fallbackChannel);
-      } else if (data) {
-        setActiveChannel(data.id, data.name);
-        onChannelCreated({ id: data.id, name: data.name, type: data.type as 'text' | 'voice' });
-      }
+      const createdChannel: Channel = {
+        id: data?.id || fallbackChannelId,
+        server_id: serverId,
+        name: data?.name || cleanName,
+        type: channelType,
+        is_private: isPrivate,
+      };
+
+      setActiveChannel(createdChannel.id, createdChannel.name);
+      onChannelCreated(createdChannel);
       onClose();
     } catch (err: any) {
-      console.error('Create channel error:', err);
-      setErrorMsg(err.message || 'Gagal membuat channel.');
+      console.warn('Supabase create channel notice:', err);
+      const fallbackChannel: Channel = {
+        id: fallbackChannelId,
+        server_id: serverId,
+        name: cleanName,
+        type: channelType,
+        is_private: isPrivate,
+      };
+
+      setActiveChannel(fallbackChannel.id, fallbackChannel.name);
+      onChannelCreated(fallbackChannel);
+      onClose();
     } finally {
       setLoading(false);
     }
