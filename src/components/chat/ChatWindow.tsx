@@ -77,6 +77,7 @@ export default function ChatWindow({
     });
   };
 
+  // Bug 2 Fix: Mark messages as read in Supabase AND update local state instantly
   const markMessagesAsRead = async () => {
     if (!chatUser) return;
     try {
@@ -86,6 +87,14 @@ export default function ChatWindow({
         .eq('sender_id', chatUser.id)
         .eq('receiver_id', currentUser.id)
         .eq('is_read', false);
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.sender_id === chatUser.id && m.receiver_id === currentUser.id
+            ? { ...m, is_read: true }
+            : m
+        )
+      );
     } catch (err) {
       console.error('Mark read error:', err);
     }
@@ -190,7 +199,7 @@ export default function ChatWindow({
         (payload) => {
           const updatedMsg = payload.new as Message;
           setMessages((prev) =>
-            prev.map((m) => (m.id === updatedMsg.id ? { ...m, ...updatedMsg } : m))
+            prev.map((m) => (m.id === updatedMsg.id ? { ...m, is_read: updatedMsg.is_read, ...updatedMsg } : m))
           );
         }
       )
@@ -576,7 +585,7 @@ export default function ChatWindow({
                     <p className="text-xs whitespace-pre-wrap leading-relaxed">{msg.content}</p>
                   )}
 
-                  {/* Checkmarks */}
+                  {/* Bug 2 Fix: Realtime Checkmarks (✔ Single, ✔✔ Double Checkmarks) */}
                   {isMe && (
                     <div className="flex justify-end mt-0.5">
                       {isRead ? (

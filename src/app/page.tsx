@@ -48,6 +48,9 @@ export default function Page() {
   const [activeChatUser, setActiveChatUser] = useState<UserType | null>(null);
   const [authChecking, setAuthChecking] = useState(true);
 
+  // Server Hydration Trigger Key
+  const [refreshServersKey, setRefreshServersKey] = useState(0);
+
   // Message Previews & Unread Counts Mapping
   const [lastMessagesMap, setLastMessagesMap] = useState<Record<string, Message>>({});
   const [unreadCountsMap, setUnreadCountsMap] = useState<Record<string, number>>({});
@@ -562,6 +565,7 @@ export default function Page() {
         onOpenNewChat={() => setShowAddFriendModal(true)}
         onOpenCreateServer={() => setShowCreateServerModal(true)}
         onSelectDMHome={() => setActiveChatUser(null)}
+        refreshKey={refreshServersKey}
       />
 
       {/* 2. Channel & DM Sidebar */}
@@ -650,6 +654,7 @@ export default function Page() {
           onClose={() => setShowCreateServerModal(false)}
           onCreated={() => {
             setActiveChatUser(null);
+            setRefreshServersKey((prev) => prev + 1);
           }}
         />
       )}
@@ -661,6 +666,7 @@ export default function Page() {
           onClose={() => setShowJoinServerModal(false)}
           onJoined={() => {
             setActiveChatUser(null);
+            setRefreshServersKey((prev) => prev + 1);
           }}
         />
       )}

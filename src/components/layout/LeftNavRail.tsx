@@ -12,6 +12,7 @@ interface LeftNavRailProps {
   onOpenNewChat: () => void;
   onOpenCreateServer?: () => void;
   onSelectDMHome?: () => void;
+  refreshKey?: number;
 }
 
 export default function LeftNavRail({
@@ -20,6 +21,7 @@ export default function LeftNavRail({
   onOpenNewChat,
   onOpenCreateServer,
   onSelectDMHome,
+  refreshKey = 0,
 }: LeftNavRailProps) {
   const { activeServerId, setActiveServer, setActiveChannel } = useAppStore();
   const [servers, setServers] = useState<Server[]>([]);
@@ -53,7 +55,7 @@ export default function LeftNavRail({
     fetchServers();
 
     const serverChannel = supabase
-      .channel('public:servers')
+      .channel('public:servers_nav')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'servers' },
@@ -63,7 +65,7 @@ export default function LeftNavRail({
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'server_members', filter: `user_id=eq.${currentUser.id}` },
+        { event: '*', schema: 'public', table: 'server_members' },
         () => {
           fetchServers();
         }
@@ -73,7 +75,7 @@ export default function LeftNavRail({
     return () => {
       supabase.removeChannel(serverChannel);
     };
-  }, [currentUser.id, supabase]);
+  }, [currentUser.id, refreshKey, supabase]);
 
   const handleSelectServer = async (srvId: string | null) => {
     setActiveServer(srvId);
