@@ -8,7 +8,7 @@ import ChatSidebar from '@/components/chat/ChatSidebar';
 import ChatWindow from '@/components/chat/ChatWindow';
 import ProfileModal from '@/components/profile/ProfileModal';
 import AddFriendModal from '@/components/friends/AddFriendModal';
-import LiveKitCallModal from '@/components/call/LiveKitCallModal';
+import VideoRoom from '@/components/chat/VideoRoom';
 import { User as UserType, Message } from '@/types';
 
 export default function Page() {
@@ -44,7 +44,6 @@ export default function Page() {
       const unreadMap: Record<string, number> = {};
 
       for (const target of targetUsers) {
-        // Fetch last message
         const { data: lastMsgs } = await supabase
           .from('messages')
           .select('*')
@@ -56,7 +55,6 @@ export default function Page() {
           lastMsgMap[target.id] = lastMsgs[0] as Message;
         }
 
-        // Fetch unread count
         const { count } = await supabase
           .from('messages')
           .select('*', { count: 'exact', head: true })
@@ -165,7 +163,6 @@ export default function Page() {
 
       setCurrentUser(userObj);
 
-      // Load all other users
       const { data: allUsers } = await supabase
         .from('users')
         .select('*')
@@ -277,7 +274,7 @@ export default function Page() {
             </div>
             
             <div className="flex items-center gap-1 bg-[#FF5C00] text-white px-2 py-1 rounded-xl shadow-md">
-              <PhoneCall className="w-4 h-4 fill-current text-white" />
+              <PhoneCall className="w-4 h-4 fill-current text-[#FF5C00] text-white" />
               <span className="font-black text-sm tracking-tight text-white">QOit</span>
             </div>
           </div>
@@ -467,7 +464,7 @@ export default function Page() {
 
       </div>
 
-      {/* Modals & Calls */}
+      {/* Modals & LiveKit Video Call Modal */}
       {showProfileModal && (
         <ProfileModal
           profile={{
@@ -490,10 +487,11 @@ export default function Page() {
         />
       )}
 
+      {/* LiveKit Video & Voice Call Modal (Matching User's Design Image) */}
       {callState?.active && (
-        <LiveKitCallModal
+        <VideoRoom
           roomName={callState.roomName}
-          username={currentUser.username}
+          currentUser={currentUser}
           onLeave={() => setCallState(null)}
         />
       )}
