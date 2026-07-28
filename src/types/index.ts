@@ -44,6 +44,7 @@ export interface Message {
   group_id?: string | null;
   room_id?: string;
   content: string | null;
+  attachment_url?: string | null;
   media_url?: string | null;
   media_type?: 'image' | 'video' | 'document' | null;
   file_url?: string | null;

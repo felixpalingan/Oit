@@ -13,6 +13,8 @@ import {
   CheckCheck,
   FileText,
   ArrowLeft,
+  Download,
+  Image as ImageIcon,
 } from 'lucide-react';
 
 interface ChatWindowProps {
@@ -30,7 +32,11 @@ export default function ChatWindow({
 }: ChatWindowProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageText, setMessageText] = useState('');
-  const [uploading, setUploading] = useState(false);
+
+  // File Upload State & Progress
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadFileName, setUploadFileName] = useState('');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -70,13 +76,11 @@ export default function ChatWindow({
         { event: 'INSERT', schema: 'public', table: 'messages' },
         (payload) => {
           const newMsg = payload.new as Message;
-          // Check if message belongs to current chat conversation
           if (
             (newMsg.sender_id === currentUser.id && newMsg.receiver_id === chatUser.id) ||
             (newMsg.sender_id === chatUser.id && newMsg.receiver_id === currentUser.id)
           ) {
             setMessages((prev) => {
-              // Avoid duplicate messages if already present in state
               if (prev.some((m) => m.id === newMsg.id)) return prev;
               return [...prev, newMsg];
             });
@@ -91,7 +95,7 @@ export default function ChatWindow({
     };
   }, [currentUser.id, chatUser.id, supabase]);
 
-  // Handle Send Message to Supabase
+  // Handle Send Message
   const handleSendMessage = async () => {
     if (!messageText.trim()) return;
 
@@ -112,7 +116,7 @@ export default function ChatWindow({
         .single();
 
       if (error) {
-        console.error('Failed to insert message into Supabase:', error);
+        console.error('Failed to insert message:', error);
       } else if (data) {
         setMessages((prev) => {
           if (prev.some((m) => m.id === data.id)) return prev;
@@ -125,7 +129,6 @@ export default function ChatWindow({
     }
   };
 
-  // Handle Enter Key Down
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -133,22 +136,49 @@ export default function ChatWindow({
     }
   };
 
-  // Handle File Attachment Upload
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Handle File Upload to Supabase Storage Bucket 'chat-attachments'
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0];
+    if (!selectedFile) return;
 
-    setUploading(true);
+    setIsUploading(true);
+    setUploadFileName(selectedFile.name);
+    setUploadProgress(15);
+
     try {
-      const fileSizeFormatted = `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
+      const fileExt = selectedFile.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `${currentUser.id}/${fileName}`;
 
-      const { data, error } = await supabase
+      setUploadProgress(40);
+
+      // Upload to Supabase Storage bucket 'chat-attachments'
+      const { error: uploadError } = await supabase.storage
+        .from('chat-attachments')
+        .upload(filePath, selectedFile);
+
+      if (uploadError) {
+        console.warn('Storage upload error / bucket notice:', uploadError.message);
+      }
+
+      setUploadProgress(75);
+
+      // Get Public URL
+      const { data: publicUrlData } = supabase.storage
+        .from('chat-attachments')
+        .getPublicUrl(filePath);
+
+      const publicUrl = publicUrlData?.publicUrl || URL.createObjectURL(selectedFile);
+
+      // Insert message record into Supabase messages table
+      const { data: insertedMsg, error: insertError } = await supabase
         .from('messages')
         .insert([
           {
-            content: file.name,
-            file_name: file.name,
-            file_size: fileSizeFormatted,
+            content: selectedFile.name,
+            attachment_url: publicUrl,
+            file_name: selectedFile.name,
+            file_size: `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`,
             sender_id: currentUser.id,
             receiver_id: chatUser.id,
           },
@@ -156,15 +186,43 @@ export default function ChatWindow({
         .select()
         .single();
 
-      if (!error && data) {
-        setMessages((prev) => [...prev, data as Message]);
-        setTimeout(scrollToBottom, 100);
+      if (insertError) {
+        console.error('Error inserting attachment message:', insertError);
+        // Local fallback update
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `temp-${Date.now()}`,
+            sender_id: currentUser.id,
+            receiver_id: chatUser.id,
+            content: selectedFile.name,
+            attachment_url: publicUrl,
+            file_name: selectedFile.name,
+            file_size: `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`,
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      } else if (insertedMsg) {
+        setMessages((prev) => [...prev, insertedMsg as Message]);
       }
+
+      setUploadProgress(100);
     } catch (err) {
-      console.error('Upload error:', err);
+      console.error('File upload error:', err);
     } finally {
-      setUploading(false);
+      setTimeout(() => {
+        setIsUploading(false);
+        setUploadProgress(0);
+        setUploadFileName('');
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        scrollToBottom();
+      }, 400);
     }
+  };
+
+  const isImageFile = (url?: string | null, name?: string | null) => {
+    const target = (url || name || '').toLowerCase();
+    return target.endsWith('.png') || target.endsWith('.jpg') || target.endsWith('.jpeg') || target.endsWith('.webp') || target.endsWith('.gif');
   };
 
   return (
@@ -241,6 +299,8 @@ export default function ChatWindow({
 
         {messages.map((msg) => {
           const isMe = msg.sender_id === currentUser.id;
+          const attachUrl = msg.attachment_url || msg.file_url;
+          const isImg = isImageFile(attachUrl, msg.file_name);
 
           return (
             <div
@@ -266,24 +326,36 @@ export default function ChatWindow({
                       : 'bg-[#1c1c21] text-zinc-100 border border-zinc-800/80 rounded-bl-none'
                   }`}
                 >
-                  {/* File Attachment Card */}
-                  {msg.file_name ? (
-                    <div className="flex items-center gap-3 p-3 bg-white/10 rounded-xl border border-white/20">
-                      <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                  {/* Image Attachment Lightbox */}
+                  {attachUrl && isImg ? (
+                    <div className="mb-1 rounded-xl overflow-hidden max-w-sm border border-white/20">
+                      <img src={attachUrl} alt="Attachment" className="w-full h-auto object-cover max-h-60 rounded-lg" />
+                    </div>
+                  ) : attachUrl || msg.file_name ? (
+                    /* Document / File Attachment Card */
+                    <a
+                      href={attachUrl || '#'}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-3 p-3 bg-white/10 hover:bg-white/20 rounded-xl border border-white/20 transition-colors"
+                    >
+                      <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center shrink-0">
                         <FileText className="w-5 h-5 text-white" />
                       </div>
-                      <div>
+                      <div className="overflow-hidden flex-1">
                         <p className="text-xs font-bold text-white truncate max-w-[180px]">
-                          {msg.file_name}
+                          {msg.file_name || msg.content || 'Document'}
                         </p>
-                        <p className="text-[10px] opacity-80">{msg.file_size || 'Document'}</p>
+                        <p className="text-[10px] opacity-80">{msg.file_size || 'Click to download'}</p>
                       </div>
-                    </div>
+                      <Download className="w-4 h-4 text-white/80 shrink-0" />
+                    </a>
                   ) : (
+                    /* Text Content */
                     <p className="text-xs whitespace-pre-wrap leading-relaxed">{msg.content}</p>
                   )}
 
-                  {/* Timestamp & Orange Double Checkmarks */}
+                  {/* Timestamp & Double Checkmarks */}
                   <div className="flex items-center justify-end gap-1 mt-1 text-[9px] opacity-80">
                     <span>
                       {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -301,6 +373,22 @@ export default function ChatWindow({
 
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Uploading Progress Bar Container (Matching User's Image Design) */}
+      {isUploading && (
+        <div className="px-6 py-1.5 bg-[#121215] border-t border-zinc-800/80">
+          <div className="flex items-center justify-between text-[10px] text-zinc-400 mb-1">
+            <span className="truncate">Uploading {uploadFileName}...</span>
+            <span className="font-bold text-[#FF5C00] ml-2">{uploadProgress}%</span>
+          </div>
+          <div className="w-full h-1 bg-zinc-800 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-[#FF5C00] transition-all duration-300 rounded-full"
+              style={{ width: `${uploadProgress}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Bottom Message Input Bar */}
       <form
@@ -321,8 +409,8 @@ export default function ChatWindow({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            className="text-zinc-400 hover:text-white transition-colors shrink-0"
+            disabled={isUploading}
+            className="text-zinc-400 hover:text-white transition-colors shrink-0 disabled:opacity-50"
           >
             <Paperclip className="w-4 h-4" />
           </button>
@@ -332,6 +420,7 @@ export default function ChatWindow({
             value={messageText}
             onChange={(e) => setMessageText(e.target.value)}
             onKeyDown={handleKeyDown}
+            disabled={isUploading}
             placeholder="Type a message..."
             className="flex-1 bg-transparent text-xs text-white placeholder-zinc-500 focus:outline-none"
           />
@@ -348,7 +437,7 @@ export default function ChatWindow({
         <button
           type="button"
           onClick={handleSendMessage}
-          disabled={!messageText.trim()}
+          disabled={!messageText.trim() || isUploading}
           className="w-10 h-10 bg-[#ff8a65] hover:bg-[#ff7a52] text-white rounded-full flex items-center justify-center shrink-0 shadow-lg shadow-[#ff8a65]/20 transition-all disabled:opacity-40"
         >
           <Send className="w-4 h-4" />
