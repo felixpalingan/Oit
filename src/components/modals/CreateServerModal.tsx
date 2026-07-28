@@ -2,28 +2,93 @@
 
 import React, { useState } from 'react';
 import { X, Upload, Hash, Volume2, Lock } from 'lucide-react';
+import { User } from '@/types';
+import { createClient } from '@/utils/supabase/client';
+import { useAppStore } from '@/store/useAppStore';
 
 interface CreateServerModalProps {
+  currentUser: User;
   onClose: () => void;
-  onCreate: (serverData: { name: string; channelName: string; isVoice: boolean; isPrivate: boolean }) => void;
+  onCreated?: () => void;
 }
 
-export default function CreateServerModal({ onClose, onCreate }: CreateServerModalProps) {
+export default function CreateServerModal({
+  currentUser,
+  onClose,
+  onCreated,
+}: CreateServerModalProps) {
   const [serverName, setServerName] = useState("Alex's Server");
-  const [channelName, setChannelName] = useState('new-channel');
+  const [channelName, setChannelName] = useState('general');
   const [channelType, setChannelType] = useState<'text' | 'voice'>('text');
   const [isPrivate, setIsPrivate] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const supabase = createClient();
+  const { setActiveServer, setActiveChannel } = useAppStore();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!serverName.trim()) return;
-    onCreate({
-      name: serverName.trim(),
-      channelName: channelName.trim() || 'general',
-      isVoice: channelType === 'voice',
-      isPrivate,
-    });
-    onClose();
+
+    setLoading(true);
+    setErrorMsg('');
+
+    try {
+      // 1. Ticket 1: Insert into servers table
+      const { data: newServer, error: serverErr } = await supabase
+        .from('servers')
+        .insert([
+          {
+            name: serverName.trim(),
+            owner_id: currentUser.id,
+          },
+        ])
+        .select()
+        .single();
+
+      let createdServerId = newServer?.id || `srv-${Date.now()}`;
+
+      if (newServer) {
+        // 2. Ticket 1: Insert owner role into server_members
+        await supabase.from('server_members').insert([
+          {
+            server_id: newServer.id,
+            user_id: currentUser.id,
+            role: 'owner',
+          },
+        ]);
+      }
+
+      // 3. Ticket 2: Insert initial channel into channels table
+      const initialChannelPayload = {
+        server_id: createdServerId,
+        name: channelName.trim().toLowerCase().replace(/\s+/g, '-') || 'general',
+        type: channelType,
+        is_private: isPrivate,
+      };
+
+      const { data: newChannel } = await supabase
+        .from('channels')
+        .insert([initialChannelPayload])
+        .select()
+        .single();
+
+      const createdChannelId = newChannel?.id || `chan-${Date.now()}`;
+      const createdChannelName = newChannel?.name || initialChannelPayload.name;
+
+      // 4. Ticket 1 & 2: Update Zustand global state
+      setActiveServer(createdServerId);
+      setActiveChannel(createdChannelId, createdChannelName);
+
+      if (onCreated) onCreated();
+      onClose();
+    } catch (err: any) {
+      console.error('Create server error:', err);
+      setErrorMsg(err.message || 'Gagal membuat server.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -44,6 +109,10 @@ export default function CreateServerModal({ onClose, onCreate }: CreateServerMod
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {errorMsg && (
+          <p className="text-xs text-red-400 font-semibold text-center">{errorMsg}</p>
+        )}
 
         <p className="text-xs text-zinc-400 text-center leading-relaxed">
           Your server is where you and your friends hang out. Make yours and start talking.
@@ -170,9 +239,10 @@ export default function CreateServerModal({ onClose, onCreate }: CreateServerMod
             </button>
             <button
               type="submit"
-              className="py-3 px-6 bg-[#FF5C00] hover:bg-[#ff701a] text-white font-extrabold rounded-2xl text-xs shadow-lg shadow-[#FF5C00]/25 transition-all active:scale-[0.98]"
+              disabled={loading}
+              className="py-3 px-6 bg-[#FF5C00] hover:bg-[#ff701a] text-white font-extrabold rounded-2xl text-xs shadow-lg shadow-[#FF5C00]/25 transition-all disabled:opacity-50"
             >
-              Create Server
+              {loading ? 'Creating Server...' : 'Create Server'}
             </button>
           </div>
 

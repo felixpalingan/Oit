@@ -622,13 +622,12 @@ export default function Page() {
         />
       )}
 
-      {/* Create Server Modal (Image 3 Match) */}
-      {showCreateServerModal && (
+      {/* Create Server Modal (Ticket 1 & 2 Match) */}
+      {showCreateServerModal && currentUser && (
         <CreateServerModal
+          currentUser={currentUser}
           onClose={() => setShowCreateServerModal(false)}
-          onCreate={(srv) => {
-            alert(`Server "${srv.name}" dengan channel #${srv.channelName} telah dibuat!`);
-          }}
+          onCreated={() => {}}
         />
       )}
 

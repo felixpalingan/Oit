@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Oit Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary-container": "#2c2b2b",
+                    "surface-tint": "#ffb59a",
+                    "surface-container": "#1f1f1f",
+                    "inverse-on-surface": "#303030",
+                    "surface-container-low": "#1b1b1b",
+                    "secondary-fixed": "#e2e2e2",
+                    "tertiary-fixed-dim": "#c8c6c5",
+                    "surface": "#131313",
+                    "on-tertiary-fixed": "#1c1b1b",
+                    "secondary-fixed-dim": "#c6c6c7",
+                    "on-surface-variant": "#e4beb1",
+                    "on-primary-container": "#521800",
+                    "tertiary-fixed": "#e5e2e1",
+                    "on-secondary-container": "#b4b5b5",
+                    "secondary-container": "#454747",
+                    "on-primary-fixed": "#370e00",
+                    "outline-variant": "#5b4137",
+                    "inverse-primary": "#a73a00",
+                    "background": "#131313",
+                    "tertiary-container": "#949292",
+                    "surface-variant": "#353535",
+                    "surface-container-lowest": "#0e0e0e",
+                    "surface-container-high": "#2a2a2a",
+                    "on-surface": "#e2e2e2",
+                    "primary-fixed-dim": "#ffb59a",
+                    "surface-container-highest": "#353535",
+                    "secondary": "#c6c6c7",
+                    "on-error": "#690005",
+                    "on-secondary-fixed-variant": "#454747",
+                    "inverse-surface": "#e2e2e2",
+                    "tertiary": "#c8c6c5",
+                    "on-error-container": "#ffdad6",
+                    "surface-bright": "#393939",
+                    "on-tertiary-fixed-variant": "#474646",
+                    "on-secondary": "#2f3131",
+                    "primary-fixed": "#ffdbce",
+                    "outline": "#ab897d",
+                    "primary-container": "#ff5c00",
+                    "surface-dim": "#131313",
+                    "on-primary-fixed-variant": "#802a00",
+                    "on-background": "#e2e2e2",
+                    "on-tertiary": "#313030",
+                    "on-primary": "#5a1b00",
+                    "error": "#ffb4ab",
+                    "error-container": "#93000a",
+                    "primary": "#ffb59a",
+                    "on-secondary-fixed": "#1a1c1c"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "stack-md": "16px",
+                    "margin-mobile": "16px",
+                    "margin-desktop": "32px",
+                    "stack-lg": "24px",
+                    "stack-sm": "8px",
+                    "unit": "4px",
+                    "gutter": "16px"
+            },
+            "fontFamily": {
+                    "headline-md": [
+                            "Inter"
+                    ],
+                    "label-sm": [
+                            "Inter"
+                    ],
+                    "label-md": [
+                            "Inter"
+                    ],
+                    "headline-lg-mobile": [
+                            "Inter"
+                    ],
+                    "body-lg": [
+                            "Inter"
+                    ],
+                    "headline-xl": [
+                            "Inter"
+                    ],
+                    "headline-lg": [
+                            "Inter"
+                    ],
+                    "body-md": [
+                            "Inter"
+                    ]
+            },
+            "fontSize": {
+                    "headline-md": [
+                            "20px",
+                            {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "label-sm": [
+                            "11px",
+                            {
+                                    "lineHeight": "14px",
+                                    "fontWeight": "500"
+                            }
+                    ],
+                    "label-md": [
+                            "12px",
+                            {
+                                    "lineHeight": "16px",
+                                    "letterSpacing": "0.05em",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "headline-lg-mobile": [
+                            "24px",
+                            {
+                                    "lineHeight": "32px",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "body-lg": [
+                            "16px",
+                            {
+                                    "lineHeight": "24px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "headline-xl": [
+                            "40px",
+                            {
+                                    "lineHeight": "48px",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "headline-lg": [
+                            "32px",
+                            {
+                                    "lineHeight": "40px",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "body-md": [
+                            "14px",
+                            {
+                                    "lineHeight": "20px",
+                                    "fontWeight": "400"
+                            }
+                    ]
+            }
+    },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #000000;
+        }
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #121212; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2a2a2a; 
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #353535; 
+        }
+    </style>
+</head>
+<body class="text-on-background h-screen flex flex-col overflow-hidden">
+<!-- TopNavBar -->
+<header class="bg-surface-container dark:bg-surface-container flex justify-between items-center w-full px-margin-desktop py-stack-sm flex-shrink-0 z-10 relative">
+<div class="flex items-center gap-4">
+<img class="h-10 w-auto object-contain" data-alt="The Oit messaging app logo, featuring a stylized orange speech bubble with a white phone icon inside, set against a dark background. The logo is bold and modern." src="https://lh3.googleusercontent.com/aida/AP1WRLvtXsSRCuR-7kLzS6gP13ezj-9cFVh40RFrFO88ClOjlNT1zDsIxpGNY_jyvpzxUy2_du8-U6wJO0CJrb9reZjW8msh4ILGzUFuewkKeBZRD2HK_XKxHGk6Qti6lDzwMpVCfshlm0pv45fkC3W1gwfowwjk3HnWRLhDa2PmPl6VnKMUnMINAk7Q5ajdl9sEkt-mraT_ZMrNCypekDVhmkntSzkEHSBG1NU9P3RfGaimADI5fug6vE6P2Lw"/>
+<span class="font-headline-xl text-headline-xl font-bold text-primary dark:text-primary">Oit</span>
+</div>
+<div class="flex-1 flex justify-center max-w-md mx-8">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full bg-[#121212] border border-[#2a2a2a] text-on-surface rounded-full py-2 pl-10 pr-4 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors font-body-md text-body-md placeholder-on-surface-variant" placeholder="Search chats..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4 text-primary dark:text-primary">
+<button class="p-2 hover:bg-surface-variant transition-colors rounded-full active:scale-95 transition-transform">
+<span class="material-symbols-outlined">qr_code_scanner</span>
+</button>
+<button class="p-2 hover:bg-surface-variant transition-colors rounded-full active:scale-95 transition-transform">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<button class="ml-2 w-10 h-10 rounded-full overflow-hidden border border-outline-variant hover:border-primary transition-colors">
+<img alt="User profile settings" class="w-full h-full object-cover" data-alt="A portrait of a male user serving as a profile picture, wearing a casual shirt, set against a blurred background, in a modern messaging app setting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBRleuXF_YleotZr6CC0R20rYkGYYAcqH49jQ7YCju5nob2cLtdU27_OnatbF6rmNHUxhluTpH4G4vyfG636Mfx-38l8krKPbbgABZQJsfIXJLUwkWc723HSb61wGWfIegikR1B_D6bRvnmuqwmM9JPpDqzyLhCjZuWfmwyxD1KjKudQPvxWhMXccNCpi1T6wim__j5hWSKHe6jQ4U9DmnHS_MJA_1HZvkEXAG6M7acBmSJ-_3YTMHLe7xEiWqeNVpvSmxTB9jVtjop"/>
+</button>
+</div>
+</header>
+<!-- Main Content Area (Two Pane) -->
+<main class="flex-1 flex overflow-hidden">
+<!-- SideNavBar / Chat List (Left Pane) -->
+<aside class="w-80 bg-surface-container-low dark:bg-surface-container-low flex flex-col h-full border-r border-outline-variant flex-shrink-0 z-0">
+<!-- Navigation Tabs (Internal to Left Pane) -->
+<nav class="flex border-b border-[#2a2a2a] px-2 py-2">
+<button class="flex-1 py-2 text-center bg-surface-container-highest text-primary border-b-2 border-primary font-label-md text-label-md rounded-t flex flex-col items-center gap-1 transition-all duration-200">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">chat</span>
+                    Chats
+                </button>
+<button class="flex-1 py-2 text-center text-on-surface-variant hover:bg-surface-variant font-label-md text-label-md rounded-t flex flex-col items-center gap-1 transition-all duration-200">
+<span class="material-symbols-outlined">group</span>
+                    Contacts
+                </button>
+<button class="flex-1 py-2 text-center text-on-surface-variant hover:bg-surface-variant font-label-md text-label-md rounded-t flex flex-col items-center gap-1 transition-all duration-200">
+<span class="material-symbols-outlined">call</span>
+                    Calls
+                </button>
+</nav>
+<!-- Chat List Content -->
+<div class="flex-1 overflow-y-auto">
+<!-- Chat Item 1 (Active) -->
+<div class="flex items-center gap-3 p-4 bg-[#1a1a1a] border-l-2 border-primary cursor-pointer hover:bg-[#1a1a1a] transition-colors relative">
+<div class="relative w-12 h-12 rounded-full overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover object-[15%_50%] scale-[2.5]" data-alt="A circular profile picture of Sarah, a 26 year old woman with curly dark hair, smiling warmly in a dark themed chat application." src="https://lh3.googleusercontent.com/aida/AP1WRLtOXg2_yfk6nCTiMQLbkFw17uDWUaFaPQ6dP7zUnaN89aFmwGt0QKXTDVI9bnc3Ohd7Acj_7QbHt8asRAxOSvkuD3mRHz2bDXw5B1c17l03cyGYjq-pEEogDGIW8orgjcdZMxkXH7XmlimOVk5Uj_WWGQBLu6lhKREQM1Jr2z_ixbDNvQjI0tk5z-Lzx5Hxd44EPW8sftWdBPIakCehE1onNhOLVivP7dyvYyrLN78_Fn2s9MD6tUrWbSuQ"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-baseline mb-1">
+<h3 class="font-headline-md text-headline-md truncate text-on-surface text-sm">Sarah (26)</h3>
+<span class="text-xs text-primary">10:42 AM</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-primary">done_all</span>
+<p class="font-body-md text-body-md text-on-surface truncate text-xs">Sounds perfect! See you then.</p>
+</div>
+</div>
+</div>
+<!-- Chat Item 2 -->
+<div class="flex items-center gap-3 p-4 border-l-2 border-transparent cursor-pointer hover:bg-surface-variant transition-colors relative">
+<div class="relative w-12 h-12 rounded-full overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover object-[35%_50%] scale-[2.5]" data-alt="A circular profile picture of Kenji, a 31 year old man with short dark hair, wearing a green sweater, smiling in a dark themed chat application." src="https://lh3.googleusercontent.com/aida/AP1WRLtOXg2_yfk6nCTiMQLbkFw17uDWUaFaPQ6dP7zUnaN89aFmwGt0QKXTDVI9bnc3Ohd7Acj_7QbHt8asRAxOSvkuD3mRHz2bDXw5B1c17l03cyGYjq-pEEogDGIW8orgjcdZMxkXH7XmlimOVk5Uj_WWGQBLu6lhKREQM1Jr2z_ixbDNvQjI0tk5z-Lzx5Hxd44EPW8sftWdBPIakCehE1onNhOLVivP7dyvYyrLN78_Fn2s9MD6tUrWbSuQ"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-baseline mb-1">
+<h3 class="font-headline-md text-headline-md truncate text-on-surface text-sm font-normal">Kenji (31)</h3>
+<span class="text-xs text-on-surface-variant">Yesterday</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-on-surface-variant">done</span>
+<p class="font-body-md text-body-md text-on-surface-variant truncate text-xs">Are we still on for the meeting?</p>
+</div>
+</div>
+</div>
+<!-- Chat Item 3 -->
+<div class="flex items-center gap-3 p-4 border-l-2 border-transparent cursor-pointer hover:bg-surface-variant transition-colors relative">
+<div class="relative w-12 h-12 rounded-full overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover object-[50%_50%] scale-[2.5]" data-alt="A circular profile picture of Maria, a 40 year old woman with dark hair pulled back, wearing a denim jacket, looking confident in a dark themed chat application." src="https://lh3.googleusercontent.com/aida/AP1WRLtOXg2_yfk6nCTiMQLbkFw17uDWUaFaPQ6dP7zUnaN89aFmwGt0QKXTDVI9bnc3Ohd7Acj_7QbHt8asRAxOSvkuD3mRHz2bDXw5B1c17l03cyGYjq-pEEogDGIW8orgjcdZMxkXH7XmlimOVk5Uj_WWGQBLu6lhKREQM1Jr2z_ixbDNvQjI0tk5z-Lzx5Hxd44EPW8sftWdBPIakCehE1onNhOLVivP7dyvYyrLN78_Fn2s9MD6tUrWbSuQ"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-baseline mb-1">
+<h3 class="font-headline-md text-headline-md truncate text-on-surface text-sm font-normal">Maria (40)</h3>
+<span class="text-xs text-on-surface-variant">Yesterday</span>
+</div>
+<div class="flex items-center gap-1">
+<p class="font-body-md text-body-md text-on-surface-variant truncate text-xs">Sent an attachment</p>
+</div>
+</div>
+<div class="w-2 h-2 bg-primary rounded-full absolute right-4 top-1/2 -translate-y-1/2"></div>
+</div>
+<!-- Chat Item 4 -->
+<div class="flex items-center gap-3 p-4 border-l-2 border-transparent cursor-pointer hover:bg-surface-variant transition-colors relative">
+<div class="relative w-12 h-12 rounded-full overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover object-[70%_50%] scale-[2.5]" data-alt="A circular profile picture of David, a 34 year old man with a beard and short hair, wearing a light blue shirt, smiling in a dark themed chat application." src="https://lh3.googleusercontent.com/aida/AP1WRLtOXg2_yfk6nCTiMQLbkFw17uDWUaFaPQ6dP7zUnaN89aFmwGt0QKXTDVI9bnc3Ohd7Acj_7QbHt8asRAxOSvkuD3mRHz2bDXw5B1c17l03cyGYjq-pEEogDGIW8orgjcdZMxkXH7XmlimOVk5Uj_WWGQBLu6lhKREQM1Jr2z_ixbDNvQjI0tk5z-Lzx5Hxd44EPW8sftWdBPIakCehE1onNhOLVivP7dyvYyrLN78_Fn2s9MD6tUrWbSuQ"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-baseline mb-1">
+<h3 class="font-headline-md text-headline-md truncate text-on-surface text-sm font-normal">David (34)</h3>
+<span class="text-xs text-on-surface-variant">Tue</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-primary">done_all</span>
+<p class="font-body-md text-body-md text-on-surface-variant truncate text-xs">Got it, thanks!</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Actions -->
+<div class="p-4 border-t border-[#2a2a2a] mt-auto">
+<button class="w-full bg-primary text-white font-headline-md text-headline-md py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-inverse-primary transition-colors">
+<span class="material-symbols-outlined">edit_square</span>
+                    New Chat
+                 </button>
+</div>
+</aside>
+<!-- Active Chat Window (Right Pane) -->
+<section class="flex-1 bg-black flex flex-col relative h-full">
+<!-- Chat Header -->
+<div class="h-[72px] bg-[#121212] border-b border-[#2a2a2a] px-6 flex items-center justify-between flex-shrink-0">
+<div class="flex items-center gap-4">
+<div class="relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover object-[15%_50%] scale-[2.5]" data-alt="A circular profile picture of Sarah (26) in the chat header, smiling warmly." src="https://lh3.googleusercontent.com/aida/AP1WRLtOXg2_yfk6nCTiMQLbkFw17uDWUaFaPQ6dP7zUnaN89aFmwGt0QKXTDVI9bnc3Ohd7Acj_7QbHt8asRAxOSvkuD3mRHz2bDXw5B1c17l03cyGYjq-pEEogDGIW8orgjcdZMxkXH7XmlimOVk5Uj_WWGQBLu6lhKREQM1Jr2z_ixbDNvQjI0tk5z-Lzx5Hxd44EPW8sftWdBPIakCehE1onNhOLVivP7dyvYyrLN78_Fn2s9MD6tUrWbSuQ"/>
+</div>
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface">Sarah (26)</h2>
+<div class="flex items-center gap-1.5">
+<div class="w-2 h-2 bg-[#4ade80] rounded-full"></div>
+<span class="text-xs font-label-md text-on-surface-variant">Online</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 text-on-surface-variant hover:bg-[#2a2a2a] hover:text-primary rounded-full transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined">call</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-[#2a2a2a] hover:text-primary rounded-full transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined">videocam</span>
+</button>
+<div class="w-px h-6 bg-[#2a2a2a] mx-2"></div>
+<button class="p-2 text-on-surface-variant hover:bg-[#2a2a2a] rounded-full transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+<!-- Messages Canvas -->
+<div class="flex-1 overflow-y-auto p-6 flex flex-col gap-unit">
+<!-- Date Separator -->
+<div class="flex justify-center my-4">
+<span class="bg-[#121212] text-on-surface-variant text-xs px-3 py-1 rounded-full font-label-md">Today, 9:30 AM</span>
+</div>
+<!-- Incoming Message Block -->
+<div class="flex items-end gap-2 mb-stack-md">
+<div class="relative w-8 h-8 rounded-full overflow-hidden flex-shrink-0 mb-1">
+<img class="w-full h-full object-cover object-[15%_50%] scale-[2.5]" data-alt="Small circular avatar of Sarah next to her incoming message." src="https://lh3.googleusercontent.com/aida/AP1WRLtOXg2_yfk6nCTiMQLbkFw17uDWUaFaPQ6dP7zUnaN89aFmwGt0QKXTDVI9bnc3Ohd7Acj_7QbHt8asRAxOSvkuD3mRHz2bDXw5B1c17l03cyGYjq-pEEogDGIW8orgjcdZMxkXH7XmlimOVk5Uj_WWGQBLu6lhKREQM1Jr2z_ixbDNvQjI0tk5z-Lzx5Hxd44EPW8sftWdBPIakCehE1onNhOLVivP7dyvYyrLN78_Fn2s9MD6tUrWbSuQ"/>
+</div>
+<div class="flex flex-col gap-1 max-w-[70%]">
+<div class="bg-[#121212] text-on-surface p-3 rounded-xl rounded-bl-none font-body-md text-body-md relative group">
+                            Hey! Are we still meeting for coffee later to discuss the new project?
+                            <div class="absolute -right-10 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1 text-on-surface-variant hover:text-primary rounded-full"><span class="material-symbols-outlined text-[18px]">reply</span></button>
+</div>
+</div>
+<span class="text-[10px] text-on-surface-variant ml-1">9:32 AM</span>
+</div>
+</div>
+<!-- Incoming Message Block (Consecutive) -->
+<div class="flex items-end gap-2 mb-stack-lg -mt-3">
+<div class="w-8 flex-shrink-0"></div> <!-- Spacer for avatar -->
+<div class="flex flex-col gap-1 max-w-[70%]">
+<div class="bg-[#121212] text-on-surface p-3 rounded-xl font-body-md text-body-md relative group">
+                            I found that document you were asking about too.
+                             <div class="absolute -right-10 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1 text-on-surface-variant hover:text-primary rounded-full"><span class="material-symbols-outlined text-[18px]">reply</span></button>
+</div>
+</div>
+<span class="text-[10px] text-on-surface-variant ml-1">9:33 AM</span>
+</div>
+</div>
+<!-- Outgoing Message Block -->
+<div class="flex items-end justify-end gap-2 mb-stack-md">
+<div class="flex flex-col items-end gap-1 max-w-[70%]">
+<div class="bg-primary text-white p-3 rounded-xl rounded-br-none font-body-md text-body-md relative group shadow-[0_4px_14px_0_rgba(255,92,0,0.2)]">
+                            Yes! 2 PM at the usual place works for me.
+                             <div class="absolute -left-10 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1 text-on-surface-variant hover:text-primary rounded-full"><span class="material-symbols-outlined text-[18px]">reply</span></button>
+</div>
+</div>
+<div class="flex items-center gap-1 mr-1">
+<span class="text-[10px] text-on-surface-variant">10:15 AM</span>
+<span class="material-symbols-outlined text-[12px] text-primary">done_all</span>
+</div>
+</div>
+</div>
+<!-- Outgoing Message Block (File) -->
+<div class="flex items-end justify-end gap-2 mb-stack-lg">
+<div class="flex flex-col items-end gap-1 max-w-[70%]">
+<div class="bg-primary text-white p-3 rounded-xl rounded-br-none font-body-md text-body-md relative group flex items-center gap-3">
+<div class="bg-white/20 p-2 rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined">description</span>
+</div>
+<div class="flex flex-col">
+<span class="font-medium text-sm">Project_Brief_v2.pdf</span>
+<span class="text-xs text-white/70">2.4 MB</span>
+</div>
+</div>
+<div class="flex items-center gap-1 mr-1">
+<span class="text-[10px] text-on-surface-variant">10:17 AM</span>
+<span class="material-symbols-outlined text-[12px] text-primary">done_all</span>
+</div>
+</div>
+</div>
+<!-- Incoming Message Block -->
+<div class="flex items-end gap-2 mb-stack-md">
+<div class="relative w-8 h-8 rounded-full overflow-hidden flex-shrink-0 mb-1">
+<img class="w-full h-full object-cover object-[15%_50%] scale-[2.5]" data-alt="Small circular avatar of Sarah next to her incoming message." src="https://lh3.googleusercontent.com/aida/AP1WRLtOXg2_yfk6nCTiMQLbkFw17uDWUaFaPQ6dP7zUnaN89aFmwGt0QKXTDVI9bnc3Ohd7Acj_7QbHt8asRAxOSvkuD3mRHz2bDXw5B1c17l03cyGYjq-pEEogDGIW8orgjcdZMxkXH7XmlimOVk5Uj_WWGQBLu6lhKREQM1Jr2z_ixbDNvQjI0tk5z-Lzx5Hxd44EPW8sftWdBPIakCehE1onNhOLVivP7dyvYyrLN78_Fn2s9MD6tUrWbSuQ"/>
+</div>
+<div class="flex flex-col gap-1 max-w-[70%]">
+<div class="bg-[#121212] text-on-surface p-3 rounded-xl rounded-bl-none font-body-md text-body-md relative group">
+                            Sounds perfect! See you then.
+                             <div class="absolute -right-10 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1 text-on-surface-variant hover:text-primary rounded-full"><span class="material-symbols-outlined text-[18px]">reply</span></button>
+</div>
+</div>
+<span class="text-[10px] text-on-surface-variant ml-1">10:42 AM</span>
+</div>
+</div>
+</div>
+<!-- Input Area -->
+<div class="p-4 bg-[#0a0a0a] border-t border-[#2a2a2a] flex-shrink-0">
+<div class="flex items-end gap-2 bg-[#121212] rounded-2xl border border-[#2a2a2a] p-2 focus-within:border-primary transition-colors relative"><div class="absolute -top-2 left-0 w-full px-4"><div class="h-1 w-full bg-surface-container-highest rounded-full overflow-hidden"><div class="h-full bg-primary w-2/3 transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(255,92,0,0.5)]"></div></div><div class="flex justify-between mt-1 px-1"><span class="text-[10px] text-primary font-medium">Uploading Project_Brief_v3.pdf...</span><span class="text-[10px] text-on-surface-variant">66%</span></div></div>
+<button class="p-2 hover:text-primary transition-colors rounded-full flex-shrink-0 text-primary">
+<span class="material-symbols-outlined">attach_file</span>
+</button>
+<textarea class="flex-1 bg-transparent border-none text-on-surface font-body-md text-body-md resize-none py-2 px-1 focus:ring-0 max-h-32 min-h-[40px]" placeholder="Type a message..." rows="1" style="scrollbar-width: none;"></textarea>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors rounded-full flex-shrink-0">
+<span class="material-symbols-outlined">mood</span>
+</button>
+<button class="p-2 bg-primary text-white hover:bg-inverse-primary transition-colors rounded-full flex items-center justify-center flex-shrink-0 ml-1">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">send</span>
+</button>
+</div>
+</div>
+</section>
+</main>
+<!-- Video Call Interface Modal -->
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md px-4 py-8" id="video-call-modal">
+<div class="relative w-full max-w-5xl h-full max-h-[85vh] bg-[#141416] rounded-[32px] overflow-hidden flex flex-col shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+<!-- Modal Header - Now floating and minimal -->
+<div class="absolute top-0 left-0 w-full z-10 flex items-center justify-between px-6 py-6 bg-gradient-to-b from-black/60 to-transparent">
+<div class="flex items-center gap-3">
+<div class="bg-primary/20 p-2 rounded-xl border border-primary/20">
+<span class="material-symbols-outlined text-primary text-xl" style="font-variation-settings: 'FILL' 1;">videocam</span>
+</div>
+<div>
+<h2 class="font-headline-md text-headline-md text-white drop-shadow-md">Sarah (26)</h2>
+<div class="flex items-center gap-1.5 mt-0.5">
+<div class="w-1.5 h-1.5 bg-[#4ade80] rounded-full shadow-[0_0_8px_#4ade80]"></div>
+<span class="text-xs font-label-md text-[#4ade80] tracking-wider">04:12</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 bg-black/20 hover:bg-black/40 backdrop-blur-md border border-white/10 rounded-full transition-all text-white/70 hover:text-white">
+<span class="material-symbols-outlined text-[20px]">minimize</span>
+</button>
+<button class="p-2 bg-black/20 hover:bg-error/20 backdrop-blur-md border border-white/10 hover:border-error/30 rounded-full transition-all text-white/70 hover:text-error" onclick="document.getElementById('video-call-modal').style.display='none'">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+</div>
+<!-- Main Content View - Immersive borderless -->
+<div class="flex-1 relative w-full h-full">
+<!-- Primary Participant (Sarah) -->
+<div class="absolute inset-0 w-full h-full group">
+<img alt="Sarah's video feed" class="w-full h-full object-cover object-[15%_50%] scale-[2.5]" src="https://lh3.googleusercontent.com/aida/AP1WRLtOXg2_yfk6nCTiMQLbkFw17uDWUaFaPQ6dP7zUnaN89aFmwGt0QKXTDVI9bnc3Ohd7Acj_7QbHt8asRAxOSvkuD3mRHz2bDXw5B1c17l03cyGYjq-pEEogDGIW8orgjcdZMxkXH7XmlimOVk5Uj_WWGQBLu6lhKREQM1Jr2z_ixbDNvQjI0tk5z-Lzx5Hxd44EPW8sftWdBPIakCehE1onNhOLVivP7dyvYyrLN78_Fn2s9MD6tUrWbSuQ"/>
+<div class="absolute inset-0 bg-gradient-to-t from-[#141416] via-transparent to-transparent opacity-80 pointer-events-none"></div>
+<!-- Floating Participant Label -->
+<div class="absolute bottom-[100px] left-6 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 flex items-center gap-2">
+<span class="text-white font-medium text-sm">Sarah (26)</span>
+<span class="material-symbols-outlined text-[14px] text-white/60">mic_off</span>
+</div>
+</div>
+<!-- Floating Self View Pod -->
+<div class="absolute top-6 right-6 w-48 h-32 rounded-2xl overflow-hidden shadow-2xl transition-all border-2 border-transparent hover:border-[#FF5C00]/50 z-20 group">
+<img alt="Your video feed" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBRleuXF_YleotZr6CC0R20rYkGYYAcqH49jQ7YCju5nob2cLtdU27_OnatbF6rmNHUxhluTpH4G4vyfG636Mfx-38l8krKPbbgABZQJsfIXJLUwkWc723HSb61wGWfIegikR1B_D6bRvnmuqwmM9JPpDqzyLhCjZuWfmwyxD1KjKudQPvxWhMXccNCpi1T6wim__j5hWSKHe6jQ4U9DmnHS_MJA_1HZvkEXAG6M7acBmSJ-_3YTMHLe7xEiWqeNVpvSmxTB9jVtjop"/>
+<div class="absolute bottom-2 left-2 flex items-center gap-1.5 bg-black/50 backdrop-blur-sm px-2 py-1 rounded-md">
+<span class="text-white text-[10px] font-medium tracking-wider">YOU</span>
+<div class="w-1.5 h-1.5 bg-[#4ade80] rounded-full shadow-[0_0_4px_#4ade80]"></div>
+</div>
+</div>
+</div>
+<!-- Floating Control Bar -->
+<div class="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 px-6 py-4 bg-black/40 backdrop-blur-xl border border-white/10 rounded-3xl z-20 shadow-2xl">
+<!-- Active State Control -->
+<button class="w-12 h-12 rounded-2xl bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white flex items-center justify-center transition-all duration-200 active:scale-95 shadow-[0_0_15px_rgba(255,92,0,0.4)]">
+<span class="material-symbols-outlined text-[22px]">mic_off</span>
+</button>
+<!-- Normal State Controls -->
+<button class="w-12 h-12 rounded-2xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all duration-200 active:scale-95 border border-white/5">
+<span class="material-symbols-outlined text-[22px]" style="font-variation-settings: 'FILL' 1;">videocam</span>
+</button>
+<div class="w-px h-8 bg-white/10 mx-1"></div>
+<button class="w-12 h-12 rounded-2xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all duration-200 active:scale-95 border border-white/5" title="Share Screen">
+<span class="material-symbols-outlined text-[22px]">monitor</span>
+</button>
+<button class="w-12 h-12 rounded-2xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all duration-200 active:scale-95 border border-white/5" title="Participants">
+<span class="material-symbols-outlined text-[22px]">people</span>
+</button>
+<button class="w-12 h-12 rounded-2xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all duration-200 active:scale-95 border border-white/5" title="Settings">
+<span class="material-symbols-outlined text-[22px]">settings</span>
+</button>
+<div class="w-px h-8 bg-white/10 mx-1"></div>
+<!-- End Call Button -->
+<button class="h-12 px-6 rounded-2xl bg-[#ff3b30] hover:bg-[#ff3b30]/90 text-white font-medium text-sm flex items-center gap-2 transition-all duration-200 shadow-[0_0_15px_rgba(255,59,48,0.3)] active:scale-95" onclick="document.getElementById('video-call-modal').style.display='none'">
+<span class="material-symbols-outlined text-[20px]">phone_disabled</span>
+<span>END CALL</span>
+</button>
+</div>
+</div>
+</div>
+</body></html>

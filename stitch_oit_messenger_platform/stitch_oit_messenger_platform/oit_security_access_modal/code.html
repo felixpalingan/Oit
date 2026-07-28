@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Oit - Security & Password</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Design System Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "tertiary-fixed-dim": "#c8c6c5",
+                    "surface-container-lowest": "#0e0e0e",
+                    "surface-bright": "#393939",
+                    "on-primary": "#5a1b00",
+                    "on-secondary": "#2f3131",
+                    "tertiary-fixed": "#e5e2e1",
+                    "secondary": "#c6c6c7",
+                    "primary-fixed": "#ffdbce",
+                    "on-surface-variant": "#e4beb1",
+                    "outline": "#ab897d",
+                    "surface-dim": "#131313",
+                    "secondary-container": "#454747",
+                    "surface-container": "#1f1f1f",
+                    "tertiary": "#c8c6c5",
+                    "surface-container-highest": "#353535",
+                    "surface-container-high": "#2a2a2a",
+                    "secondary-fixed-dim": "#c6c6c7",
+                    "on-error-container": "#ffdad6",
+                    "on-background": "#e2e2e2",
+                    "inverse-on-surface": "#303030",
+                    "surface-variant": "#353535",
+                    "on-tertiary-container": "#2c2b2b",
+                    "primary-container": "#ff5c00",
+                    "on-primary-container": "#521800",
+                    "error-container": "#93000a",
+                    "surface-tint": "#ffb59a",
+                    "on-primary-fixed-variant": "#802a00",
+                    "primary": "#ffb59a",
+                    "inverse-primary": "#a73a00",
+                    "background": "#131313",
+                    "tertiary-container": "#949292",
+                    "on-surface": "#e2e2e2",
+                    "on-secondary-fixed-variant": "#454747",
+                    "on-secondary-fixed": "#1a1c1c",
+                    "surface-container-low": "#1b1b1b",
+                    "secondary-fixed": "#e2e2e2",
+                    "on-tertiary-fixed": "#1c1b1b",
+                    "surface": "#131313",
+                    "outline-variant": "#5b4137",
+                    "on-error": "#690005",
+                    "primary-fixed-dim": "#ffb59a",
+                    "on-tertiary-fixed-variant": "#474646",
+                    "on-primary-fixed": "#370e00",
+                    "on-tertiary": "#313030",
+                    "on-secondary-container": "#b4b5b5",
+                    "error": "#ffb4ab",
+                    "inverse-surface": "#e2e2e2"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "stack-lg": "24px",
+                    "margin-mobile": "16px",
+                    "margin-desktop": "32px",
+                    "unit": "4px",
+                    "stack-md": "16px",
+                    "gutter": "16px",
+                    "stack-sm": "8px"
+            },
+            "fontFamily": {
+                    "headline-xl": ["Inter"],
+                    "body-md": ["Inter"],
+                    "label-sm": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "label-md": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "headline-lg-mobile": ["Inter"],
+                    "body-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-xl": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "label-sm": ["11px", {"lineHeight": "14px", "fontWeight": "500"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        /* Custom Animations */
+        @keyframes knock-entrance {
+            0% { transform: scale(0.95) translateY(20px); opacity: 0; }
+            50% { transform: scale(1.02) translateY(-5px); opacity: 1; }
+            75% { transform: scale(0.98) translateY(2px); }
+            100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+        
+        @keyframes subtle-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 92, 0, 0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(255, 92, 0, 0); }
+        }
+
+        .animate-knock {
+            animation: knock-entrance 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        
+        .animate-knock-hint:hover {
+            animation: subtle-pulse 1.5s infinite;
+        }
+        
+        /* Glassmorphism specific utilities beyond Tailwind */
+        .glass-panel {
+            background: rgba(30, 30, 30, 0.7);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface h-screen w-screen overflow-hidden font-body-md selection:bg-primary-container selection:text-on-primary-container relative">
+<!-- BACKGROUND: Simulated Oit Dashboard (Blurred out) -->
+<div class="absolute inset-0 flex select-none pointer-events-none filter blur-md brightness-50">
+<!-- Rail Nav Mockup -->
+<div class="w-[72px] h-full bg-surface-container-lowest border-r border-outline-variant flex flex-col items-center py-stack-md gap-stack-md">
+<div class="w-12 h-12 rounded-xl bg-surface-container-high flex items-center justify-center opacity-50"></div>
+<div class="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center opacity-30"></div>
+<div class="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center opacity-30"></div>
+</div>
+<!-- Standard Nav Mockup -->
+<div class="w-[260px] h-full bg-surface-container-low border-r border-outline-variant flex flex-col p-4 gap-4">
+<div class="h-8 bg-surface-container rounded opacity-40 w-3/4 mb-4"></div>
+<div class="h-6 bg-surface-container rounded opacity-30 w-full"></div>
+<div class="h-6 bg-surface-container rounded opacity-30 w-5/6"></div>
+<div class="h-6 bg-surface-container rounded opacity-30 w-4/5"></div>
+<div class="h-6 bg-surface-container-highest rounded opacity-70 w-full mt-4"></div> <!-- Active looking item -->
+</div>
+<!-- Main Chat Area Mockup -->
+<div class="flex-1 bg-surface flex flex-col">
+<!-- Top Bar -->
+<div class="h-16 border-b border-outline-variant flex items-center px-8">
+<div class="h-6 bg-surface-container rounded w-48 opacity-40"></div>
+</div>
+<!-- Messages Area -->
+<div class="flex-1 p-8 flex flex-col justify-end gap-6 pb-24">
+<div class="flex gap-4 items-end">
+<div class="w-10 h-10 rounded-full bg-surface-container opacity-40"></div>
+<div class="w-64 h-16 bg-surface-container-high rounded-xl rounded-bl-none opacity-40"></div>
+</div>
+<div class="flex gap-4 items-end justify-end">
+<div class="w-48 h-12 bg-primary-container rounded-xl rounded-br-none opacity-30"></div>
+</div>
+<div class="flex gap-4 items-end">
+<div class="w-10 h-10 rounded-full bg-surface-container opacity-40"></div>
+<div class="w-80 h-24 bg-surface-container-high rounded-xl rounded-bl-none opacity-40"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- OVERLAY & MODAL -->
+<div class="absolute inset-0 z-50 flex items-center justify-center p-margin-mobile md:p-margin-desktop bg-black/40 backdrop-blur-sm">
+<!-- Modal Container (Glassmorphism & High-Voltage Dark) -->
+<div class="relative w-full max-w-[420px] glass-panel rounded-2xl flex flex-col overflow-hidden animate-knock">
+<!-- Architectural Detail: Top energetic glow -->
+<div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-primary to-transparent opacity-80"></div>
+<!-- Content Padding Wrapper -->
+<div class="p-8 flex flex-col gap-stack-lg items-center text-center">
+<!-- Icon Header -->
+<div class="flex flex-col items-center gap-stack-sm relative">
+<!-- Ambient glow behind icon -->
+<div class="absolute inset-0 bg-primary/20 blur-2xl rounded-full scale-150 -z-10"></div>
+<div class="w-16 h-16 rounded-full bg-surface-container-high border border-outline-variant flex items-center justify-center shadow-lg relative group">
+<span class="material-symbols-outlined text-[32px] text-primary transition-transform duration-300 group-hover:scale-110" style="font-variation-settings: 'FILL' 1;">lock</span>
+</div>
+<div class="flex flex-col gap-1 mt-2">
+<h2 class="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface tracking-tight">Security Check</h2>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-[280px]">This channel requires a password to enter. Knock to verify access.</p>
+</div>
+</div>
+<!-- Form Area -->
+<form class="w-full flex flex-col gap-stack-md" onsubmit="event.preventDefault();">
+<!-- Input Group -->
+<div class="relative w-full group">
+<div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-on-surface-variant group-focus-within:text-primary transition-colors">key</span>
+</div>
+<input class="w-full h-14 pl-12 pr-4 bg-surface-dim/80 border border-outline-variant rounded-xl font-body-lg text-body-lg text-on-surface placeholder-on-surface-variant/50 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary focus:bg-surface-dim transition-all duration-200" placeholder="Enter password" type="password"/>
+<!-- Subtle inner shadow for depth on input -->
+<div class="absolute inset-0 rounded-xl shadow-[inset_0_2px_4px_rgba(0,0,0,0.4)] pointer-events-none"></div>
+</div>
+<!-- Action Buttons -->
+<div class="flex flex-col gap-stack-sm w-full mt-2">
+<!-- Primary Button (Oit Orange) with Knock Hint -->
+<button class="w-full h-14 bg-primary text-on-primary-container font-headline-md text-headline-md rounded-xl hover:bg-primary-fixed transition-all duration-200 flex items-center justify-center gap-2 group relative overflow-hidden animate-knock-hint shadow-[0_0_15px_rgba(255,92,0,0.3)] hover:shadow-[0_0_25px_rgba(255,92,0,0.5)] active:scale-[0.98]" type="submit">
+<!-- Shine effect on hover -->
+<div class="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12"></div>
+<span class="relative z-10 font-bold tracking-wide">Enter Room</span>
+<span class="material-symbols-outlined relative z-10 group-hover:translate-x-1 transition-transform" style="font-variation-settings: 'FILL' 1;">meeting_room</span>
+</button>
+<!-- Secondary Cancel Link -->
+<button class="w-full h-12 bg-transparent text-on-surface-variant font-label-md text-label-md rounded-lg hover:text-on-surface hover:bg-surface-container-high/50 transition-colors duration-200" type="button">
+                            Cancel & Return
+                        </button>
+</div>
+</form>
+</div>
+</div>
+</div>
+<style>
+        @keyframes shimmer {
+            100% { transform: translateX(100%); }
+        }
+    </style>
+</body></html>

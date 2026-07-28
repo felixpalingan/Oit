@@ -9,6 +9,33 @@ export interface User {
 
 export type UserProfile = User;
 
+export interface Server {
+  id: string;
+  name: string;
+  icon_url?: string | null;
+  owner_id: string;
+  created_at?: string;
+}
+
+export interface ServerMember {
+  id: string;
+  server_id: string;
+  user_id: string;
+  role: 'owner' | 'admin' | 'member';
+  joined_at?: string;
+}
+
+export interface Channel {
+  id: string;
+  server_id: string;
+  name: string;
+  type: 'text' | 'voice';
+  is_private?: boolean;
+  password?: string | null;
+  created_at?: string;
+  unread_count?: number;
+}
+
 export interface Friend {
   id: string;
   user_id: string;

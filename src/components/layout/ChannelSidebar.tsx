@@ -1,9 +1,20 @@
 'use client';
 
-import React, { useState } from 'react';
-import { User, Message } from '@/types';
+import React, { useState, useEffect } from 'react';
+import {
+  Search,
+  Plus,
+  Hash,
+  Volume2,
+  Lock,
+  ChevronDown,
+  UserPlus,
+  MessageSquare,
+} from 'lucide-react';
+import { User, Message, Channel } from '@/types';
 import { useAppStore } from '@/store/useAppStore';
-import { ChevronDown, Plus, Hash, Megaphone, Volume2, Lock } from 'lucide-react';
+import { createClient } from '@/utils/supabase/client';
+import CreateChannelModal from '@/components/modals/CreateChannelModal';
 
 interface ChannelSidebarProps {
   currentUser: User;
@@ -11,9 +22,9 @@ interface ChannelSidebarProps {
   activeChatUser: User | null;
   onSelectUser: (user: User) => void;
   onOpenNewChatModal: () => void;
-  lastMessagesMap?: Record<string, Message>;
-  unreadCountsMap?: Record<string, number>;
-  onKnockRoom?: (roomName: string, title: string) => void;
+  lastMessagesMap: Record<string, Message>;
+  unreadCountsMap: Record<string, number>;
+  onKnockRoom: (roomId: string, title: string) => void;
 }
 
 export default function ChannelSidebar({
@@ -22,145 +33,336 @@ export default function ChannelSidebar({
   activeChatUser,
   onSelectUser,
   onOpenNewChatModal,
-  lastMessagesMap = {},
-  unreadCountsMap = {},
+  lastMessagesMap,
+  unreadCountsMap,
   onKnockRoom,
 }: ChannelSidebarProps) {
-  const { activeChannelId, setActiveChannel } = useAppStore();
+  const {
+    activeServerId,
+    activeChannelId,
+    setActiveChannel,
+  } = useAppStore();
 
-  const channelsList = [
-    { id: 'ui-ux-sync', name: 'ui-ux-sync', icon: Hash, locked: false },
-    { id: 'general', name: 'general', icon: Hash, locked: false },
-    { id: 'announcements', name: 'announcements', icon: Megaphone, locked: false },
-    { id: 'secret-room', name: 'Secret Room', icon: Lock, locked: true },
-  ];
+  const [activeTab, setActiveTab] = useState<'direct' | 'groups'>('direct');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
 
-  const defaultUsers: User[] = [
-    { id: 'sample-1', username: 'Sarah (26)', display_name: 'Sarah (26)', avatar_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150' },
-    { id: 'sample-2', username: 'Kenji (31)', display_name: 'Kenji (31)', avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150' },
-  ];
+  // Ticket 3: Realtime Channels State
+  const [textChannels, setTextChannels] = useState<Channel[]>([]);
+  const [voiceChannels, setVoiceChannels] = useState<Channel[]>([]);
+  const [serverTitle, setServerTitle] = useState('Design Team');
 
-  const displayUsers = usersList.length > 0 ? usersList : defaultUsers;
+  const supabase = createClient();
+
+  // Ticket 3: Fetch Channels for Active Server
+  const fetchChannels = async () => {
+    if (!activeServerId) return;
+
+    try {
+      // Fetch Server Info
+      const { data: srv } = await supabase
+        .from('servers')
+        .select('*')
+        .eq('id', activeServerId)
+        .single();
+
+      if (srv) {
+        setServerTitle(srv.name);
+      } else {
+        setServerTitle(activeServerId === 'design-team' ? 'Design Team' : 'Server Oit');
+      }
+
+      // Fetch Channels
+      const { data, error } = await supabase
+        .from('channels')
+        .select('*')
+        .eq('server_id', activeServerId)
+        .order('created_at', { ascending: true });
+
+      if (!error && data && data.length > 0) {
+        const text = data.filter((c: Channel) => c.type === 'text');
+        const voice = data.filter((c: Channel) => c.type === 'voice');
+        setTextChannels(text as Channel[]);
+        setVoiceChannels(voice as Channel[]);
+      } else {
+        // Default sample channels
+        setTextChannels([
+          { id: 'ui-ux-sync', server_id: activeServerId, name: 'ui-ux-sync', type: 'text' },
+          { id: 'general', server_id: activeServerId, name: 'general', type: 'text' },
+          { id: 'announcements', server_id: activeServerId, name: 'announcements', type: 'text' },
+        ]);
+        setVoiceChannels([
+          { id: 'lounge-voice', server_id: activeServerId, name: 'Lounge Voice', type: 'voice' },
+          { id: 'secret-room', server_id: activeServerId, name: 'Secret Room', type: 'voice', is_private: true },
+        ]);
+      }
+    } catch (err) {
+      console.error('Fetch channels error:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (activeServerId) {
+      fetchChannels();
+
+      // Ticket 3: Realtime Listener on channels table for active server
+      const channelSub = supabase
+        .channel(`public:channels:${activeServerId}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'channels', filter: `server_id=eq.${activeServerId}` },
+          () => {
+            fetchChannels();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channelSub);
+      };
+    }
+  }, [activeServerId, supabase]);
+
+  const filteredUsers = usersList.filter((u) => {
+    const q = searchQuery.toLowerCase();
+    return (
+      u.username.toLowerCase().includes(q) ||
+      (u.display_name && u.display_name.toLowerCase().includes(q))
+    );
+  });
+
+  const isServerMode = activeServerId !== null;
 
   return (
-    <aside className="w-60 md:w-64 h-full bg-[#161619] border-r border-zinc-800/80 flex flex-col shrink-0 select-none">
+    <div className="w-64 md:w-72 h-full bg-[#161619] border-r border-zinc-800/80 flex flex-col shrink-0 select-none z-20">
       
-      {/* Top Header: Team Server Dropdown */}
-      <div className="px-4 py-3.5 bg-[#121215] border-b border-zinc-800/80 flex items-center justify-between cursor-pointer hover:bg-[#18181c] transition-colors">
-        <h2 className="text-sm font-extrabold text-white tracking-tight flex items-center gap-1.5">
-          <span>Design Team</span>
-        </h2>
-        <ChevronDown className="w-4 h-4 text-zinc-400" />
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
-        
-        {/* CHANNELS Section */}
-        <div>
-          <div className="flex items-center justify-between px-2 mb-2 text-[10px] font-extrabold text-zinc-500 tracking-wider uppercase">
-            <span>CHANNELS</span>
-            <button
-              onClick={() => alert('Buat Channel Baru')}
-              title="Add Channel"
-              className="hover:text-white transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          <div className="space-y-1">
-            {channelsList.map((ch) => {
-              const IconComp = ch.icon;
-              const isActive = activeChannelId === ch.id && !activeChatUser;
-
-              return (
-                <div
-                  key={ch.id}
-                  onClick={() => {
-                    if (ch.locked && onKnockRoom) {
-                      onKnockRoom(ch.id, ch.name);
-                    } else {
-                      setActiveChannel(ch.id, ch.name);
-                    }
-                  }}
-                  className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
-                    isActive
-                      ? 'bg-[#222228] text-white shadow-sm border border-zinc-700/50'
-                      : 'text-zinc-400 hover:text-zinc-200 hover:bg-[#1c1c21]'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 truncate">
-                    <IconComp className={`w-4 h-4 shrink-0 ${ch.locked ? 'text-[#FF5C00]' : 'text-zinc-500'}`} />
-                    <span className="truncate">{ch.name}</span>
-                  </div>
-
-                  {ch.locked && (
-                    <span className="text-[9px] font-bold bg-[#FF5C00]/20 text-[#FF5C00] px-1.5 py-0.5 rounded border border-[#FF5C00]/40">
-                      Knock
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+      {/* 1. Header Bar */}
+      <div className="px-5 py-4 border-b border-zinc-800/80 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <h2 className="text-sm font-extrabold text-white truncate max-w-[170px]">
+            {isServerMode ? serverTitle : 'Messages'}
+          </h2>
+          {isServerMode && <ChevronDown className="w-4 h-4 text-zinc-400" />}
         </div>
 
-        {/* DIRECT MESSAGES Section */}
-        <div>
-          <div className="flex items-center justify-between px-2 mb-2 text-[10px] font-extrabold text-zinc-500 tracking-wider uppercase">
-            <span>DIRECT MESSAGES</span>
+        <div className="flex items-center gap-1">
+          {isServerMode ? (
+            <button
+              onClick={() => setShowCreateChannelModal(true)}
+              title="Create Channel"
+              className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+            >
+              <Plus className="w-4 h-4 stroke-[2.5]" />
+            </button>
+          ) : (
             <button
               onClick={onOpenNewChatModal}
-              title="New DM"
-              className="hover:text-white transition-colors"
+              title="New Chat"
+              className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <UserPlus className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 2. Mode: DM Search & Direct/Groups Tabs */}
+      {!isServerMode && (
+        <div className="px-4 pt-3 pb-2 space-y-3 border-b border-zinc-800/60">
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-2.5" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search chats..."
+              className="w-full pl-9 pr-3 py-2 bg-[#121215] border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#FF5C00] transition-colors"
+            />
+          </div>
+
+          <div className="flex p-1 bg-[#121215] rounded-xl border border-zinc-800/80">
+            <button
+              onClick={() => setActiveTab('direct')}
+              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                activeTab === 'direct'
+                  ? 'bg-[#1c1c21] text-white shadow-sm'
+                  : 'text-zinc-500 hover:text-zinc-300'
+              }`}
+            >
+              Direct
+            </button>
+            <button
+              onClick={() => setActiveTab('groups')}
+              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                activeTab === 'groups'
+                  ? 'bg-[#1c1c21] text-white shadow-sm'
+                  : 'text-zinc-500 hover:text-zinc-300'
+              }`}
+            >
+              Groups
             </button>
           </div>
-
-          <div className="space-y-1">
-            {displayUsers.map((user) => {
-              const isActive = activeChatUser?.id === user.id;
-              const unreadCount = unreadCountsMap[user.id] || 0;
-
-              return (
-                <div
-                  key={user.id}
-                  onClick={() => onSelectUser(user)}
-                  className={`flex items-center gap-2.5 px-2.5 py-2 rounded-xl cursor-pointer transition-all ${
-                    isActive
-                      ? 'bg-[#222228] text-white shadow-sm border border-zinc-700/50'
-                      : 'text-zinc-400 hover:text-zinc-200 hover:bg-[#1c1c21]'
-                  }`}
-                >
-                  <div className="relative shrink-0">
-                    <div className="w-7 h-7 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center font-bold text-xs text-[#FF5C00]">
-                      {user.avatar_url ? (
-                        <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        user.username[0]?.toUpperCase()
-                      )}
-                    </div>
-                    <div className="absolute bottom-0 right-0 w-2 h-2 bg-emerald-500 rounded-full border border-[#161619]" />
-                  </div>
-
-                  <span className="text-xs font-semibold truncate flex-1">
-                    {user.display_name || user.username}
-                  </span>
-
-                  {unreadCount > 0 && (
-                    <span className="w-4 h-4 bg-[#FF5C00] text-white text-[9px] font-bold rounded-full flex items-center justify-center shrink-0">
-                      {unreadCount}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
         </div>
+      )}
+
+      {/* 3. Main List Content Stream */}
+      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-4 no-scrollbar">
+        
+        {isServerMode ? (
+          /* Server Mode: Categorized Text & Voice Channels (Ticket 3) */
+          <>
+            {/* TEXT CHANNELS GROUP */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-zinc-400">
+                <span>TEXT CHANNELS ({textChannels.length})</span>
+                <button
+                  onClick={() => setShowCreateChannelModal(true)}
+                  className="hover:text-white"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {textChannels.map((c) => {
+                const isActive = activeChannelId === c.id;
+                return (
+                  <div
+                    key={c.id}
+                    onClick={() => setActiveChannel(c.id, c.name)}
+                    className={`flex items-center gap-2.5 px-3 py-2 rounded-xl cursor-pointer text-xs font-bold transition-all ${
+                      isActive
+                        ? 'bg-[#FF5C00] text-white shadow-md shadow-[#FF5C00]/20'
+                        : 'text-zinc-400 hover:text-white hover:bg-[#1c1c21]'
+                    }`}
+                  >
+                    <Hash className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-zinc-500'}`} />
+                    <span className="truncate">{c.name}</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* VOICE CHANNELS GROUP */}
+            <div className="space-y-1 pt-2">
+              <div className="flex items-center justify-between px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-zinc-400">
+                <span>VOICE CHANNELS ({voiceChannels.length})</span>
+                <button
+                  onClick={() => setShowCreateChannelModal(true)}
+                  className="hover:text-white"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {voiceChannels.map((c) => {
+                const isActive = activeChannelId === c.id;
+                return (
+                  <div
+                    key={c.id}
+                    onClick={() => {
+                      if (c.is_private) {
+                        onKnockRoom(c.id, c.name);
+                      } else {
+                        setActiveChannel(c.id, c.name);
+                      }
+                    }}
+                    className={`flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer text-xs font-bold transition-all ${
+                      isActive
+                        ? 'bg-[#FF5C00] text-white shadow-md shadow-[#FF5C00]/20'
+                        : 'text-zinc-400 hover:text-white hover:bg-[#1c1c21]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 truncate">
+                      <Volume2 className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-[#FF5C00]'}`} />
+                      <span className="truncate">{c.name}</span>
+                    </div>
+
+                    {c.is_private && (
+                      <Lock className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          /* DM Mode: Direct Contact Messages List */
+          <div className="space-y-1">
+            {filteredUsers.length === 0 ? (
+              <p className="text-xs text-zinc-500 text-center py-6">Tidak ada kontak obrolan.</p>
+            ) : (
+              filteredUsers.map((u) => {
+                const isSelected = activeChatUser?.id === u.id;
+                const lastMsg = lastMessagesMap[u.id];
+                const unreadCount = unreadCountsMap[u.id] || 0;
+                const previewText = lastMsg
+                  ? lastMsg.content || (lastMsg.attachment_url ? 'Sent an attachment' : '')
+                  : 'Start a conversation';
+
+                return (
+                  <div
+                    key={u.id}
+                    onClick={() => onSelectUser(u)}
+                    className={`p-3 rounded-2xl cursor-pointer flex items-center gap-3 transition-all ${
+                      isSelected
+                        ? 'bg-[#1c1c21] border border-zinc-800 text-white shadow-sm'
+                        : 'hover:bg-[#1c1c21]/60 text-zinc-300'
+                    }`}
+                  >
+                    <div className="relative shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center font-bold text-xs text-[#FF5C00]">
+                        {u.avatar_url ? (
+                          <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          u.username[0]?.toUpperCase()
+                        )}
+                      </div>
+                      <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-[#161619]" />
+                    </div>
+
+                    <div className="flex-1 overflow-hidden">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <h4 className="text-xs font-bold text-white truncate">
+                          {u.display_name || u.username}
+                        </h4>
+                        {lastMsg && (
+                          <span className="text-[10px] text-zinc-500 shrink-0">
+                            {new Date(lastMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <p className="text-[11px] text-zinc-400 truncate max-w-[140px]">
+                          {previewText}
+                        </p>
+                        {unreadCount > 0 && (
+                          <span className="bg-[#FF5C00] text-white text-[10px] font-extrabold px-1.5 py-0.2 rounded-full shrink-0">
+                            {unreadCount}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
 
       </div>
 
-    </aside>
+      {/* Modal Ticket 2 Trigger */}
+      {showCreateChannelModal && activeServerId && (
+        <CreateChannelModal
+          serverId={activeServerId}
+          onClose={() => setShowCreateChannelModal(false)}
+          onChannelCreated={() => {
+            fetchChannels();
+          }}
+        />
+      )}
+
+    </div>
   );
 }

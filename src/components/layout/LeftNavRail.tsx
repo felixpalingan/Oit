@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
-import { MessageSquare, Phone, Users, Settings, Plus, Hash } from 'lucide-react';
-import { User } from '@/types';
+import React, { useEffect, useState } from 'react';
+import { Settings, Plus } from 'lucide-react';
+import { User, Server } from '@/types';
+import { createClient } from '@/utils/supabase/client';
+import { useAppStore } from '@/store/useAppStore';
 
 interface LeftNavRailProps {
   currentUser: User;
@@ -17,13 +19,75 @@ export default function LeftNavRail({
   onOpenNewChat,
   onOpenCreateServer,
 }: LeftNavRailProps) {
-  const [activeTab, setActiveTab] = useState<'chat' | 'calls' | 'friends'>('chat');
-  const [selectedServer, setSelectedServer] = useState<string | null>('design-team');
+  const { activeServerId, setActiveServer, setActiveChannel } = useAppStore();
+  const [servers, setServers] = useState<Server[]>([]);
+  const supabase = createClient();
 
-  const demoServers = [
-    { id: 'design-team', name: 'Design Team', icon: '🎨' },
-    { id: 'dev-lounge', name: 'Dev Lounge', icon: '💻' },
-  ];
+  // Ticket 3: Fetch servers where user is owner or member
+  const fetchServers = async () => {
+    try {
+      // 1. Owned servers
+      const { data: owned } = await supabase
+        .from('servers')
+        .select('*')
+        .eq('owner_id', currentUser.id);
+
+      // 2. Member servers
+      const { data: memberRows } = await supabase
+        .from('server_members')
+        .select('server_id, servers(*)')
+        .eq('user_id', currentUser.id);
+
+      const memberServers = (memberRows || []).map((m: any) => m.servers).filter(Boolean);
+
+      // Combine and deduplicate
+      const allMap = new Map<string, Server>();
+      (owned || []).forEach((s: Server) => allMap.set(s.id, s));
+      memberServers.forEach((s: Server) => allMap.set(s.id, s));
+
+      const serverList = Array.from(allMap.values());
+
+      // If empty, add default sample servers
+      if (serverList.length === 0) {
+        const defaultServers: Server[] = [
+          { id: 'design-team', name: 'Design Team', owner_id: currentUser.id },
+          { id: 'dev-lounge', name: 'Dev Lounge', owner_id: currentUser.id },
+        ];
+        setServers(defaultServers);
+      } else {
+        setServers(serverList);
+      }
+    } catch (err) {
+      console.error('Fetch servers error:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchServers();
+
+    // Ticket 3: Realtime Listener for new servers
+    const serverChannel = supabase
+      .channel('public:servers')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'servers' },
+        () => {
+          fetchServers();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(serverChannel);
+    };
+  }, [currentUser.id, supabase]);
+
+  const handleSelectServer = (srvId: string | null) => {
+    setActiveServer(srvId);
+    if (!srvId) {
+      setActiveChannel(null);
+    }
+  };
 
   return (
     <div className="w-16 h-full bg-[#0a0a0c] border-r border-zinc-800/60 flex flex-col items-center justify-between py-4 shrink-0 select-none z-30">
@@ -31,11 +95,15 @@ export default function LeftNavRail({
       {/* Top Section: Oit Logo & Server Icons List */}
       <div className="flex flex-col items-center gap-4 w-full px-2">
         
-        {/* Oit Logo */}
+        {/* Oit Logo (DM Mode) */}
         <div
-          onClick={() => setSelectedServer(null)}
+          onClick={() => handleSelectServer(null)}
           title="Direct Messages & Oit Home"
-          className="w-11 h-11 rounded-2xl flex items-center justify-center cursor-pointer hover:scale-105 transition-transform bg-[#121215] border border-zinc-800 shadow-md"
+          className={`w-11 h-11 rounded-2xl flex items-center justify-center cursor-pointer hover:scale-105 transition-all ${
+            activeServerId === null
+              ? 'bg-[#FF5C00] border border-[#FF5C00] shadow-lg shadow-[#FF5C00]/30'
+              : 'bg-[#121215] border border-zinc-800'
+          }`}
         >
           <img
             src="/oit_logo.png"
@@ -46,28 +114,42 @@ export default function LeftNavRail({
 
         <div className="w-8 h-[1px] bg-zinc-800/80 my-1" />
 
-        {/* Server Icons List */}
-        <div className="flex flex-col items-center gap-3 w-full">
-          {demoServers.map((srv) => (
-            <div
-              key={srv.id}
-              onClick={() => setSelectedServer(srv.id)}
-              title={srv.name}
-              className={`w-11 h-11 rounded-2xl flex items-center justify-center cursor-pointer font-bold text-base transition-all ${
-                selectedServer === srv.id
-                  ? 'bg-[#FF5C00] text-white rounded-xl shadow-lg shadow-[#FF5C00]/30'
-                  : 'bg-[#161619] text-zinc-400 hover:text-white hover:rounded-xl hover:bg-[#202025]'
-              }`}
-            >
-              <span>{srv.icon}</span>
-            </div>
-          ))}
+        {/* Dynamic Server Icons List (Ticket 3) */}
+        <div className="flex flex-col items-center gap-3 w-full max-h-[50vh] overflow-y-auto no-scrollbar">
+          {servers.map((srv) => {
+            const isSelected = activeServerId === srv.id;
+            const initial = srv.name[0]?.toUpperCase() || 'S';
+
+            return (
+              <div
+                key={srv.id}
+                onClick={() => handleSelectServer(srv.id)}
+                title={srv.name}
+                className={`w-11 h-11 rounded-2xl flex items-center justify-center cursor-pointer font-extrabold text-sm transition-all relative group ${
+                  isSelected
+                    ? 'bg-[#FF5C00] text-white rounded-xl shadow-lg shadow-[#FF5C00]/30'
+                    : 'bg-[#161619] text-zinc-300 hover:text-white hover:rounded-xl hover:bg-[#202025]'
+                }`}
+              >
+                {srv.icon_url ? (
+                  <img src={srv.icon_url} alt={srv.name} className="w-full h-full object-cover rounded-2xl" />
+                ) : (
+                  <span>{initial}</span>
+                )}
+
+                {/* Left Active Bar Indicator */}
+                {isSelected && (
+                  <div className="absolute -left-2 top-2 bottom-2 w-1 bg-[#FF5C00] rounded-r-full" />
+                )}
+              </div>
+            );
+          })}
 
           {/* Add Server Button + */}
           <button
             onClick={onOpenCreateServer}
             title="Create a Server"
-            className="w-11 h-11 rounded-full bg-[#161619] hover:bg-[#FF5C00] text-zinc-400 hover:text-white flex items-center justify-center transition-all shadow-md group"
+            className="w-11 h-11 rounded-full bg-[#161619] hover:bg-[#FF5C00] text-zinc-400 hover:text-white flex items-center justify-center transition-all shadow-md group shrink-0"
           >
             <Plus className="w-5 h-5 stroke-[2.5] group-hover:scale-110 transition-transform" />
           </button>
