@@ -542,7 +542,7 @@ export default function Page() {
     );
   }
 
-  // --- RENDER MAIN OIT DASHBOARD MATCHING DESIGN IMAGE ---
+  // --- RENDER MAIN OIT DASHBOARD ---
   return (
     <div className="h-screen w-screen bg-[#141416] flex overflow-hidden font-sans relative select-none">
       
@@ -589,7 +589,7 @@ export default function Page() {
         />
       </main>
 
-      {/* 4. Bottom Right Floating Live Pod */}
+      {/* 4. Bottom Right Floating Live Pod (Appears when Call is Minimized) */}
       {activeCallRoomId && isCallMinimized && (
         <FloatingPod
           currentUser={currentUser}
@@ -633,13 +633,14 @@ export default function Page() {
         />
       )}
 
-      {/* Full LiveKit Video / Voice Call Modal (Expanded) */}
+      {/* Full LiveKit Video / Voice Call Modal (Expanded state when not minimized) */}
       {activeCallRoomId && !isCallMinimized && (
         <VideoRoom
           roomName={activeCallRoomId}
           currentUser={currentUser}
           chatUser={activeCallTargetUser}
           isVideo={isCallVideo}
+          onMinimize={() => setIsCallMinimized(true)}
           onLeave={handleEndCall}
         />
       )}

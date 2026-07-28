@@ -5,17 +5,10 @@ import {
   LiveKitRoom,
   VideoConference,
   RoomAudioRenderer,
-  ControlBar,
 } from '@livekit/components-react';
 import '@livekit/components-styles';
 import {
   Video,
-  Mic,
-  MicOff,
-  VideoOff,
-  MonitorUp,
-  Users,
-  Settings,
   PhoneOff,
   Minus,
   X,
@@ -29,6 +22,7 @@ interface VideoRoomProps {
   currentUser: User;
   chatUser?: User | null;
   isVideo?: boolean;
+  onMinimize?: () => void;
   onLeave: () => void;
 }
 
@@ -37,6 +31,7 @@ export default function VideoRoom({
   currentUser,
   chatUser,
   isVideo = true,
+  onMinimize,
   onLeave,
 }: VideoRoomProps) {
   const [token, setToken] = useState<string>('');
@@ -83,7 +78,7 @@ export default function VideoRoom({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-3 select-none">
       
       {/* Main Video Call Modal Container */}
-      <div className="w-full max-w-4xl bg-[#161619] border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col relative text-white">
+      <div className="w-full max-w-4xl bg-[#161619] border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col relative text-white animate-in zoom-in-95 duration-200">
         
         {/* Top Header Bar */}
         <div className="px-5 py-3.5 bg-[#121215] border-b border-zinc-800/80 flex items-center justify-between z-10">
@@ -103,19 +98,22 @@ export default function VideoRoom({
           </div>
 
           <div className="flex items-center gap-2">
+            {/* MINIMIZE BUTTON -> SHRINK INTO FLOATING POD */}
             <button
-              onClick={onLeave}
-              title="Minimize"
+              onClick={onMinimize || onLeave}
+              title="Minimize into Floating Pod"
               className="p-2 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-colors"
             >
-              <Minus className="w-4 h-4" />
+              <Minus className="w-4 h-4 stroke-[3]" />
             </button>
+
+            {/* END/CLOSE BUTTON */}
             <button
               onClick={onLeave}
-              title="Close"
-              className="p-2 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-colors"
+              title="Close & End Call"
+              className="p-2 text-zinc-400 hover:text-red-400 rounded-lg hover:bg-zinc-800 transition-colors"
             >
-              <X className="w-4 h-4" />
+              <X className="w-4 h-4 stroke-[3]" />
             </button>
           </div>
         </div>
@@ -129,7 +127,6 @@ export default function VideoRoom({
               <p className="text-xs text-zinc-400 font-medium">Menghubungkan Panggilan Oit LiveKit...</p>
             </div>
           ) : token ? (
-            /* Clean LiveKit Player Grid without duplicate double control bar */
             <LiveKitRoom
               video={isVideo}
               audio={true}
@@ -145,7 +142,6 @@ export default function VideoRoom({
               <RoomAudioRenderer />
             </LiveKitRoom>
           ) : (
-            /* Voice Call Avatar Screen Fallback */
             <div className="flex flex-col items-center justify-center space-y-4">
               <div className="relative">
                 <div className="w-28 h-28 rounded-full bg-zinc-800 border-4 border-[#FF5C00] flex items-center justify-center font-bold text-3xl text-[#FF5C00] overflow-hidden shadow-2xl shadow-[#FF5C00]/20 animate-pulse">
