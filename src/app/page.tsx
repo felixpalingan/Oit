@@ -573,6 +573,9 @@ export default function Page() {
         lastMessagesMap={lastMessagesMap}
         unreadCountsMap={unreadCountsMap}
         onKnockRoom={handleKnockRoom}
+        onJoinVoiceCall={(c) => {
+          setActiveCall(`vc_${c.id}`, { display_name: c.name }, false);
+        }}
       />
 
       {/* 3. Main Content Stream Area */}

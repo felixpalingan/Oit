@@ -23,16 +23,14 @@ export default function LeftNavRail({
   const [servers, setServers] = useState<Server[]>([]);
   const supabase = createClient();
 
-  // Ticket 3: Fetch servers where user is owner or member
+  // Fetch servers where user is owner or member
   const fetchServers = async () => {
     try {
-      // 1. Owned servers
       const { data: owned } = await supabase
         .from('servers')
         .select('*')
         .eq('owner_id', currentUser.id);
 
-      // 2. Member servers
       const { data: memberRows } = await supabase
         .from('server_members')
         .select('server_id, servers(*)')
@@ -40,14 +38,12 @@ export default function LeftNavRail({
 
       const memberServers = (memberRows || []).map((m: any) => m.servers).filter(Boolean);
 
-      // Combine and deduplicate
       const allMap = new Map<string, Server>();
       (owned || []).forEach((s: Server) => allMap.set(s.id, s));
       memberServers.forEach((s: Server) => allMap.set(s.id, s));
 
       const serverList = Array.from(allMap.values());
 
-      // If empty, add default sample servers
       if (serverList.length === 0) {
         const defaultServers: Server[] = [
           { id: 'design-team', name: 'Design Team', owner_id: currentUser.id },
@@ -65,12 +61,18 @@ export default function LeftNavRail({
   useEffect(() => {
     fetchServers();
 
-    // Ticket 3: Realtime Listener for new servers
     const serverChannel = supabase
       .channel('public:servers')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'servers' },
+        () => {
+          fetchServers();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'server_members', filter: `user_id=eq.${currentUser.id}` },
         () => {
           fetchServers();
         }
@@ -82,10 +84,30 @@ export default function LeftNavRail({
     };
   }, [currentUser.id, supabase]);
 
-  const handleSelectServer = (srvId: string | null) => {
+  // Issue 2 Fix: When switching servers, automatically fetch and activate the first channel of the new server
+  const handleSelectServer = async (srvId: string | null) => {
     setActiveServer(srvId);
     if (!srvId) {
       setActiveChannel(null);
+      return;
+    }
+
+    try {
+      const { data: chans } = await supabase
+        .from('channels')
+        .select('*')
+        .eq('server_id', srvId)
+        .order('created_at', { ascending: true })
+        .limit(1);
+
+      if (chans && chans.length > 0) {
+        setActiveChannel(chans[0].id, chans[0].name);
+      } else {
+        setActiveChannel(`${srvId}-general`, 'general');
+      }
+    } catch (err) {
+      console.error('Auto switch channel error:', err);
+      setActiveChannel('general', 'general');
     }
   };
 
@@ -114,7 +136,7 @@ export default function LeftNavRail({
 
         <div className="w-8 h-[1px] bg-zinc-800/80 my-1" />
 
-        {/* Dynamic Server Icons List (Ticket 3) */}
+        {/* Dynamic Server Icons List */}
         <div className="flex flex-col items-center gap-3 w-full max-h-[50vh] overflow-y-auto no-scrollbar">
           {servers.map((srv) => {
             const isSelected = activeServerId === srv.id;

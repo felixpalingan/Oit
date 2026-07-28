@@ -9,7 +9,6 @@ import {
   Lock,
   ChevronDown,
   UserPlus,
-  MessageSquare,
 } from 'lucide-react';
 import { User, Message, Channel } from '@/types';
 import { useAppStore } from '@/store/useAppStore';
@@ -25,6 +24,7 @@ interface ChannelSidebarProps {
   lastMessagesMap: Record<string, Message>;
   unreadCountsMap: Record<string, number>;
   onKnockRoom: (roomId: string, title: string) => void;
+  onJoinVoiceCall?: (channel: Channel) => void;
 }
 
 export default function ChannelSidebar({
@@ -36,6 +36,7 @@ export default function ChannelSidebar({
   lastMessagesMap,
   unreadCountsMap,
   onKnockRoom,
+  onJoinVoiceCall,
 }: ChannelSidebarProps) {
   const {
     activeServerId,
@@ -47,19 +48,16 @@ export default function ChannelSidebar({
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
 
-  // Ticket 3: Realtime Channels State
   const [textChannels, setTextChannels] = useState<Channel[]>([]);
   const [voiceChannels, setVoiceChannels] = useState<Channel[]>([]);
   const [serverTitle, setServerTitle] = useState('Design Team');
 
   const supabase = createClient();
 
-  // Ticket 3: Fetch Channels for Active Server
   const fetchChannels = async () => {
     if (!activeServerId) return;
 
     try {
-      // Fetch Server Info
       const { data: srv } = await supabase
         .from('servers')
         .select('*')
@@ -72,7 +70,6 @@ export default function ChannelSidebar({
         setServerTitle(activeServerId === 'design-team' ? 'Design Team' : 'Server Oit');
       }
 
-      // Fetch Channels
       const { data, error } = await supabase
         .from('channels')
         .select('*')
@@ -85,7 +82,6 @@ export default function ChannelSidebar({
         setTextChannels(text as Channel[]);
         setVoiceChannels(voice as Channel[]);
       } else {
-        // Default sample channels
         setTextChannels([
           { id: 'ui-ux-sync', server_id: activeServerId, name: 'ui-ux-sync', type: 'text' },
           { id: 'general', server_id: activeServerId, name: 'general', type: 'text' },
@@ -105,7 +101,6 @@ export default function ChannelSidebar({
     if (activeServerId) {
       fetchChannels();
 
-      // Ticket 3: Realtime Listener on channels table for active server
       const channelSub = supabase
         .channel(`public:channels:${activeServerId}`)
         .on(
@@ -136,7 +131,7 @@ export default function ChannelSidebar({
   return (
     <div className="w-64 md:w-72 h-full bg-[#161619] border-r border-zinc-800/80 flex flex-col shrink-0 select-none z-20">
       
-      {/* 1. Header Bar */}
+      {/* Header Bar */}
       <div className="px-5 py-4 border-b border-zinc-800/80 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h2 className="text-sm font-extrabold text-white truncate max-w-[170px]">
@@ -166,7 +161,7 @@ export default function ChannelSidebar({
         </div>
       </div>
 
-      {/* 2. Mode: DM Search & Direct/Groups Tabs */}
+      {/* DM Mode Search & Tabs */}
       {!isServerMode && (
         <div className="px-4 pt-3 pb-2 space-y-3 border-b border-zinc-800/60">
           <div className="relative">
@@ -205,11 +200,10 @@ export default function ChannelSidebar({
         </div>
       )}
 
-      {/* 3. Main List Content Stream */}
+      {/* Main Stream Content */}
       <div className="flex-1 overflow-y-auto px-3 py-3 space-y-4 no-scrollbar">
         
         {isServerMode ? (
-          /* Server Mode: Categorized Text & Voice Channels (Ticket 3) */
           <>
             {/* TEXT CHANNELS GROUP */}
             <div className="space-y-1">
@@ -242,7 +236,7 @@ export default function ChannelSidebar({
               })}
             </div>
 
-            {/* VOICE CHANNELS GROUP */}
+            {/* VOICE CHANNELS GROUP (Issue 3 Fix: Triggers LiveKit Voice Call) */}
             <div className="space-y-1 pt-2">
               <div className="flex items-center justify-between px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-zinc-400">
                 <span>VOICE CHANNELS ({voiceChannels.length})</span>
@@ -262,8 +256,8 @@ export default function ChannelSidebar({
                     onClick={() => {
                       if (c.is_private) {
                         onKnockRoom(c.id, c.name);
-                      } else {
-                        setActiveChannel(c.id, c.name);
+                      } else if (onJoinVoiceCall) {
+                        onJoinVoiceCall(c);
                       }
                     }}
                     className={`flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer text-xs font-bold transition-all ${
@@ -286,7 +280,7 @@ export default function ChannelSidebar({
             </div>
           </>
         ) : (
-          /* DM Mode: Direct Contact Messages List */
+          /* DM Mode */
           <div className="space-y-1">
             {filteredUsers.length === 0 ? (
               <p className="text-xs text-zinc-500 text-center py-6">Tidak ada kontak obrolan.</p>
@@ -352,7 +346,6 @@ export default function ChannelSidebar({
 
       </div>
 
-      {/* Modal Ticket 2 Trigger */}
       {showCreateChannelModal && activeServerId && (
         <CreateChannelModal
           serverId={activeServerId}

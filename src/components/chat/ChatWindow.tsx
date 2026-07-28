@@ -38,6 +38,7 @@ export default function ChatWindow({
   const { activeChannelId, activeChannelName } = useAppStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageText, setMessageText] = useState('');
+  const [sendersMap, setSendersMap] = useState<Record<string, User>>({});
 
   // File Upload State & Progress
   const [isUploading, setIsUploading] = useState(false);
@@ -52,7 +53,7 @@ export default function ChatWindow({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
 
-  const currentChannelId = activeChannelId || 'ui-ux-sync';
+  const currentChannelId = activeChannelId || 'general';
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -90,9 +91,31 @@ export default function ChatWindow({
     }
   };
 
-  // 2. Fetching & 3. Realtime Subscription with Mandatory Cleanup
+  // Fetch profiles for all unique message senders
+  const fetchSenderProfiles = async (msgs: Message[]) => {
+    const senderIds = Array.from(new Set(msgs.map((m) => m.sender_id).filter(Boolean)));
+    if (senderIds.length === 0) return;
+
+    try {
+      const { data } = await supabase
+        .from('users')
+        .select('*')
+        .in('id', senderIds);
+
+      if (data) {
+        const map: Record<string, User> = {};
+        data.forEach((u: User) => {
+          map[u.id] = u;
+        });
+        setSendersMap((prev) => ({ ...prev, ...map }));
+      }
+    } catch (err) {
+      console.error('Error fetching sender profiles:', err);
+    }
+  };
+
+  // 2. Fetching & 3. Realtime Subscription with Clean Unsubscribe
   useEffect(() => {
-    // 2. Clear state on channel change
     setMessages([]);
 
     async function fetchChannelMessages() {
@@ -104,7 +127,7 @@ export default function ChatWindow({
             `and(sender_id.eq.${currentUser.id},receiver_id.eq.${chatUser.id}),and(sender_id.eq.${chatUser.id},receiver_id.eq.${currentUser.id})`
           );
         } else {
-          // Strict channel matching using activeChannelId
+          // Strict channel matching
           query = query.eq('channel_id', currentChannelId);
         }
 
@@ -113,7 +136,9 @@ export default function ChatWindow({
           .limit(100);
 
         if (!error && data) {
-          setMessages(data as Message[]);
+          const msgs = data as Message[];
+          setMessages(msgs);
+          await fetchSenderProfiles(msgs);
           if (chatUser) await markMessagesAsRead();
         }
       } catch (err) {
@@ -125,7 +150,7 @@ export default function ChatWindow({
 
     fetchChannelMessages();
 
-    // 3. Scoped Realtime Subscription
+    // Scoped Realtime Subscription
     const channelName = chatUser
       ? `dm:${[currentUser.id, chatUser.id].sort().join('_')}`
       : `channel:${currentChannelId}`;
@@ -138,7 +163,6 @@ export default function ChatWindow({
         async (payload) => {
           const newMsg = payload.new as Message;
 
-          // Verify that message belongs to active DM or active channel_id
           const belongsToCurrentScope = chatUser
             ? (newMsg.sender_id === currentUser.id && newMsg.receiver_id === chatUser.id) ||
               (newMsg.sender_id === chatUser.id && newMsg.receiver_id === currentUser.id)
@@ -149,6 +173,8 @@ export default function ChatWindow({
               if (prev.some((m) => m.id === newMsg.id)) return prev;
               return [...prev, newMsg];
             });
+
+            await fetchSenderProfiles([newMsg]);
 
             if (chatUser && newMsg.sender_id === chatUser.id) {
               await markMessagesAsRead();
@@ -170,7 +196,6 @@ export default function ChatWindow({
       )
       .subscribe();
 
-    // MANDATORY CLEANUP: Unsubscribe previous WebSocket listener when channel changes
     return () => {
       supabase.removeChannel(channel);
     };
@@ -385,7 +410,7 @@ export default function ChatWindow({
         </div>
       )}
 
-      {/* Top Header Bar Matching Design Image */}
+      {/* Top Header Bar */}
       <div className="px-5 py-3 bg-[#121215] border-b border-zinc-800/80 flex items-center justify-between z-10">
         <div className="flex items-center gap-3">
           <button
@@ -464,6 +489,13 @@ export default function ChatWindow({
 
         {messages.map((msg) => {
           const isMe = msg.sender_id === currentUser.id;
+          const senderProfile = sendersMap[msg.sender_id] || (isMe ? currentUser : chatUser);
+          const senderName = isMe
+            ? 'You'
+            : (senderProfile?.display_name || senderProfile?.username || 'Member');
+          const senderAvatar = senderProfile?.avatar_url;
+          const senderInitial = (senderProfile?.username || 'U')[0].toUpperCase();
+
           const attachUrl = msg.attachment_url || msg.file_url || (msg.content?.startsWith('http') || msg.content?.startsWith('data:') ? msg.content : null);
           const isImg = isImageFile(attachUrl, msg.file_name || msg.content);
           const isRead = msg.is_read;
@@ -473,17 +505,12 @@ export default function ChatWindow({
               key={msg.id}
               className={`flex items-start gap-3 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
             >
+              {/* Actual Sender Avatar */}
               <div className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center text-xs font-bold text-[#FF5C00] shrink-0 mt-0.5">
-                {isMe ? (
-                  currentUser.avatar_url ? (
-                    <img src={currentUser.avatar_url} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    currentUser.username[0]?.toUpperCase()
-                  )
-                ) : chatUser?.avatar_url ? (
-                  <img src={chatUser.avatar_url} alt="" className="w-full h-full object-cover" />
+                {senderAvatar ? (
+                  <img src={senderAvatar} alt="" className="w-full h-full object-cover" />
                 ) : (
-                  (chatUser?.username || 'K')[0]?.toUpperCase()
+                  <span>{senderInitial}</span>
                 )}
               </div>
 
@@ -491,7 +518,7 @@ export default function ChatWindow({
                 
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-xs font-bold text-white">
-                    {isMe ? 'You' : (chatUser?.display_name || chatUser?.username || 'Kenji (31)')}
+                    {senderName}
                   </span>
                   <span className="text-[10px] text-zinc-500">
                     {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -505,7 +532,7 @@ export default function ChatWindow({
                       : 'bg-[#1c1c21] text-zinc-100 border border-zinc-800/80 rounded-tl-none'
                   }`}
                 >
-                  {/* Image Attachment Lightbox */}
+                  {/* Image Attachment */}
                   {attachUrl && isImg ? (
                     <a
                       href={attachUrl}
@@ -585,7 +612,7 @@ export default function ChatWindow({
         </div>
       )}
 
-      {/* Bottom Message Input Bar Matching Design Image */}
+      {/* Bottom Message Input Bar */}
       <form
         onSubmit={(e) => {
           e.preventDefault();
