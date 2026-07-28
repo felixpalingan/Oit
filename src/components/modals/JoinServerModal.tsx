@@ -54,17 +54,14 @@ export default function JoinServerModal({
           .or('is_private.is.null,is_private.eq.false')
           .limit(20);
 
-        if (srvs && srvs.length > 0) {
+        if (srvs) {
           setPublicServers(srvs as Server[]);
         } else {
-          setPublicServers([
-            { id: 'design-team', name: 'Design Team', owner_id: 'public-owner', is_private: false },
-            { id: 'dev-lounge', name: 'Dev Lounge', owner_id: 'public-owner', is_private: false },
-            { id: 'gaming-hub', name: 'Gaming Hub', owner_id: 'public-owner', is_private: false },
-          ]);
+          setPublicServers([]);
         }
       } catch (err) {
         console.error('Fetch public servers error:', err);
+        setPublicServers([]);
       }
     }
     fetchData();
@@ -99,7 +96,7 @@ export default function JoinServerModal({
         .eq('server_id', serverIdToJoin)
         .limit(1);
 
-      const firstChanId = chans && chans.length > 0 ? chans[0].id : 'general';
+      const firstChanId = chans && chans.length > 0 ? chans[0].id : `${serverIdToJoin}-general`;
       const firstChanName = chans && chans.length > 0 ? chans[0].name : 'general';
 
       setActiveServer(serverIdToJoin);
@@ -111,7 +108,7 @@ export default function JoinServerModal({
     } catch (err: any) {
       console.warn('Join server notice:', err);
       setActiveServer(serverIdToJoin);
-      setActiveChannel('general', 'general');
+      setActiveChannel(`${serverIdToJoin}-general`, 'general');
       if (onJoined) onJoined();
       setTimeout(onClose, 500);
     } finally {
@@ -192,47 +189,53 @@ export default function JoinServerModal({
           <div className="flex-1 border-t border-zinc-800" />
         </div>
 
-        {/* SECTION 2: PUBLIC SERVERS ONLY */}
+        {/* SECTION 2: PUBLIC SERVERS LIST */}
         <div className="space-y-2 max-h-56 overflow-y-auto no-scrollbar">
-          {publicServers.map((srv) => {
-            const isAlreadyJoined = joinedServerIds.has(srv.id);
+          {publicServers.length === 0 ? (
+            <p className="text-xs text-zinc-500 text-center py-6">
+              Belum ada server publik. Buat server pertama Anda!
+            </p>
+          ) : (
+            publicServers.map((srv) => {
+              const isAlreadyJoined = joinedServerIds.has(srv.id);
 
-            return (
-              <div
-                key={srv.id}
-                className="p-3.5 bg-[#1c1c21] border border-zinc-800/80 hover:border-[#FF5C00]/60 rounded-2xl flex items-center justify-between transition-all group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center font-extrabold text-sm text-[#FF5C00]">
-                    {srv.name[0]?.toUpperCase()}
+              return (
+                <div
+                  key={srv.id}
+                  className="p-3.5 bg-[#1c1c21] border border-zinc-800/80 hover:border-[#FF5C00]/60 rounded-2xl flex items-center justify-between transition-all group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center font-extrabold text-sm text-[#FF5C00]">
+                      {srv.name[0]?.toUpperCase()}
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white group-hover:text-[#FF5C00] transition-colors">
+                        {srv.name}
+                      </h4>
+                      <p className="text-[10px] text-zinc-400">Public Server</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-white group-hover:text-[#FF5C00] transition-colors">
-                      {srv.name}
-                    </h4>
-                    <p className="text-[10px] text-zinc-400">Public Server</p>
-                  </div>
+
+                  {isAlreadyJoined ? (
+                    <div className="px-3 py-1.5 bg-emerald-950/60 border border-emerald-800 text-emerald-400 font-bold rounded-xl text-xs flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Joined</span>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleJoinById(srv.id, srv.name)}
+                      disabled={loading}
+                      className="px-4 py-2 bg-[#FF5C00]/15 hover:bg-[#FF5C00] text-[#FF5C00] hover:text-white font-bold rounded-xl text-xs transition-colors flex items-center gap-1.5"
+                    >
+                      <PlusCircle className="w-3.5 h-3.5" />
+                      <span>Join</span>
+                    </button>
+                  )}
                 </div>
-
-                {isAlreadyJoined ? (
-                  <div className="px-3 py-1.5 bg-emerald-950/60 border border-emerald-800 text-emerald-400 font-bold rounded-xl text-xs flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Joined</span>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => handleJoinById(srv.id, srv.name)}
-                    disabled={loading}
-                    className="px-4 py-2 bg-[#FF5C00]/15 hover:bg-[#FF5C00] text-[#FF5C00] hover:text-white font-bold rounded-xl text-xs transition-colors flex items-center gap-1.5"
-                  >
-                    <PlusCircle className="w-3.5 h-3.5" />
-                    <span>Join</span>
-                  </button>
-                )}
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
 
       </div>

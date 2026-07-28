@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { X, Upload, Hash, Volume2, Lock, Image as ImageIcon } from 'lucide-react';
+import { X, Upload, Hash, Volume2, Lock } from 'lucide-react';
 import { User } from '@/types';
 import { createClient } from '@/utils/supabase/client';
 import { useAppStore } from '@/store/useAppStore';
@@ -66,12 +66,18 @@ export default function CreateServerModal({
     setErrorMsg('');
 
     const cleanChanName = channelName.trim().toLowerCase().replace(/\s+/g, '-') || 'general';
-    const fallbackServerId = `srv-${Date.now()}`;
-    const fallbackChannelId = `chan-${Date.now()}`;
 
     try {
-      // 1. Insert into servers table with icon_url and is_private flag
-      const { data: newServer } = await supabase
+      // 0. Ensure user row exists in public.users to satisfy foreign key constraint
+      await supabase.from('users').upsert({
+        id: currentUser.id,
+        username: currentUser.username,
+        display_name: currentUser.display_name || currentUser.username,
+        avatar_url: currentUser.avatar_url,
+      });
+
+      // 1. Insert into servers table
+      const { data: newServer, error: serverErr } = await supabase
         .from('servers')
         .insert([
           {
@@ -84,18 +90,17 @@ export default function CreateServerModal({
         .select()
         .single();
 
-      const createdServerId = newServer?.id || fallbackServerId;
+      if (serverErr) throw serverErr;
+      const createdServerId = newServer.id;
 
-      if (newServer) {
-        // 2. Insert into server_members table
-        await supabase.from('server_members').insert([
-          {
-            server_id: newServer.id,
-            user_id: currentUser.id,
-            role: 'owner',
-          },
-        ]);
-      }
+      // 2. Insert into server_members table
+      await supabase.from('server_members').insert([
+        {
+          server_id: createdServerId,
+          user_id: currentUser.id,
+          role: 'owner',
+        },
+      ]);
 
       // 3. Insert initial channel into channels table
       const { data: newChannel } = await supabase
@@ -111,7 +116,7 @@ export default function CreateServerModal({
         .select()
         .single();
 
-      const createdChannelId = newChannel?.id || fallbackChannelId;
+      const createdChannelId = newChannel?.id || `${createdServerId}-general`;
       const createdChannelName = newChannel?.name || cleanChanName;
 
       // 4. Update Zustand state immediately
@@ -121,11 +126,8 @@ export default function CreateServerModal({
       if (onCreated) onCreated();
       onClose();
     } catch (err: any) {
-      console.warn('Supabase create server notice:', err);
-      setActiveServer(fallbackServerId);
-      setActiveChannel(fallbackChannelId, cleanChanName);
-      if (onCreated) onCreated();
-      onClose();
+      console.error('Supabase create server error:', err);
+      setErrorMsg(err.message || 'Gagal membuat server. Silakan coba lagi.');
     } finally {
       setLoading(false);
     }
