@@ -29,7 +29,7 @@ export default function ChatWindow({
   onStartCall,
 }: ChatWindowProps) {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [inputText, setInputText] = useState('');
+  const [messageText, setMessageText] = useState('');
   const [uploading, setUploading] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -52,48 +52,6 @@ export default function ChatWindow({
 
         if (!error && data) {
           setMessages(data as Message[]);
-        } else {
-          // Default mock messages matching user's image if database has no messages yet
-          setMessages([
-            {
-              id: 'm1',
-              sender_id: chatUser.id,
-              receiver_id: currentUser.id,
-              content: 'Hey! Are we still meeting for coffee later to discuss the new project?',
-              created_at: new Date(Date.now() - 3600000).toISOString(),
-            },
-            {
-              id: 'm2',
-              sender_id: chatUser.id,
-              receiver_id: currentUser.id,
-              content: 'I found that document you were asking about too.',
-              created_at: new Date(Date.now() - 3500000).toISOString(),
-            },
-            {
-              id: 'm3',
-              sender_id: currentUser.id,
-              receiver_id: chatUser.id,
-              content: 'Yes! 2 PM at the usual place works for me.',
-              created_at: new Date(Date.now() - 1800000).toISOString(),
-            },
-            {
-              id: 'm4',
-              sender_id: currentUser.id,
-              receiver_id: chatUser.id,
-              content: 'Project_Brief_v2.pdf',
-              file_url: '#',
-              file_name: 'Project_Brief_v2.pdf',
-              file_size: '2.4 MB',
-              created_at: new Date(Date.now() - 1700000).toISOString(),
-            },
-            {
-              id: 'm5',
-              sender_id: chatUser.id,
-              receiver_id: currentUser.id,
-              content: 'Sounds perfect! See you then.',
-              created_at: new Date(Date.now() - 600000).toISOString(),
-            },
-          ]);
         }
       } catch (err) {
         console.error('Fetch messages error:', err);
@@ -117,7 +75,11 @@ export default function ChatWindow({
             (newMsg.sender_id === currentUser.id && newMsg.receiver_id === chatUser.id) ||
             (newMsg.sender_id === chatUser.id && newMsg.receiver_id === currentUser.id)
           ) {
-            setMessages((prev) => [...prev, newMsg]);
+            setMessages((prev) => {
+              // Avoid duplicate messages if already present in state
+              if (prev.some((m) => m.id === newMsg.id)) return prev;
+              return [...prev, newMsg];
+            });
             setTimeout(scrollToBottom, 100);
           }
         }
@@ -129,42 +91,45 @@ export default function ChatWindow({
     };
   }, [currentUser.id, chatUser.id, supabase]);
 
-  // Handle Send Message
-  const handleSendMessage = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!inputText.trim()) return;
+  // Handle Send Message to Supabase
+  const handleSendMessage = async () => {
+    if (!messageText.trim()) return;
 
-    const contentToSend = inputText.trim();
-    setInputText('');
+    const contentToSend = messageText.trim();
+    setMessageText('');
 
     try {
       const { data, error } = await supabase
         .from('messages')
-        .insert({
-          sender_id: currentUser.id,
-          receiver_id: chatUser.id,
-          content: contentToSend,
-        })
+        .insert([
+          {
+            content: contentToSend,
+            sender_id: currentUser.id,
+            receiver_id: chatUser.id,
+          },
+        ])
         .select()
         .single();
 
       if (error) {
-        console.warn('Insert message DB warning:', error.message);
-        // Fallback local update
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `temp-${Date.now()}`,
-            sender_id: currentUser.id,
-            receiver_id: chatUser.id,
-            content: contentToSend,
-            created_at: new Date().toISOString(),
-          },
-        ]);
+        console.error('Failed to insert message into Supabase:', error);
+      } else if (data) {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === data.id)) return prev;
+          return [...prev, data as Message];
+        });
         setTimeout(scrollToBottom, 100);
       }
     } catch (err) {
-      console.error('Failed to send message:', err);
+      console.error('Unexpected error sending message:', err);
+    }
+  };
+
+  // Handle Enter Key Down
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
     }
   };
 
@@ -177,27 +142,24 @@ export default function ChatWindow({
     try {
       const fileSizeFormatted = `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
 
-      await supabase.from('messages').insert({
-        sender_id: currentUser.id,
-        receiver_id: chatUser.id,
-        content: file.name,
-        file_name: file.name,
-        file_size: fileSizeFormatted,
-      });
+      const { data, error } = await supabase
+        .from('messages')
+        .insert([
+          {
+            content: file.name,
+            file_name: file.name,
+            file_size: fileSizeFormatted,
+            sender_id: currentUser.id,
+            receiver_id: chatUser.id,
+          },
+        ])
+        .select()
+        .single();
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `temp-${Date.now()}`,
-          sender_id: currentUser.id,
-          receiver_id: chatUser.id,
-          content: file.name,
-          file_name: file.name,
-          file_size: fileSizeFormatted,
-          created_at: new Date().toISOString(),
-        },
-      ]);
-      setTimeout(scrollToBottom, 100);
+      if (!error && data) {
+        setMessages((prev) => [...prev, data as Message]);
+        setTimeout(scrollToBottom, 100);
+      }
     } catch (err) {
       console.error('Upload error:', err);
     } finally {
@@ -342,7 +304,10 @@ export default function ChatWindow({
 
       {/* Bottom Message Input Bar */}
       <form
-        onSubmit={handleSendMessage}
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSendMessage();
+        }}
         className="p-4 bg-[#121215] border-t border-zinc-800/80 flex items-center gap-3"
       >
         <input
@@ -364,15 +329,16 @@ export default function ChatWindow({
 
           <input
             type="text"
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
+            value={messageText}
+            onChange={(e) => setMessageText(e.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder="Type a message..."
             className="flex-1 bg-transparent text-xs text-white placeholder-zinc-500 focus:outline-none"
           />
 
           <button
             type="button"
-            onClick={() => setInputText((prev) => prev + ' 😊')}
+            onClick={() => setMessageText((prev) => prev + ' 😊')}
             className="text-zinc-400 hover:text-white transition-colors shrink-0"
           >
             <Smile className="w-4 h-4" />
@@ -380,8 +346,9 @@ export default function ChatWindow({
         </div>
 
         <button
-          type="submit"
-          disabled={!inputText.trim()}
+          type="button"
+          onClick={handleSendMessage}
+          disabled={!messageText.trim()}
           className="w-10 h-10 bg-[#ff8a65] hover:bg-[#ff7a52] text-white rounded-full flex items-center justify-center shrink-0 shadow-lg shadow-[#ff8a65]/20 transition-all disabled:opacity-40"
         >
           <Send className="w-4 h-4" />
