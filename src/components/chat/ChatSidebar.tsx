@@ -1,249 +1,146 @@
 'use client';
 
 import React, { useState } from 'react';
-import { UserProfile, Room, Friend } from '@/types';
-import { MessageSquare, Users, UserPlus, Flame, LogOut, Plus, Search, Settings, Phone } from 'lucide-react';
+import { User, Message } from '@/types';
+import { MessageSquare, Users, Phone, Plus, CheckCheck, Check } from 'lucide-react';
 
 interface ChatSidebarProps {
-  currentProfile: UserProfile;
-  rooms: Room[];
-  friends: Friend[];
-  activeRoom: Room | null;
-  onSelectRoom: (room: Room) => void;
-  onOpenProfile: () => void;
-  onOpenAddFriend: () => void;
-  onOpenCreateGroup: () => void;
-  onStartDirectCall: (friendProfile: UserProfile) => void;
-  onLogout: () => void;
+  currentUser: User;
+  usersList: User[];
+  activeChatUser: User | null;
+  onSelectUser: (user: User) => void;
+  onOpenNewChatModal: () => void;
+  searchQuery: string;
 }
 
 export default function ChatSidebar({
-  currentProfile,
-  rooms,
-  friends,
-  activeRoom,
-  onSelectRoom,
-  onOpenProfile,
-  onOpenAddFriend,
-  onOpenCreateGroup,
-  onStartDirectCall,
-  onLogout,
+  currentUser,
+  usersList,
+  activeChatUser,
+  onSelectUser,
+  onOpenNewChatModal,
+  searchQuery,
 }: ChatSidebarProps) {
-  const [tab, setTab] = useState<'chats' | 'friends'>('chats');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'chats' | 'contacts' | 'calls'>('chats');
 
-  const filteredRooms = rooms.filter((r) =>
-    (r.name || 'Chat').toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Sample placeholder contacts matching the user's design image if list is empty
+  const defaultContacts: User[] = [
+    { id: 'sample-1', username: 'Sarah (26)', display_name: 'Sarah (26)', avatar_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150' },
+    { id: 'sample-2', username: 'Kenji (31)', display_name: 'Kenji (31)', avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150' },
+    { id: 'sample-3', username: 'Maria (40)', display_name: 'Maria (40)', avatar_url: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150' },
+    { id: 'sample-4', username: 'David (34)', display_name: 'David (34)', avatar_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150' },
+  ];
 
-  const filteredFriends = friends.filter((f) =>
-    (f.profile?.display_name || f.profile?.username || '').toLowerCase().includes(searchQuery.toLowerCase())
+  const displayList = usersList.length > 0 ? usersList : defaultContacts;
+
+  const filteredUsers = displayList.filter((u) =>
+    (u.display_name || u.username).toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
-    <div className="w-full md:w-80 lg:w-96 h-full bg-[#09090b] border-r border-zinc-800 flex flex-col shrink-0">
+    <aside className="w-full md:w-80 lg:w-84 h-full bg-[#161619] border-r border-zinc-800/80 flex flex-col shrink-0 select-none">
       
-      {/* Sidebar Header */}
-      <div className="p-4 border-b border-zinc-800/80 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onOpenProfile}
-            className="relative w-10 h-10 rounded-full bg-zinc-800 border-2 border-[#ff6b00] overflow-hidden flex items-center justify-center font-bold text-[#ff6b00] shrink-0 hover:opacity-90 transition-opacity shadow-md shadow-orange-950/30"
-          >
-            {currentProfile.avatar_url ? (
-              <img src={currentProfile.avatar_url} alt="" className="w-full h-full object-cover" />
-            ) : (
-              currentProfile.username[0]?.toUpperCase()
-            )}
-            <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-black" />
-          </button>
-
-          <div className="overflow-hidden">
-            <h3 className="text-sm font-bold text-white truncate">
-              {currentProfile.display_name || currentProfile.username}
-            </h3>
-            <span className="text-xs text-[#ff6b00] font-mono truncate block">
-              @{currentProfile.username}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1">
-          <button
-            onClick={onOpenAddFriend}
-            title="Tambah Teman"
-            className="p-2 text-zinc-400 hover:text-[#ff6b00] hover:bg-zinc-800/80 rounded-xl transition-colors"
-          >
-            <UserPlus className="w-5 h-5" />
-          </button>
-
-          <button
-            onClick={onOpenCreateGroup}
-            title="Buat Grup"
-            className="p-2 text-zinc-400 hover:text-[#ff6b00] hover:bg-zinc-800/80 rounded-xl transition-colors"
-          >
-            <Plus className="w-5 h-5" />
-          </button>
-
-          <button
-            onClick={onLogout}
-            title="Logout"
-            className="p-2 text-zinc-400 hover:text-red-400 hover:bg-zinc-800/80 rounded-xl transition-colors"
-          >
-            <LogOut className="w-5 h-5" />
-          </button>
-        </div>
-      </div>
-
-      {/* Navigation Tabs */}
-      <div className="px-4 pt-3 flex gap-2">
+      {/* Top Sidebar Navigation Tabs */}
+      <div className="p-2.5 bg-[#121215] border-b border-zinc-800/80 flex items-center justify-between gap-1">
         <button
-          onClick={() => setTab('chats')}
-          className={`flex-1 py-2 text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all ${
-            tab === 'chats'
-              ? 'bg-[#18181b] text-[#ff6b00] border border-[#ff6b00]/30 shadow-md'
+          onClick={() => setActiveTab('chats')}
+          className={`flex-1 py-2 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-all ${
+            activeTab === 'chats'
+              ? 'bg-[#222227] text-white border border-[#FF5C00]/40 shadow-sm'
               : 'text-zinc-400 hover:text-white'
           }`}
         >
-          <MessageSquare className="w-4 h-4" /> Chats ({rooms.length})
+          <MessageSquare className="w-4 h-4 text-[#FF5C00]" />
+          <span>Chats</span>
         </button>
 
         <button
-          onClick={() => setTab('friends')}
-          className={`flex-1 py-2 text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all ${
-            tab === 'friends'
-              ? 'bg-[#18181b] text-[#ff6b00] border border-[#ff6b00]/30 shadow-md'
+          onClick={() => setActiveTab('contacts')}
+          className={`flex-1 py-2 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-all ${
+            activeTab === 'contacts'
+              ? 'bg-[#222227] text-white border border-[#FF5C00]/40 shadow-sm'
               : 'text-zinc-400 hover:text-white'
           }`}
         >
-          <Users className="w-4 h-4" /> Teman ({friends.length})
+          <Users className="w-4 h-4 text-zinc-400" />
+          <span>Contacts</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('calls')}
+          className={`flex-1 py-2 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-all ${
+            activeTab === 'calls'
+              ? 'bg-[#222227] text-white border border-[#FF5C00]/40 shadow-sm'
+              : 'text-zinc-400 hover:text-white'
+          }`}
+        >
+          <Phone className="w-4 h-4 text-zinc-400" />
+          <span>Calls</span>
         </button>
       </div>
 
-      {/* Search Input */}
-      <div className="p-4">
-        <div className="relative">
-          <Search className="w-4 h-4 text-zinc-500 absolute left-3 top-3" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={tab === 'chats' ? 'Cari obrolan...' : 'Cari teman...'}
-            className="w-full pl-9 pr-4 py-2.5 bg-[#141417] border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#ff6b00]"
-          />
-        </div>
+      {/* Chat Contacts List */}
+      <div className="flex-1 overflow-y-auto p-2 space-y-1">
+        {filteredUsers.map((user) => {
+          const isActive = activeChatUser?.id === user.id;
+
+          return (
+            <div
+              key={user.id}
+              onClick={() => onSelectUser(user)}
+              className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all ${
+                isActive
+                  ? 'bg-[#222228] border-l-4 border-[#FF5C00] shadow-md'
+                  : 'hover:bg-[#1c1c21] text-zinc-300'
+              }`}
+            >
+              {/* Avatar + Online Indicator */}
+              <div className="relative shrink-0">
+                <div className="w-11 h-11 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center font-bold text-[#FF5C00]">
+                  {user.avatar_url ? (
+                    <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    user.username[0]?.toUpperCase()
+                  )}
+                </div>
+                <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[#161619]" />
+              </div>
+
+              {/* Info & Message Preview */}
+              <div className="flex-1 overflow-hidden">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-white truncate">
+                    {user.display_name || user.username}
+                  </h4>
+                  <span className="text-[10px] text-zinc-500 shrink-0">
+                    10:42 AM
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1 mt-1 text-[11px] text-zinc-400 truncate">
+                  <CheckCheck className="w-3.5 h-3.5 text-[#FF5C00] shrink-0" />
+                  <span className="truncate">
+                    {user.username === 'Sarah (26)' ? 'Sounds perfect! See you then.' : 'Mulai percakapan Oit...'}
+                  </span>
+                </div>
+              </div>
+
+            </div>
+          );
+        })}
       </div>
 
-      {/* List Stream */}
-      <div className="flex-1 overflow-y-auto px-3 pb-4 space-y-1">
-        {tab === 'chats' ? (
-          filteredRooms.length === 0 ? (
-            <div className="text-center py-12 px-4">
-              <Flame className="w-8 h-8 text-zinc-700 mx-auto mb-2" />
-              <p className="text-xs text-zinc-500">Belum ada obrolan.</p>
-              <button
-                onClick={onOpenAddFriend}
-                className="mt-3 text-xs text-[#ff6b00] font-semibold hover:underline"
-              >
-                + Tambah Teman & Mulai Chat
-              </button>
-            </div>
-          ) : (
-            filteredRooms.map((room) => {
-              const isActive = activeRoom?.id === room.id;
-              return (
-                <div
-                  key={room.id}
-                  onClick={() => onSelectRoom(room)}
-                  className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${
-                    isActive
-                      ? 'bg-[#18181b] border-l-4 border-[#ff6b00] shadow-md'
-                      : 'hover:bg-[#141417] text-zinc-300'
-                  }`}
-                >
-                  <div className="w-11 h-11 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center font-bold text-[#ff6b00] shrink-0 overflow-hidden">
-                    {room.avatar_url ? (
-                      <img src={room.avatar_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      (room.name || 'Chat')[0]?.toUpperCase()
-                    )}
-                  </div>
-
-                  <div className="flex-1 overflow-hidden">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-xs font-bold text-white truncate">
-                        {room.name || 'Personal Chat'}
-                      </h4>
-                      {room.last_message && (
-                        <span className="text-[10px] text-zinc-500">
-                          {new Date(room.last_message.created_at).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
-                      )}
-                    </div>
-
-                    <p className="text-xs text-zinc-400 truncate mt-0.5">
-                      {room.last_message?.content || (room.type === 'group' ? 'Ruang obrolan grup' : 'Mulai obrolan...')}
-                    </p>
-                  </div>
-                </div>
-              );
-            })
-          )
-        ) : (
-          filteredFriends.length === 0 ? (
-            <div className="text-center py-12 px-4">
-              <Users className="w-8 h-8 text-zinc-700 mx-auto mb-2" />
-              <p className="text-xs text-zinc-500">Belum ada daftar teman.</p>
-              <button
-                onClick={onOpenAddFriend}
-                className="mt-3 text-xs text-[#ff6b00] font-semibold hover:underline"
-              >
-                + Cari atau Scan QR Teman
-              </button>
-            </div>
-          ) : (
-            filteredFriends.map((f) => {
-              const profile = f.profile;
-              if (!profile) return null;
-              return (
-                <div
-                  key={f.id}
-                  className="flex items-center justify-between p-3 rounded-xl hover:bg-[#141417] transition-all"
-                >
-                  <div className="flex items-center gap-3 overflow-hidden">
-                    <div className="w-10 h-10 rounded-full bg-zinc-800 border border-[#ff6b00] flex items-center justify-center font-bold text-[#ff6b00] shrink-0 overflow-hidden">
-                      {profile.avatar_url ? (
-                        <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        profile.username[0]?.toUpperCase()
-                      )}
-                    </div>
-
-                    <div className="overflow-hidden">
-                      <h4 className="text-xs font-bold text-white truncate">
-                        {profile.display_name || profile.username}
-                      </h4>
-                      <p className="text-[11px] text-zinc-400 truncate">@{profile.username}</p>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => onStartDirectCall(profile)}
-                    title="Panggil Teman Ini"
-                    className="p-2 text-[#ff6b00] hover:bg-[#ff6b00]/20 rounded-xl transition-colors"
-                  >
-                    <Phone className="w-4 h-4" />
-                  </button>
-                </div>
-              );
-            })
-          )
-        )}
+      {/* Bottom Sticky Action Button: New Chat */}
+      <div className="p-3 bg-[#121215] border-t border-zinc-800/80">
+        <button
+          onClick={onOpenNewChatModal}
+          className="w-full bg-[#ff8a65] hover:bg-[#ff7a52] text-white font-bold py-3 px-4 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-[#ff8a65]/20 transition-all active:scale-[0.99]"
+        >
+          <Plus className="w-4 h-4 stroke-[3]" />
+          <span>New Chat</span>
+        </button>
       </div>
 
-    </div>
+    </aside>
   );
 }
