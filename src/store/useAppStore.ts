@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 export interface KnockRequest {
   id: string;
@@ -27,35 +28,48 @@ interface AppState {
   clearCall: () => void;
 }
 
-export const useAppStore = create<AppState>((set) => ({
-  activeServerId: null,
-  activeChannelId: null,
-  activeChannelName: '',
-  activeCallRoomId: null,
-  activeCallTargetUser: null,
-  isCallVideo: true,
-  isCallMinimized: false,
-  knockNotification: null,
-
-  setActiveServer: (id) => set({ activeServerId: id }),
-  setActiveChannel: (id, name) =>
-    set({
-      activeChannelId: id,
-      activeChannelName: name || id || '',
-    }),
-  setActiveCall: (roomId, targetUser = null, isVideo = true) =>
-    set({
-      activeCallRoomId: roomId,
-      activeCallTargetUser: targetUser,
-      isCallVideo: isVideo,
-      isCallMinimized: false,
-    }),
-  setIsCallMinimized: (minimized) => set({ isCallMinimized: minimized }),
-  setKnockNotification: (knock) => set({ knockNotification: knock }),
-  clearCall: () =>
-    set({
+export const useAppStore = create<AppState>()(
+  persist(
+    (set) => ({
+      activeServerId: null,
+      activeChannelId: null,
+      activeChannelName: '',
       activeCallRoomId: null,
       activeCallTargetUser: null,
+      isCallVideo: true,
       isCallMinimized: false,
+      knockNotification: null,
+
+      setActiveServer: (id) => set({ activeServerId: id }),
+      setActiveChannel: (id, name) =>
+        set((state) => ({
+          activeChannelId: id,
+          activeChannelName: name !== undefined ? name : state.activeChannelName,
+        })),
+      setActiveCall: (roomId, targetUser = null, isVideo = true) =>
+        set({
+          activeCallRoomId: roomId,
+          activeCallTargetUser: targetUser,
+          isCallVideo: isVideo,
+          isCallMinimized: false,
+        }),
+      setIsCallMinimized: (minimized) => set({ isCallMinimized: minimized }),
+      setKnockNotification: (knock) => set({ knockNotification: knock }),
+      clearCall: () =>
+        set({
+          activeCallRoomId: null,
+          activeCallTargetUser: null,
+          isCallMinimized: false,
+        }),
     }),
-}));
+    {
+      name: 'oit-app-storage',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        activeServerId: state.activeServerId,
+        activeChannelId: state.activeChannelId,
+        activeChannelName: state.activeChannelName,
+      }),
+    }
+  )
+);

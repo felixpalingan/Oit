@@ -13,6 +13,7 @@ import {
   Compass,
   Share2,
   Check,
+  User as UserIcon,
 } from 'lucide-react';
 import { User, Message, Channel } from '@/types';
 import { useAppStore } from '@/store/useAppStore';
@@ -50,6 +51,7 @@ export default function ChannelSidebar({
   const {
     activeServerId,
     activeChannelId,
+    activeCallRoomId,
     setActiveChannel,
   } = useAppStore();
 
@@ -99,7 +101,6 @@ export default function ChannelSidebar({
           setActiveChannel(text[0].id, text[0].name);
         }
       } else {
-        // Fallback default channel for server if table row doesn't exist yet
         const defaultChan: Channel = {
           id: `${activeServerId}-general`,
           server_id: activeServerId,
@@ -143,6 +144,21 @@ export default function ChannelSidebar({
     navigator.clipboard.writeText(activeServerId);
     setCopiedInvite(true);
     setTimeout(() => setCopiedInvite(false), 2000);
+  };
+
+  const handleChannelCreatedLocally = (newChan: Channel) => {
+    if (newChan.type === 'text') {
+      setTextChannels((prev) => {
+        if (prev.some((c) => c.id === newChan.id)) return prev;
+        return [...prev, newChan];
+      });
+    } else {
+      setVoiceChannels((prev) => {
+        if (prev.some((c) => c.id === newChan.id)) return prev;
+        return [...prev, newChan];
+      });
+    }
+    fetchChannels();
   };
 
   const filteredUsers = usersList.filter((u) => {
@@ -304,7 +320,7 @@ export default function ChannelSidebar({
               })}
             </div>
 
-            {/* VOICE CHANNELS GROUP */}
+            {/* VOICE CHANNELS GROUP WITH ACTIVE PARTICIPANTS PREVIEW */}
             <div className="space-y-1 pt-2">
               <div className="flex items-center justify-between px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-zinc-400">
                 <span>VOICE CHANNELS ({voiceChannels.length})</span>
@@ -318,46 +334,66 @@ export default function ChannelSidebar({
 
               {voiceChannels.map((c) => {
                 const isActive = activeChannelId === c.id;
+                const isVoiceActive = activeCallRoomId === `vc_${c.id}`;
+
                 return (
-                  <div
-                    key={c.id}
-                    className={`flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer text-xs font-bold transition-all group ${
-                      isActive
-                        ? 'bg-[#FF5C00] text-white shadow-md shadow-[#FF5C00]/20'
-                        : 'text-zinc-400 hover:text-white hover:bg-[#1c1c21]'
-                    }`}
-                  >
+                  <div key={c.id} className="space-y-1">
                     <div
-                      onClick={() => {
-                        if (onSelectChannel) onSelectChannel();
-                        if (c.is_private) {
-                          onKnockRoom(c.id, c.name);
-                        } else if (onJoinVoiceCall) {
-                          onJoinVoiceCall(c);
-                        }
-                      }}
-                      className="flex items-center gap-2.5 truncate flex-1"
+                      className={`flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer text-xs font-bold transition-all group ${
+                        isActive || isVoiceActive
+                          ? 'bg-[#FF5C00] text-white shadow-md shadow-[#FF5C00]/20'
+                          : 'text-zinc-400 hover:text-white hover:bg-[#1c1c21]'
+                      }`}
                     >
-                      <Volume2 className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#FF5C00]' : 'text-[#FF5C00]'}`} />
-                      <span className="truncate">{c.name}</span>
-                    </div>
-
-                    <div className="flex items-center gap-1">
-                      {c.is_private && (
-                        <Lock className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                      )}
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingChannel(c);
+                      <div
+                        onClick={() => {
+                          if (onSelectChannel) onSelectChannel();
+                          if (c.is_private) {
+                            onKnockRoom(c.id, c.name);
+                          } else if (onJoinVoiceCall) {
+                            onJoinVoiceCall(c);
+                          }
                         }}
-                        title="Edit Channel Settings"
-                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-black/30 rounded-md transition-opacity"
+                        className="flex items-center gap-2.5 truncate flex-1"
                       >
-                        <Settings className="w-3.5 h-3.5" />
-                      </button>
+                        <Volume2 className={`w-4 h-4 shrink-0 ${isActive || isVoiceActive ? 'text-white' : 'text-[#FF5C00]'}`} />
+                        <span className="truncate">{c.name}</span>
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        {c.is_private && (
+                          <Lock className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                        )}
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingChannel(c);
+                          }}
+                          title="Edit Channel Settings"
+                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-black/30 rounded-md transition-opacity"
+                        >
+                          <Settings className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
+
+                    {/* Active Voice Participants Preview List */}
+                    {isVoiceActive && (
+                      <div className="pl-6 pr-2 py-1 space-y-1">
+                        <div className="flex items-center gap-2 px-2 py-1 bg-[#121215] border border-zinc-800 rounded-lg text-[11px] font-semibold text-zinc-300">
+                          <div className="w-5 h-5 rounded-full bg-[#FF5C00] text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                            {currentUser.avatar_url ? (
+                              <img src={currentUser.avatar_url} alt="" className="w-full h-full object-cover rounded-full" />
+                            ) : (
+                              currentUser.username[0]?.toUpperCase()
+                            )}
+                          </div>
+                          <span className="truncate">{currentUser.display_name || currentUser.username}</span>
+                          <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse ml-auto" />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -434,8 +470,8 @@ export default function ChannelSidebar({
         <CreateChannelModal
           serverId={activeServerId}
           onClose={() => setShowCreateChannelModal(false)}
-          onChannelCreated={() => {
-            fetchChannels();
+          onChannelCreated={(created) => {
+            handleChannelCreatedLocally(created);
           }}
         />
       )}

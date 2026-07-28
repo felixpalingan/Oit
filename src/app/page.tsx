@@ -169,11 +169,6 @@ export default function Page() {
           clearCall();
         }
       })
-      .on('broadcast', { event: 'call_ended' }, ({ payload }) => {
-        if (payload?.roomName && activeCallRoomId === payload.roomName) {
-          clearCall();
-        }
-      })
       .subscribe();
 
     // 3. Supabase Realtime "Knock-Knock" Room Requests Channel
@@ -328,17 +323,8 @@ export default function Page() {
     setIncomingCallPrompt(null);
   };
 
-  // End Call Handler
+  // Fix Issue 1: End Call Handler only disconnects current user!
   const handleEndCall = () => {
-    if (activeCallRoomId) {
-      supabase.channel('global:call_signaling').send({
-        type: 'broadcast',
-        event: 'call_ended',
-        payload: {
-          roomName: activeCallRoomId,
-        },
-      });
-    }
     clearCall();
   };
 
