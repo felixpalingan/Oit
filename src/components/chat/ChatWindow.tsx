@@ -14,7 +14,7 @@ import {
   FileText,
   ArrowLeft,
   Download,
-  Image as ImageIcon,
+  ExternalLink,
 } from 'lucide-react';
 
 interface ChatWindowProps {
@@ -44,6 +44,12 @@ export default function ChatWindow({
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  // Helper function to detect image files
+  const isImageFile = (url?: string | null, name?: string | null) => {
+    const target = (url || name || '').toLowerCase();
+    return /\.(png|jpe?g|webp|gif|svg|bmp)(\?.*)?$/i.test(target) || target.includes('/image');
   };
 
   // Fetch Initial Messages & Wire Supabase Realtime Listener
@@ -143,22 +149,25 @@ export default function ChatWindow({
 
     setIsUploading(true);
     setUploadFileName(selectedFile.name);
-    setUploadProgress(15);
+    setUploadProgress(20);
 
     try {
       const fileExt = selectedFile.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
       const filePath = `${currentUser.id}/${fileName}`;
 
-      setUploadProgress(40);
+      setUploadProgress(45);
 
       // Upload to Supabase Storage bucket 'chat-attachments'
       const { error: uploadError } = await supabase.storage
         .from('chat-attachments')
-        .upload(filePath, selectedFile);
+        .upload(filePath, selectedFile, {
+          cacheControl: '3600',
+          upsert: true,
+        });
 
       if (uploadError) {
-        console.warn('Storage upload error / bucket notice:', uploadError.message);
+        console.warn('Storage upload error:', uploadError.message);
       }
 
       setUploadProgress(75);
@@ -169,6 +178,7 @@ export default function ChatWindow({
         .getPublicUrl(filePath);
 
       const publicUrl = publicUrlData?.publicUrl || URL.createObjectURL(selectedFile);
+      const fileSizeFormatted = `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`;
 
       // Insert message record into Supabase messages table
       const { data: insertedMsg, error: insertError } = await supabase
@@ -178,7 +188,7 @@ export default function ChatWindow({
             content: selectedFile.name,
             attachment_url: publicUrl,
             file_name: selectedFile.name,
-            file_size: `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`,
+            file_size: fileSizeFormatted,
             sender_id: currentUser.id,
             receiver_id: chatUser.id,
           },
@@ -189,21 +199,22 @@ export default function ChatWindow({
       if (insertError) {
         console.error('Error inserting attachment message:', insertError);
         // Local fallback update
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `temp-${Date.now()}`,
-            sender_id: currentUser.id,
-            receiver_id: chatUser.id,
-            content: selectedFile.name,
-            attachment_url: publicUrl,
-            file_name: selectedFile.name,
-            file_size: `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`,
-            created_at: new Date().toISOString(),
-          },
-        ]);
+        const tempMsg: Message = {
+          id: `temp-${Date.now()}`,
+          sender_id: currentUser.id,
+          receiver_id: chatUser.id,
+          content: selectedFile.name,
+          attachment_url: publicUrl,
+          file_name: selectedFile.name,
+          file_size: fileSizeFormatted,
+          created_at: new Date().toISOString(),
+        };
+        setMessages((prev) => [...prev, tempMsg]);
       } else if (insertedMsg) {
-        setMessages((prev) => [...prev, insertedMsg as Message]);
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === insertedMsg.id)) return prev;
+          return [...prev, insertedMsg as Message];
+        });
       }
 
       setUploadProgress(100);
@@ -218,11 +229,6 @@ export default function ChatWindow({
         scrollToBottom();
       }, 400);
     }
-  };
-
-  const isImageFile = (url?: string | null, name?: string | null) => {
-    const target = (url || name || '').toLowerCase();
-    return target.endsWith('.png') || target.endsWith('.jpg') || target.endsWith('.jpeg') || target.endsWith('.webp') || target.endsWith('.gif');
   };
 
   return (
@@ -299,8 +305,8 @@ export default function ChatWindow({
 
         {messages.map((msg) => {
           const isMe = msg.sender_id === currentUser.id;
-          const attachUrl = msg.attachment_url || msg.file_url;
-          const isImg = isImageFile(attachUrl, msg.file_name);
+          const attachUrl = msg.attachment_url || msg.file_url || (msg.content?.startsWith('http') ? msg.content : null);
+          const isImg = isImageFile(attachUrl, msg.file_name || msg.content);
 
           return (
             <div
@@ -328,16 +334,31 @@ export default function ChatWindow({
                 >
                   {/* Image Attachment Lightbox */}
                   {attachUrl && isImg ? (
-                    <div className="mb-1 rounded-xl overflow-hidden max-w-sm border border-white/20">
-                      <img src={attachUrl} alt="Attachment" className="w-full h-auto object-cover max-h-60 rounded-lg" />
-                    </div>
+                    <a
+                      href={attachUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block cursor-pointer hover:opacity-90 transition-opacity mb-1"
+                    >
+                      <div className="rounded-xl overflow-hidden max-w-sm border border-white/20 relative group">
+                        <img
+                          src={attachUrl}
+                          alt={msg.content || 'Image Attachment'}
+                          className="w-full h-auto object-cover max-h-72 rounded-lg"
+                        />
+                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-xs font-bold gap-1">
+                          <ExternalLink className="w-4 h-4" /> Buka Gambar Full
+                        </div>
+                      </div>
+                    </a>
                   ) : attachUrl || msg.file_name ? (
-                    /* Document / File Attachment Card */
+                    /* Document / File Attachment Card (Clickable) */
                     <a
                       href={attachUrl || '#'}
                       target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center gap-3 p-3 bg-white/10 hover:bg-white/20 rounded-xl border border-white/20 transition-colors"
+                      rel="noopener noreferrer"
+                      download={msg.file_name || msg.content || 'attachment'}
+                      className="flex items-center gap-3 p-3 bg-white/15 hover:bg-white/25 rounded-xl border border-white/30 transition-all cursor-pointer shadow-sm active:scale-[0.98]"
                     >
                       <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center shrink-0">
                         <FileText className="w-5 h-5 text-white" />
@@ -346,9 +367,9 @@ export default function ChatWindow({
                         <p className="text-xs font-bold text-white truncate max-w-[180px]">
                           {msg.file_name || msg.content || 'Document'}
                         </p>
-                        <p className="text-[10px] opacity-80">{msg.file_size || 'Click to download'}</p>
+                        <p className="text-[10px] text-white/80">{msg.file_size || 'Klik untuk buka/unduh'}</p>
                       </div>
-                      <Download className="w-4 h-4 text-white/80 shrink-0" />
+                      <Download className="w-4 h-4 text-white shrink-0" />
                     </a>
                   ) : (
                     /* Text Content */
