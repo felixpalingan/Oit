@@ -11,6 +11,8 @@ import {
   UserPlus,
   Settings,
   Compass,
+  Share2,
+  Check,
 } from 'lucide-react';
 import { User, Message, Channel } from '@/types';
 import { useAppStore } from '@/store/useAppStore';
@@ -55,6 +57,7 @@ export default function ChannelSidebar({
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
+  const [copiedInvite, setCopiedInvite] = useState(false);
 
   const [textChannels, setTextChannels] = useState<Channel[]>([]);
   const [voiceChannels, setVoiceChannels] = useState<Channel[]>([]);
@@ -126,6 +129,13 @@ export default function ChannelSidebar({
     }
   }, [activeServerId, supabase]);
 
+  const handleCopyInviteCode = () => {
+    if (!activeServerId) return;
+    navigator.clipboard.writeText(activeServerId);
+    setCopiedInvite(true);
+    setTimeout(() => setCopiedInvite(false), 2000);
+  };
+
   const filteredUsers = usersList.filter((u) => {
     const q = searchQuery.toLowerCase();
     return (
@@ -142,7 +152,7 @@ export default function ChannelSidebar({
       {/* Header Bar */}
       <div className="px-5 py-4 border-b border-zinc-800/80 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h2 className="text-sm font-extrabold text-white truncate max-w-[150px]">
+          <h2 className="text-sm font-extrabold text-white truncate max-w-[140px]">
             {isServerMode ? serverTitle : 'Messages'}
           </h2>
           {isServerMode && <ChevronDown className="w-4 h-4 text-zinc-400" />}
@@ -151,12 +161,25 @@ export default function ChannelSidebar({
         <div className="flex items-center gap-1">
           {isServerMode ? (
             <>
+              {/* Copy Server Invite Code Button */}
+              <button
+                onClick={handleCopyInviteCode}
+                title="Copy Server Invite Code"
+                className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors relative"
+              >
+                {copiedInvite ? (
+                  <Check className="w-4 h-4 text-emerald-400 stroke-[3]" />
+                ) : (
+                  <Share2 className="w-4 h-4 text-[#FF5C00]" />
+                )}
+              </button>
+
               <button
                 onClick={onOpenJoinServer}
                 title="Join or Explore Servers"
                 className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
               >
-                <Compass className="w-4 h-4 text-[#FF5C00]" />
+                <Compass className="w-4 h-4 text-zinc-400 hover:text-white" />
               </button>
 
               <button
@@ -383,7 +406,7 @@ export default function ChannelSidebar({
                           {previewText}
                         </p>
                         {unreadCount > 0 && (
-                          <span className="bg-[#FF5C00] text-white text-[10px] font-extrabold px-1.5 py-0.2 rounded-full shrink-0">
+                          <span className="bg-[#FF5C00] text-[#FF5C00] text-[10px] font-extrabold px-1.5 py-0.2 rounded-full shrink-0">
                             {unreadCount}
                           </span>
                         )}

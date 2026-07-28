@@ -14,6 +14,7 @@ export interface Server {
   name: string;
   icon_url?: string | null;
   owner_id: string;
+  is_private?: boolean;
   created_at?: string;
 }
 

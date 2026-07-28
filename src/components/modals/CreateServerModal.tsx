@@ -39,13 +39,14 @@ export default function CreateServerModal({
     const fallbackChannelId = `chan-${Date.now()}`;
 
     try {
-      // 1. Insert into servers table
-      const { data: newServer, error: srvErr } = await supabase
+      // 1. Insert into servers table with is_private flag
+      const { data: newServer } = await supabase
         .from('servers')
         .insert([
           {
             name: serverName.trim(),
             owner_id: currentUser.id,
+            is_private: isPrivate,
           },
         ])
         .select()
@@ -89,7 +90,6 @@ export default function CreateServerModal({
       onClose();
     } catch (err: any) {
       console.warn('Supabase create server notice:', err);
-      // Fallback: guaranteed instant creation in state
       setActiveServer(fallbackServerId);
       setActiveChannel(fallbackChannelId, cleanChanName);
       if (onCreated) onCreated();
@@ -215,14 +215,14 @@ export default function CreateServerModal({
               </div>
             </div>
 
-            {/* Private Channel Toggle */}
+            {/* Private Server & Channel Toggle */}
             <div className="p-4 bg-[#1c1c21] border border-zinc-800 rounded-2xl flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Lock className="w-5 h-5 text-zinc-400" />
+                <Lock className="w-5 h-5 text-[#FF5C00]" />
                 <div>
-                  <h5 className="text-xs font-bold text-white">Private Channel</h5>
+                  <h5 className="text-xs font-bold text-white">Private Server & Channel</h5>
                   <p className="text-[10px] text-zinc-400">
-                    Only selected members and roles will be able to view this channel.
+                    Hide from public discovery. Require Invite Code to join.
                   </p>
                 </div>
               </div>

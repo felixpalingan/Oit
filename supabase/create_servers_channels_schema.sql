@@ -1,10 +1,13 @@
--- Migration SQL untuk Ekosistem Server & Channels Oit (Dengan RLS Permissive)
+-- Migration SQL untuk Server Private & Public + Server Members Oit
+
+ALTER TABLE public.servers ADD COLUMN IF NOT EXISTS is_private BOOLEAN DEFAULT false;
 
 -- 1. Tabel Servers
 CREATE TABLE IF NOT EXISTS public.servers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   icon_url TEXT,
+  is_private BOOLEAN DEFAULT false,
   owner_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ DEFAULT now()
 );
@@ -29,10 +32,6 @@ CREATE TABLE IF NOT EXISTS public.channels (
   password TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
-
--- Indexing
-CREATE INDEX IF NOT EXISTS idx_server_members_user_id ON public.server_members(user_id);
-CREATE INDEX IF NOT EXISTS idx_channels_server_id ON public.channels(server_id);
 
 -- Enable RLS & Allow All Authenticated Operations
 ALTER TABLE public.servers ENABLE ROW LEVEL SECURITY;
