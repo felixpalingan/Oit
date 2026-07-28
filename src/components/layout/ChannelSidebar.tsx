@@ -65,32 +65,39 @@ export default function ChannelSidebar({
   const [voiceChannels, setVoiceChannels] = useState<Channel[]>([]);
   const [serverTitle, setServerTitle] = useState('Server');
 
-  // Supabase Realtime Presence State for Voice Room Participants
-  const [voiceParticipantsMap, setVoiceParticipantsMap] = useState<Record<string, User[]>>({});
+  // Supabase Realtime Server-Wide Voice Room Presence State
+  // Maps voice_channel_id -> User[]
+  const [voiceRoomMembersMap, setVoiceRoomMembersMap] = useState<Record<string, User[]>>({});
 
   const supabase = createClient();
 
-  // Track Realtime Presence of Users in Voice Rooms
+  // Server-Wide Realtime Presence Listener: Track who is inside WHICH Voice Channel
   useEffect(() => {
-    if (!activeCallRoomId || !currentUser) return;
+    if (!activeServerId || !currentUser) return;
 
-    const presenceChannel = supabase.channel(`presence_${activeCallRoomId}`, {
+    const presenceChannel = supabase.channel(`server_voice_presence:${activeServerId}`, {
       config: { presence: { key: currentUser.id } },
     });
 
     presenceChannel
       .on('presence', { event: 'sync' }, () => {
         const state = presenceChannel.presenceState();
-        const participants: User[] = [];
+        const roomMap: Record<string, User[]> = {};
+
         Object.values(state).forEach((presences: any) => {
           presences.forEach((p: any) => {
-            if (p.user) participants.push(p.user);
+            if (p.user && p.vcChannelId) {
+              if (!roomMap[p.vcChannelId]) {
+                roomMap[p.vcChannelId] = [];
+              }
+              if (!roomMap[p.vcChannelId].some((u) => u.id === p.user.id)) {
+                roomMap[p.vcChannelId].push(p.user);
+              }
+            }
           });
         });
-        setVoiceParticipantsMap((prev) => ({
-          ...prev,
-          [activeCallRoomId]: participants,
-        }));
+
+        setVoiceRoomMembersMap(roomMap);
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
@@ -101,6 +108,7 @@ export default function ChannelSidebar({
               display_name: currentUser.display_name || currentUser.username,
               avatar_url: currentUser.avatar_url,
             },
+            vcChannelId: activeCallRoomId || null,
           });
         }
       });
@@ -109,7 +117,7 @@ export default function ChannelSidebar({
       presenceChannel.untrack();
       supabase.removeChannel(presenceChannel);
     };
-  }, [activeCallRoomId, currentUser, supabase]);
+  }, [activeServerId, activeCallRoomId, currentUser, supabase]);
 
   const fetchChannels = async () => {
     if (!activeServerId) return;
@@ -190,7 +198,6 @@ export default function ChannelSidebar({
     setTimeout(() => setCopiedInvite(false), 2000);
   };
 
-  // Instant local channel creation fix
   const handleChannelCreatedLocally = (newChan: Channel) => {
     if (newChan.type === 'text') {
       setTextChannels((prev) => {
@@ -366,7 +373,7 @@ export default function ChannelSidebar({
               })}
             </div>
 
-            {/* VOICE CHANNELS GROUP WITH REALTIME PARTICIPANTS LIST */}
+            {/* VOICE CHANNELS GROUP WITH REALTIME PARTICIPANTS LIST (EVEN BEFORE JOINING) */}
             <div className="space-y-1 pt-2">
               <div className="flex items-center justify-between px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-zinc-400">
                 <span>VOICE CHANNELS ({voiceChannels.length})</span>
@@ -382,7 +389,7 @@ export default function ChannelSidebar({
                 const isActive = activeChannelId === c.id;
                 const vcRoomKey = `vc_${c.id}`;
                 const isVoiceActive = activeCallRoomId === vcRoomKey;
-                const participants = voiceParticipantsMap[vcRoomKey] || (isVoiceActive ? [currentUser] : []);
+                const participants = voiceRoomMembersMap[vcRoomKey] || (isVoiceActive ? [currentUser] : []);
 
                 return (
                   <div key={c.id} className="space-y-1">
@@ -426,7 +433,7 @@ export default function ChannelSidebar({
                       </div>
                     </div>
 
-                    {/* Realtime Participants List (ALL USERS IN VC) */}
+                    {/* Realtime Participants List (Visible BEFORE and AFTER joining) */}
                     {participants.length > 0 && (
                       <div className="pl-6 pr-2 py-1 space-y-1">
                         {participants.map((p, idx) => (
