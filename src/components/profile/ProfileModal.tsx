@@ -1,184 +1,345 @@
 'use client';
 
-import React, { useState } from 'react';
-import { QRCodeSVG } from 'qrcode.react';
+import React, { useState, useRef, useEffect } from 'react';
+import { X, Settings, Mic, Video, VideoOff, Save, Upload } from 'lucide-react';
 import { UserProfile } from '@/types';
-import { createClient } from '@/lib/supabase/client';
-import { X, QrCode, User, Save, Camera } from 'lucide-react';
+import { createClient } from '@/utils/supabase/client';
 
 interface ProfileModalProps {
   profile: UserProfile;
   onClose: () => void;
-  onUpdate: (updated: UserProfile) => void;
+  onUpdate: (updatedProfile: UserProfile) => void;
 }
 
-export default function ProfileModal({ profile, onClose, onUpdate }: ProfileModalProps) {
-  const [displayName, setDisplayName] = useState(profile.display_name || '');
-  const [bio, setBio] = useState(profile.bio || '');
+export default function ProfileModal({
+  profile,
+  onClose,
+  onUpdate,
+}: ProfileModalProps) {
+  const [displayName, setDisplayName] = useState(profile.display_name || profile.username);
+  const [aboutMe, setAboutMe] = useState(profile.bio || 'Navigating the digital ether.');
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url || '');
-  const [activeTab, setActiveTab] = useState<'profile' | 'qr'>('profile');
-  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
+  // Hardware Devices State
+  const [mics, setMics] = useState<MediaDeviceInfo[]>([]);
+  const [cams, setCams] = useState<MediaDeviceInfo[]>([]);
+  const [selectedMic, setSelectedMic] = useState<string>('');
+  const [selectedCam, setSelectedCam] = useState<string>('');
+  const [isPreviewCamOn, setIsPreviewCamOn] = useState(true);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const supabase = createClient();
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({
-          display_name: displayName,
-          bio: bio,
-          avatar_url: avatarUrl,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', profile.id)
-        .select()
-        .single();
+  // Enumerate Media Hardware Devices
+  useEffect(() => {
+    async function getDevices() {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const audioInputs = devices.filter((d) => d.kind === 'audioinput');
+        const videoInputs = devices.filter((d) => d.kind === 'videoinput');
 
-      if (error) throw error;
-      if (data) {
-        onUpdate(data);
-        onClose();
+        setMics(audioInputs);
+        setCams(videoInputs);
+
+        if (audioInputs.length > 0) setSelectedMic(audioInputs[0].deviceId);
+        if (videoInputs.length > 0) setSelectedCam(videoInputs[0].deviceId);
+      } catch (err) {
+        console.warn('Could not enumerate media devices:', err);
+      }
+    }
+    getDevices();
+  }, []);
+
+  // Camera Preview Stream
+  useEffect(() => {
+    let stream: MediaStream | null = null;
+    async function startCamera() {
+      if (!isPreviewCamOn || !videoRef.current) return;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: selectedCam ? { deviceId: { exact: selectedCam } } : true,
+          audio: false,
+        });
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      } catch (err) {
+        console.warn('Camera preview error:', err);
+      }
+    }
+    startCamera();
+
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, [selectedCam, isPreviewCamOn]);
+
+  // Handle Avatar Upload
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop() || 'png';
+      const filePath = `avatars/${profile.id}_${Date.now()}.${fileExt}`;
+
+      const { error: uploadErr } = await supabase.storage
+        .from('chat-attachments')
+        .upload(filePath, file, { upsert: true });
+
+      if (!uploadErr) {
+        const { data } = supabase.storage.from('chat-attachments').getPublicUrl(filePath);
+        if (data?.publicUrl) {
+          setAvatarUrl(data.publicUrl);
+        }
+      } else {
+        // Fallback to Base64
+        const reader = new FileReader();
+        reader.onload = () => setAvatarUrl(reader.result as string);
+        reader.readAsDataURL(file);
       }
     } catch (err) {
-      console.error('Failed to update profile:', err);
-      alert('Gagal mengupdate profil.');
+      console.error('Avatar upload error:', err);
     } finally {
-      setSaving(false);
+      setUploading(false);
     }
   };
 
-  const qrPayload = JSON.stringify({
-    type: 'oit_user',
-    username: profile.username,
-    id: profile.id,
-  });
+  const handleSave = async () => {
+    const updated: UserProfile = {
+      ...profile,
+      display_name: displayName,
+      bio: aboutMe,
+      avatar_url: avatarUrl || null,
+    };
+
+    try {
+      await supabase.from('users').update({
+        display_name: displayName,
+        avatar_url: avatarUrl || null,
+      }).eq('id', profile.id);
+    } catch (err) {
+      console.error('User update error:', err);
+    }
+
+    onUpdate(updated);
+    onClose();
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-      <div className="w-full max-w-md bg-[#0f0f11] border border-zinc-800 rounded-2xl p-6 shadow-2xl text-zinc-100 relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 select-none animate-in fade-in duration-200">
+      
+      {/* User Settings Modal Container matching image_2.png */}
+      <div className="w-full max-w-2xl bg-[#161619] border border-zinc-800 rounded-3xl p-7 shadow-2xl flex flex-col space-y-6 text-white max-h-[90vh] overflow-y-auto relative">
         
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-white rounded-full bg-zinc-900/60 hover:bg-zinc-800 transition-colors"
-        >
-          <X className="w-5 h-5" />
-        </button>
-
-        {/* Tab Switcher */}
-        <div className="flex gap-2 p-1 bg-[#18181b] rounded-xl mb-6">
+        {/* Top Header */}
+        <div className="flex items-center justify-between border-b border-zinc-800/80 pb-4">
+          <div className="flex items-center gap-2">
+            <Settings className="w-5 h-5 text-[#FF5C00]" />
+            <h3 className="text-lg font-black text-white tracking-tight">
+              User Settings
+            </h3>
+          </div>
           <button
-            onClick={() => setActiveTab('profile')}
-            className={`flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-2 transition-all ${
-              activeTab === 'profile'
-                ? 'bg-[#ff6b00] text-white shadow-md'
-                : 'text-zinc-400 hover:text-white'
-            }`}
+            onClick={onClose}
+            className="p-2 text-zinc-400 hover:text-white rounded-xl hover:bg-zinc-800 transition-colors"
           >
-            <User className="w-4 h-4" /> Edit Profil
-          </button>
-          <button
-            onClick={() => setActiveTab('qr')}
-            className={`flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-2 transition-all ${
-              activeTab === 'qr'
-                ? 'bg-[#ff6b00] text-white shadow-md'
-                : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-            <QrCode className="w-4 h-4" /> QR Code Unik
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {activeTab === 'profile' ? (
-          <form onSubmit={handleSave} className="space-y-4">
-            {/* Avatar Preview */}
-            <div className="flex flex-col items-center mb-4">
-              <div className="relative w-24 h-24 rounded-full bg-zinc-800 border-2 border-[#ff6b00] overflow-hidden flex items-center justify-center shadow-lg shadow-orange-950/40">
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-3xl font-bold text-[#ff6b00]">
-                    {profile.username[0]?.toUpperCase()}
-                  </span>
-                )}
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer">
-                  <Camera className="w-6 h-6 text-white" />
-                </div>
-              </div>
-              <span className="text-xs text-[#ff6b00] font-mono mt-2">@{profile.username}</span>
-            </div>
+        {/* SECTION 1: PROFILE DETAILS */}
+        <div className="space-y-4">
+          <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-[#FF5C00] flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#FF5C00]" />
+            PROFILE DETAILS
+          </h4>
 
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1">
-                Display Name
-              </label>
-              <input
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                className="w-full px-4 py-2.5 bg-[#18181b] border border-zinc-800 rounded-xl text-sm focus:outline-none focus:border-[#ff6b00]"
-              />
-            </div>
+          {/* Avatar Upload Box */}
+          <div className="flex items-center gap-5 p-4 bg-[#1c1c21] border border-zinc-800 rounded-2xl">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleAvatarUpload}
+              accept="image/*"
+              className="hidden"
+            />
 
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1">
-                Bio Singkat
-              </label>
-              <textarea
-                rows={2}
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                placeholder="Ceritakan tentang Anda..."
-                className="w-full px-4 py-2.5 bg-[#18181b] border border-zinc-800 rounded-xl text-sm focus:outline-none focus:border-[#ff6b00] resize-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1">
-                URL Foto Profil
-              </label>
-              <input
-                type="text"
-                value={avatarUrl}
-                onChange={(e) => setAvatarUrl(e.target.value)}
-                placeholder="https://..."
-                className="w-full px-4 py-2.5 bg-[#18181b] border border-zinc-800 rounded-xl text-sm focus:outline-none focus:border-[#ff6b00]"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={saving}
-              className="w-full btn-orange flex items-center justify-center gap-2 py-3 text-sm font-semibold rounded-xl mt-6"
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="w-20 h-20 rounded-full bg-zinc-800 border-2 border-dashed border-[#FF5C00] overflow-hidden flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity shrink-0 relative group"
             >
-              <Save className="w-4 h-4" /> {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
-            </button>
-          </form>
-        ) : (
-          <div className="flex flex-col items-center py-4 space-y-4">
-            <div className="p-4 bg-white rounded-2xl shadow-xl shadow-orange-950/40 border-4 border-[#ff6b00]">
-              <QRCodeSVG
-                value={qrPayload}
-                size={200}
-                bgColor="#ffffff"
-                fgColor="#000000"
-                level="H"
-                includeMargin={false}
-              />
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-2xl font-extrabold text-[#FF5C00]">
+                  {(displayName || 'U')[0].toUpperCase()}
+                </span>
+              )}
+              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-[10px] font-bold">
+                Change
+              </div>
             </div>
-            <div className="text-center">
-              <h3 className="text-sm font-bold text-white">@{profile.username}</h3>
-              <p className="text-xs text-zinc-400 mt-1 max-w-xs">
-                Minta teman Anda untuk meng-scan QR Code ini langsung di aplikasi Oit untuk berteman instan!
+
+            <div className="flex-1">
+              <h5 className="text-xs font-bold text-white">Avatar Image</h5>
+              <p className="text-[11px] text-zinc-400 mt-1 leading-relaxed">
+                Drag and drop a new image here, or click to browse. We recommend a 256×256px PNG or JPG.
               </p>
             </div>
           </div>
-        )}
+
+          {/* Display Name Input */}
+          <div>
+            <label className="block text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mb-2">
+              DISPLAY NAME
+            </label>
+            <input
+              type="text"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              className="w-full px-4 py-3 bg-[#1c1c21] border border-zinc-800 rounded-2xl text-xs text-white focus:outline-none focus:border-[#FF5C00] transition-colors"
+            />
+          </div>
+
+          {/* About Me Textarea */}
+          <div>
+            <label className="block text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mb-2">
+              ABOUT ME
+            </label>
+            <textarea
+              rows={3}
+              value={aboutMe}
+              onChange={(e) => setAboutMe(e.target.value)}
+              className="w-full px-4 py-3 bg-[#1c1c21] border border-zinc-800 rounded-2xl text-xs text-white focus:outline-none focus:border-[#FF5C00] transition-colors resize-none"
+            />
+          </div>
+        </div>
+
+        {/* SECTION 2: HARDWARE DEVICES */}
+        <div className="space-y-4 border-t border-zinc-800/80 pt-4">
+          <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-[#FF5C00] flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#FF5C00]" />
+            HARDWARE DEVICES
+          </h4>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Microphone Dropdown */}
+            <div>
+              <label className="block text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mb-2">
+                MICROPHONE INPUT
+              </label>
+              <div className="relative">
+                <Mic className="w-4 h-4 text-zinc-500 absolute left-3.5 top-3.5" />
+                <select
+                  value={selectedMic}
+                  onChange={(e) => setSelectedMic(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-[#1c1c21] border border-zinc-800 rounded-2xl text-xs text-white focus:outline-none focus:border-[#FF5C00] transition-colors appearance-none cursor-pointer"
+                >
+                  {mics.length > 0 ? (
+                    mics.map((m) => (
+                      <option key={m.deviceId} value={m.deviceId}>
+                        {m.label || `Microphone ${m.deviceId.substring(0, 5)}`}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="">System Default (Shure SM7B)</option>
+                  )}
+                </select>
+              </div>
+
+              {/* Volume Indicator Bar */}
+              <div className="mt-2 flex items-center gap-2">
+                <Mic className="w-3.5 h-3.5 text-zinc-500" />
+                <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                  <div className="h-full bg-[#FF5C00] w-3/5 rounded-full animate-pulse" />
+                </div>
+              </div>
+            </div>
+
+            {/* Video Source Dropdown */}
+            <div>
+              <label className="block text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mb-2">
+                VIDEO SOURCE
+              </label>
+              <div className="relative">
+                <Video className="w-4 h-4 text-zinc-500 absolute left-3.5 top-3.5" />
+                <select
+                  value={selectedCam}
+                  onChange={(e) => setSelectedCam(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-[#1c1c21] border border-zinc-800 rounded-2xl text-xs text-white focus:outline-none focus:border-[#FF5C00] transition-colors appearance-none cursor-pointer"
+                >
+                  {cams.length > 0 ? (
+                    cams.map((c) => (
+                      <option key={c.deviceId} value={c.deviceId}>
+                        {c.label || `Camera ${c.deviceId.substring(0, 5)}`}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="">Sony A7IV (Capture Card)</option>
+                  )}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Camera Preview Box */}
+          <div className="relative w-full h-40 bg-[#1c1c21] border border-zinc-800 rounded-2xl overflow-hidden flex items-center justify-center">
+            {isPreviewCamOn ? (
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center text-zinc-500 space-y-1">
+                <VideoOff className="w-8 h-8 text-[#FF5C00]" />
+                <span className="text-[11px] font-medium">Camera Preview Disabled</span>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setIsPreviewCamOn(!isPreviewCamOn)}
+              className="absolute bottom-3 right-3 p-2 bg-black/60 hover:bg-black/80 text-white rounded-xl backdrop-blur-md transition-colors text-xs font-semibold flex items-center gap-1.5"
+            >
+              {isPreviewCamOn ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4" />}
+              <span>{isPreviewCamOn ? 'Disable' : 'Enable'}</span>
+            </button>
+          </div>
+
+        </div>
+
+        {/* Footer Actions */}
+        <div className="flex items-center justify-end gap-3 pt-3 border-t border-zinc-800/80">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-5 py-3 bg-[#26262a] hover:bg-[#303036] text-zinc-200 font-extrabold rounded-2xl text-xs transition-colors"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={uploading}
+            className="px-6 py-3 bg-[#FF5C00] hover:bg-[#ff701a] text-white font-extrabold rounded-2xl text-xs shadow-lg shadow-[#FF5C00]/25 transition-all active:scale-[0.98] flex items-center gap-2 disabled:opacity-50"
+          >
+            <Save className="w-4 h-4" />
+            <span>Save Changes</span>
+          </button>
+        </div>
 
       </div>
+
     </div>
   );
 }

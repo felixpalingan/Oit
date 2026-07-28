@@ -11,6 +11,8 @@ import AddFriendModal from '@/components/friends/AddFriendModal';
 import VideoRoom from '@/components/chat/VideoRoom';
 import IncomingCallModal from '@/components/call/IncomingCallModal';
 import KnockNotification from '@/components/call/KnockNotification';
+import SecurityCheckModal from '@/components/modals/SecurityCheckModal';
+import CreateServerModal from '@/components/modals/CreateServerModal';
 import { useAppStore, KnockRequest } from '@/store/useAppStore';
 import { User as UserType, Message } from '@/types';
 
@@ -49,6 +51,8 @@ export default function Page() {
   // Modals & Realtime Call State
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showAddFriendModal, setShowAddFriendModal] = useState(false);
+  const [showCreateServerModal, setShowCreateServerModal] = useState(false);
+  const [securityCheckRoom, setSecurityCheckRoom] = useState<{ id: string; title: string } | null>(null);
   const [incomingCallPrompt, setIncomingCallPrompt] = useState<{ caller: UserType; roomName: string; isVideo: boolean } | null>(null);
 
   const supabase = createClient();
@@ -248,20 +252,26 @@ export default function Page() {
     }
   };
 
-  // Trigger Outgoing Knock Knock Door Request
+  // Trigger Outgoing Knock Knock Door Request & Open Security Check Modal
   const handleKnockRoom = (roomId: string, title: string) => {
-    if (!currentUser) return;
+    setSecurityCheckRoom({ id: roomId, title });
+  };
+
+  const handleSecurityCheckSuccess = () => {
+    if (!securityCheckRoom || !currentUser) return;
+
     supabase.channel('room_requests').send({
       type: 'broadcast',
       event: 'knock',
       payload: {
         userId: currentUser.id,
         userName: currentUser.display_name || currentUser.username,
-        roomId: roomId,
-        targetRoomTitle: title,
+        roomId: securityCheckRoom.id,
+        targetRoomTitle: securityCheckRoom.title,
       },
     });
-    alert(`Knock Knock! Permintaan masuk ke "${title}" telah dikirim ke penghuni room.`);
+
+    setSecurityCheckRoom(null);
   };
 
   // Trigger Outgoing Call Signaling to Target User
@@ -403,7 +413,7 @@ export default function Page() {
     );
   }
 
-  // --- RENDER AUTH PAGE ---
+  // --- RENDER AUTH PAGE (IMAGE 4 MATCH) ---
   if (!currentUser) {
     return (
       <div className="min-h-screen w-full bg-[#000000] flex flex-col items-center justify-center p-4 selection:bg-[#FF5C00] selection:text-white">
@@ -550,6 +560,7 @@ export default function Page() {
         currentUser={currentUser}
         onOpenProfile={() => setShowProfileModal(true)}
         onOpenNewChat={() => setShowAddFriendModal(true)}
+        onOpenCreateServer={() => setShowCreateServerModal(true)}
       />
 
       {/* 2. Channel & DM Sidebar */}
@@ -595,7 +606,7 @@ export default function Page() {
             id: currentUser.id,
             username: currentUser.username,
             display_name: currentUser.display_name,
-            bio: 'Hey there! I am using Oit.',
+            bio: 'Navigating the digital ether.',
             avatar_url: currentUser.avatar_url,
           }}
           onClose={() => setShowProfileModal(false)}
@@ -608,6 +619,25 @@ export default function Page() {
           currentUserId={currentUser.id}
           onClose={() => setShowAddFriendModal(false)}
           onFriendAdded={() => {}}
+        />
+      )}
+
+      {/* Create Server Modal (Image 3 Match) */}
+      {showCreateServerModal && (
+        <CreateServerModal
+          onClose={() => setShowCreateServerModal(false)}
+          onCreate={(srv) => {
+            alert(`Server "${srv.name}" dengan channel #${srv.channelName} telah dibuat!`);
+          }}
+        />
+      )}
+
+      {/* Glassmorphism Security Check Password Modal (Image 1 Match) */}
+      {securityCheckRoom && (
+        <SecurityCheckModal
+          roomTitle={securityCheckRoom.title}
+          onSuccess={handleSecurityCheckSuccess}
+          onClose={() => setSecurityCheckRoom(null)}
         />
       )}
 
@@ -624,7 +654,7 @@ export default function Page() {
         />
       )}
 
-      {/* Persistent LiveKit Video / Voice Call Component (Renders both Full Modal and Minimized Floating Pod View inside LiveKitRoom wrapper) */}
+      {/* Persistent LiveKit Video / Voice Call Component */}
       {activeCallRoomId && (
         <VideoRoom
           roomName={activeCallRoomId}
