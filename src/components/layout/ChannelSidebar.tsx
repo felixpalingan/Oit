@@ -9,11 +9,14 @@ import {
   Lock,
   ChevronDown,
   UserPlus,
+  Settings,
+  Compass,
 } from 'lucide-react';
 import { User, Message, Channel } from '@/types';
 import { useAppStore } from '@/store/useAppStore';
 import { createClient } from '@/utils/supabase/client';
 import CreateChannelModal from '@/components/modals/CreateChannelModal';
+import EditChannelModal from '@/components/modals/EditChannelModal';
 
 interface ChannelSidebarProps {
   currentUser: User;
@@ -26,6 +29,7 @@ interface ChannelSidebarProps {
   onKnockRoom: (roomId: string, title: string) => void;
   onJoinVoiceCall?: (channel: Channel) => void;
   onSelectChannel?: () => void;
+  onOpenJoinServer?: () => void;
 }
 
 export default function ChannelSidebar({
@@ -39,6 +43,7 @@ export default function ChannelSidebar({
   onKnockRoom,
   onJoinVoiceCall,
   onSelectChannel,
+  onOpenJoinServer,
 }: ChannelSidebarProps) {
   const {
     activeServerId,
@@ -49,6 +54,7 @@ export default function ChannelSidebar({
   const [activeTab, setActiveTab] = useState<'direct' | 'groups'>('direct');
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
+  const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
 
   const [textChannels, setTextChannels] = useState<Channel[]>([]);
   const [voiceChannels, setVoiceChannels] = useState<Channel[]>([]);
@@ -136,7 +142,7 @@ export default function ChannelSidebar({
       {/* Header Bar */}
       <div className="px-5 py-4 border-b border-zinc-800/80 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h2 className="text-sm font-extrabold text-white truncate max-w-[170px]">
+          <h2 className="text-sm font-extrabold text-white truncate max-w-[150px]">
             {isServerMode ? serverTitle : 'Messages'}
           </h2>
           {isServerMode && <ChevronDown className="w-4 h-4 text-zinc-400" />}
@@ -144,13 +150,23 @@ export default function ChannelSidebar({
 
         <div className="flex items-center gap-1">
           {isServerMode ? (
-            <button
-              onClick={() => setShowCreateChannelModal(true)}
-              title="Create Channel"
-              className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
-            >
-              <Plus className="w-4 h-4 stroke-[2.5]" />
-            </button>
+            <>
+              <button
+                onClick={onOpenJoinServer}
+                title="Join or Explore Servers"
+                className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+              >
+                <Compass className="w-4 h-4 text-[#FF5C00]" />
+              </button>
+
+              <button
+                onClick={() => setShowCreateChannelModal(true)}
+                title="Create Channel"
+                className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+              >
+                <Plus className="w-4 h-4 stroke-[2.5]" />
+              </button>
+            </>
           ) : (
             <button
               onClick={onOpenNewChatModal}
@@ -224,18 +240,33 @@ export default function ChannelSidebar({
                 return (
                   <div
                     key={c.id}
-                    onClick={() => {
-                      setActiveChannel(c.id, c.name);
-                      if (onSelectChannel) onSelectChannel();
-                    }}
-                    className={`flex items-center gap-2.5 px-3 py-2 rounded-xl cursor-pointer text-xs font-bold transition-all ${
+                    className={`flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer text-xs font-bold transition-all group ${
                       isActive
                         ? 'bg-[#FF5C00] text-white shadow-md shadow-[#FF5C00]/20'
                         : 'text-zinc-400 hover:text-white hover:bg-[#1c1c21]'
                     }`}
                   >
-                    <Hash className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-zinc-500'}`} />
-                    <span className="truncate">{c.name}</span>
+                    <div
+                      onClick={() => {
+                        setActiveChannel(c.id, c.name);
+                        if (onSelectChannel) onSelectChannel();
+                      }}
+                      className="flex items-center gap-2.5 truncate flex-1"
+                    >
+                      <Hash className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-zinc-500'}`} />
+                      <span className="truncate">{c.name}</span>
+                    </div>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingChannel(c);
+                      }}
+                      title="Edit Channel Settings"
+                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-black/30 rounded-md transition-opacity"
+                    >
+                      <Settings className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 );
               })}
@@ -258,28 +289,43 @@ export default function ChannelSidebar({
                 return (
                   <div
                     key={c.id}
-                    onClick={() => {
-                      if (onSelectChannel) onSelectChannel();
-                      if (c.is_private) {
-                        onKnockRoom(c.id, c.name);
-                      } else if (onJoinVoiceCall) {
-                        onJoinVoiceCall(c);
-                      }
-                    }}
-                    className={`flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer text-xs font-bold transition-all ${
+                    className={`flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer text-xs font-bold transition-all group ${
                       isActive
                         ? 'bg-[#FF5C00] text-white shadow-md shadow-[#FF5C00]/20'
                         : 'text-zinc-400 hover:text-white hover:bg-[#1c1c21]'
                     }`}
                   >
-                    <div className="flex items-center gap-2.5 truncate">
+                    <div
+                      onClick={() => {
+                        if (onSelectChannel) onSelectChannel();
+                        if (c.is_private) {
+                          onKnockRoom(c.id, c.name);
+                        } else if (onJoinVoiceCall) {
+                          onJoinVoiceCall(c);
+                        }
+                      }}
+                      className="flex items-center gap-2.5 truncate flex-1"
+                    >
                       <Volume2 className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#FF5C00]' : 'text-[#FF5C00]'}`} />
                       <span className="truncate">{c.name}</span>
                     </div>
 
-                    {c.is_private && (
-                      <Lock className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                    )}
+                    <div className="flex items-center gap-1">
+                      {c.is_private && (
+                        <Lock className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                      )}
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingChannel(c);
+                        }}
+                        title="Edit Channel Settings"
+                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-black/30 rounded-md transition-opacity"
+                      >
+                        <Settings className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -359,6 +405,15 @@ export default function ChannelSidebar({
           onChannelCreated={() => {
             fetchChannels();
           }}
+        />
+      )}
+
+      {editingChannel && (
+        <EditChannelModal
+          channel={editingChannel}
+          onClose={() => setEditingChannel(null)}
+          onUpdated={() => fetchChannels()}
+          onDeleted={() => fetchChannels()}
         />
       )}
 
