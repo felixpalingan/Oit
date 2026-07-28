@@ -2,17 +2,34 @@
 
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { User, Lock, LogIn, UserPlus, PhoneCall, AlertCircle, CheckCircle2 } from 'lucide-react';
-import TopNavbar from '@/components/chat/TopNavbar';
-import ChatSidebar from '@/components/chat/ChatSidebar';
+import { User, Lock, LogIn, UserPlus, AlertCircle, CheckCircle2 } from 'lucide-react';
+import LeftNavRail from '@/components/layout/LeftNavRail';
+import ChannelSidebar from '@/components/layout/ChannelSidebar';
 import ChatWindow from '@/components/chat/ChatWindow';
 import ProfileModal from '@/components/profile/ProfileModal';
 import AddFriendModal from '@/components/friends/AddFriendModal';
 import VideoRoom from '@/components/chat/VideoRoom';
 import IncomingCallModal from '@/components/call/IncomingCallModal';
+import KnockNotification from '@/components/call/KnockNotification';
+import FloatingPod from '@/components/call/FloatingPod';
+import { useAppStore, KnockRequest } from '@/store/useAppStore';
 import { User as UserType, Message } from '@/types';
 
 export default function Page() {
+  const {
+    activeChannelId,
+    activeChannelName,
+    activeCallRoomId,
+    activeCallTargetUser,
+    isCallVideo,
+    isCallMinimized,
+    knockNotification,
+    setActiveCall,
+    setIsCallMinimized,
+    setKnockNotification,
+    clearCall,
+  } = useAppStore();
+
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -24,7 +41,6 @@ export default function Page() {
   const [currentUser, setCurrentUser] = useState<UserType | null>(null);
   const [usersList, setUsersList] = useState<UserType[]>([]);
   const [activeChatUser, setActiveChatUser] = useState<UserType | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
   const [authChecking, setAuthChecking] = useState(true);
 
   // Message Previews & Unread Counts Mapping
@@ -34,7 +50,6 @@ export default function Page() {
   // Modals & Realtime Call State
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showAddFriendModal, setShowAddFriendModal] = useState(false);
-  const [callState, setCallState] = useState<{ active: boolean; roomName: string; isVideo: boolean } | null>(null);
   const [incomingCallPrompt, setIncomingCallPrompt] = useState<{ caller: UserType; roomName: string; isVideo: boolean } | null>(null);
 
   const supabase = createClient();
@@ -108,7 +123,7 @@ export default function Page() {
     };
   }, [supabase]);
 
-  // Real-time Listeners for Previews & Realtime Call Signaling (Incoming, Decline, End Call)
+  // Real-time Listeners for Previews, Call Signaling, and Knock-Knock Broadcasts
   useEffect(() => {
     if (!currentUser) return;
 
@@ -139,14 +154,34 @@ export default function Page() {
         }
       })
       .on('broadcast', { event: 'call_declined' }, ({ payload }) => {
-        if (payload?.roomName && callState?.roomName === payload.roomName) {
-          setCallState(null);
+        if (payload?.roomName && activeCallRoomId === payload.roomName) {
+          clearCall();
         }
       })
       .on('broadcast', { event: 'call_ended' }, ({ payload }) => {
-        if (payload?.roomName) {
-          setCallState((prev) => (prev?.roomName === payload.roomName ? null : prev));
-          setIncomingCallPrompt((prev) => (prev?.roomName === payload.roomName ? null : prev));
+        if (payload?.roomName && activeCallRoomId === payload.roomName) {
+          clearCall();
+        }
+      })
+      .subscribe();
+
+    // 3. Supabase Realtime "Knock-Knock" Room Requests Channel
+    const roomRequestsChannel = supabase
+      .channel('room_requests')
+      .on('broadcast', { event: 'knock' }, ({ payload }) => {
+        if (payload?.userId !== currentUser.id) {
+          setKnockNotification({
+            id: `knock-${Date.now()}`,
+            userId: payload.userId,
+            userName: payload.userName || 'David (34)',
+            roomName: payload.roomId || 'secret-room',
+            targetRoomTitle: payload.targetRoomTitle || 'Secret Room',
+          });
+        }
+      })
+      .on('broadcast', { event: 'knock_approved' }, ({ payload }) => {
+        if (payload?.targetUserId === currentUser.id) {
+          setActiveCall(payload.roomName, null, true);
         }
       })
       .subscribe();
@@ -154,8 +189,9 @@ export default function Page() {
     return () => {
       supabase.removeChannel(sidebarChannel);
       supabase.removeChannel(callSignalingChannel);
+      supabase.removeChannel(roomRequestsChannel);
     };
-  }, [currentUser, usersList, callState?.roomName, supabase]);
+  }, [currentUser, usersList, activeCallRoomId, supabase]);
 
   const handleSessionUser = async (sessionUser: { id: string; email?: string }) => {
     const uname = sessionUser.email?.split('@')[0] || 'user';
@@ -199,7 +235,6 @@ export default function Page() {
 
       if (allUsers && allUsers.length > 0) {
         setUsersList(allUsers as UserType[]);
-        setActiveChatUser(allUsers[0] as UserType);
         await fetchMessagePreviews(sessionUser.id, allUsers as UserType[]);
       } else {
         const sampleUser: UserType = {
@@ -208,18 +243,32 @@ export default function Page() {
           display_name: 'Sarah (26)',
           avatar_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
         };
-        setActiveChatUser(sampleUser);
       }
     } catch (err) {
       console.error('Session user setup error:', err);
     }
   };
 
+  // Trigger Outgoing Knock Knock Door Request
+  const handleKnockRoom = (roomId: string, title: string) => {
+    if (!currentUser) return;
+    supabase.channel('room_requests').send({
+      type: 'broadcast',
+      event: 'knock',
+      payload: {
+        userId: currentUser.id,
+        userName: currentUser.display_name || currentUser.username,
+        roomId: roomId,
+        targetRoomTitle: title,
+      },
+    });
+    alert(`Knock Knock! Permintaan masuk ke "${title}" telah dikirim ke penghuni room.`);
+  };
+
   // Trigger Outgoing Call Signaling to Target User
   const initiateCall = (chatUser: UserType, isVideo: boolean) => {
     const roomName = `call_${[currentUser?.id, chatUser.id].sort().join('_')}`;
 
-    // Broadcast incoming_call signal
     supabase.channel('global:call_signaling').send({
       type: 'broadcast',
       event: 'incoming_call',
@@ -231,7 +280,27 @@ export default function Page() {
       },
     });
 
-    setCallState({ active: true, roomName, isVideo });
+    setActiveCall(roomName, chatUser, isVideo);
+  };
+
+  // Approve Knock Handler
+  const handleApproveKnock = (knock: KnockRequest) => {
+    const roomName = `room_${knock.roomName}`;
+    supabase.channel('room_requests').send({
+      type: 'broadcast',
+      event: 'knock_approved',
+      payload: {
+        targetUserId: knock.userId,
+        roomName,
+      },
+    });
+    setActiveCall(roomName, { display_name: knock.userName }, true);
+    setKnockNotification(null);
+  };
+
+  // Deny Knock Handler
+  const handleDenyKnock = (knock: KnockRequest) => {
+    setKnockNotification(null);
   };
 
   // Decline Call Handler
@@ -251,16 +320,16 @@ export default function Page() {
 
   // End Call Handler
   const handleEndCall = () => {
-    if (callState) {
+    if (activeCallRoomId) {
       supabase.channel('global:call_signaling').send({
         type: 'broadcast',
         event: 'call_ended',
         payload: {
-          roomName: callState.roomName,
+          roomName: activeCallRoomId,
         },
       });
     }
-    setCallState(null);
+    clearCall();
   };
 
   // Login & Register handler
@@ -473,64 +542,62 @@ export default function Page() {
     );
   }
 
-  // --- RENDER MAIN OIT DASHBOARD ---
+  // --- RENDER MAIN OIT DASHBOARD MATCHING DESIGN IMAGE ---
   return (
-    <div className="h-screen w-screen bg-[#000000] flex flex-col overflow-hidden font-sans">
+    <div className="h-screen w-screen bg-[#141416] flex overflow-hidden font-sans relative select-none">
       
-      {/* Top Navbar */}
-      <TopNavbar
+      {/* 1. Leftmost Vertical Navigation Rail */}
+      <LeftNavRail
         currentUser={currentUser}
-        onOpenQR={() => setShowProfileModal(true)}
-        onLogout={async () => {
-          await supabase.auth.signOut();
-          setCurrentUser(null);
-        }}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
+        onOpenProfile={() => setShowProfileModal(true)}
+        onOpenNewChat={() => setShowAddFriendModal(true)}
       />
 
-      {/* Main App Container */}
-      <div className="flex-1 flex overflow-hidden">
+      {/* 2. Channel & DM Sidebar */}
+      <ChannelSidebar
+        currentUser={currentUser}
+        usersList={usersList}
+        activeChatUser={activeChatUser}
+        onSelectUser={(u) => setActiveChatUser(u)}
+        onOpenNewChatModal={() => setShowAddFriendModal(true)}
+        lastMessagesMap={lastMessagesMap}
+        unreadCountsMap={unreadCountsMap}
+        onKnockRoom={handleKnockRoom}
+      />
+
+      {/* 3. Main Content Stream Area */}
+      <main className="flex-1 h-full flex flex-col relative overflow-hidden bg-[#121215]">
         
-        {/* Left Sidebar */}
-        <div className={`h-full w-full md:w-auto ${activeChatUser ? 'hidden md:flex' : 'flex'}`}>
-          <ChatSidebar
-            currentUser={currentUser}
-            usersList={usersList}
-            activeChatUser={activeChatUser}
-            onSelectUser={(u) => {
-              setActiveChatUser(u);
-              fetchMessagePreviews(currentUser.id, usersList);
-            }}
-            onOpenNewChatModal={() => setShowAddFriendModal(true)}
-            searchQuery={searchQuery}
-            lastMessagesMap={lastMessagesMap}
-            unreadCountsMap={unreadCountsMap}
+        {/* Top Right Knock Knock Notification Badge */}
+        {knockNotification && (
+          <KnockNotification
+            knock={knockNotification}
+            onApprove={handleApproveKnock}
+            onDeny={handleDenyKnock}
           />
-        </div>
+        )}
 
-        {/* Main Chat Stream Area */}
-        <div className={`h-full flex-1 ${activeChatUser ? 'flex' : 'hidden md:flex'}`}>
-          {activeChatUser ? (
-            <ChatWindow
-              currentUser={currentUser}
-              chatUser={activeChatUser}
-              onBackMobile={() => setActiveChatUser(null)}
-              onStartCall={(isVideo) => initiateCall(activeChatUser, isVideo)}
-            />
-          ) : (
-            <div className="flex-1 h-full bg-[#000000] flex flex-col items-center justify-center text-center p-8 border-l border-zinc-900">
-              <h2 className="text-2xl font-black text-white">Selamat Datang di Oit!</h2>
-              <p className="text-xs text-zinc-400 max-w-sm mt-2">
-                Pilih kontak untuk mulai berkirim pesan real-time.
-              </p>
-            </div>
-          )}
-        </div>
+        {/* Chat Window Stream */}
+        <ChatWindow
+          currentUser={currentUser}
+          chatUser={activeChatUser}
+          onBackMobile={() => setActiveChatUser(null)}
+          onStartCall={(isVideo) => {
+            if (activeChatUser) initiateCall(activeChatUser, isVideo);
+            else initiateCall({ id: 'room-1', username: activeChannelName, display_name: activeChannelName, avatar_url: null }, isVideo);
+          }}
+        />
+      </main>
 
-      </div>
+      {/* 4. Bottom Right Floating Live Pod */}
+      {activeCallRoomId && isCallMinimized && (
+        <FloatingPod
+          currentUser={currentUser}
+          onExpand={() => setIsCallMinimized(false)}
+        />
+      )}
 
-      {/* Modals & Realtime Call Handlers */}
+      {/* Modals & Realtime Ringing Handlers */}
       {showProfileModal && (
         <ProfileModal
           profile={{
@@ -559,24 +626,20 @@ export default function Page() {
           caller={incomingCallPrompt.caller}
           isVideo={incomingCallPrompt.isVideo}
           onAccept={() => {
-            setCallState({
-              active: true,
-              roomName: incomingCallPrompt.roomName,
-              isVideo: incomingCallPrompt.isVideo,
-            });
+            setActiveCall(incomingCallPrompt.roomName, incomingCallPrompt.caller, incomingCallPrompt.isVideo);
             setIncomingCallPrompt(null);
           }}
           onDecline={handleDeclineCall}
         />
       )}
 
-      {/* Active LiveKit Video / Voice Call Modal */}
-      {callState?.active && (
+      {/* Full LiveKit Video / Voice Call Modal (Expanded) */}
+      {activeCallRoomId && !isCallMinimized && (
         <VideoRoom
-          roomName={callState.roomName}
+          roomName={activeCallRoomId}
           currentUser={currentUser}
-          chatUser={activeChatUser}
-          isVideo={callState.isVideo}
+          chatUser={activeCallTargetUser}
+          isVideo={isCallVideo}
           onLeave={handleEndCall}
         />
       )}

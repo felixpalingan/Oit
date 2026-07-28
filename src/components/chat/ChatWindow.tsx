@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Message } from '@/types';
 import { createClient } from '@/utils/supabase/client';
+import { useAppStore } from '@/store/useAppStore';
 import {
   Phone,
   Video,
@@ -17,11 +18,13 @@ import {
   Download,
   ExternalLink,
   UploadCloud,
+  Hash,
+  Plus,
 } from 'lucide-react';
 
 interface ChatWindowProps {
   currentUser: User;
-  chatUser: User;
+  chatUser?: User | null;
   onBackMobile: () => void;
   onStartCall: (isVideo: boolean) => void;
 }
@@ -32,6 +35,7 @@ export default function ChatWindow({
   onBackMobile,
   onStartCall,
 }: ChatWindowProps) {
+  const { activeChannelName } = useAppStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageText, setMessageText] = useState('');
 
@@ -52,7 +56,6 @@ export default function ChatWindow({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Helper function to detect image files
   const isImageFile = (url?: string | null, name?: string | null) => {
     const target = (url || name || '').toLowerCase();
     return (
@@ -62,7 +65,6 @@ export default function ChatWindow({
     );
   };
 
-  // Convert File to Base64 Data URL Helper
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -72,8 +74,8 @@ export default function ChatWindow({
     });
   };
 
-  // Mark unread messages as read in Supabase
   const markMessagesAsRead = async () => {
+    if (!chatUser) return;
     try {
       await supabase
         .from('messages')
@@ -90,15 +92,15 @@ export default function ChatWindow({
   useEffect(() => {
     async function fetchMessages() {
       try {
-        const { data, error } = await supabase
-          .from('messages')
-          .select('*')
-          .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${chatUser.id}),and(sender_id.eq.${chatUser.id},receiver_id.eq.${currentUser.id})`)
-          .order('created_at', { ascending: true });
+        let query = supabase.from('messages').select('*');
+        if (chatUser) {
+          query = query.or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${chatUser.id}),and(sender_id.eq.${chatUser.id},receiver_id.eq.${currentUser.id})`);
+        }
+        const { data, error } = await query.order('created_at', { ascending: true }).limit(50);
 
         if (!error && data) {
           setMessages(data as Message[]);
-          await markMessagesAsRead();
+          if (chatUser) await markMessagesAsRead();
         }
       } catch (err) {
         console.error('Fetch messages error:', err);
@@ -109,7 +111,6 @@ export default function ChatWindow({
 
     fetchMessages();
 
-    // Wiring Supabase Realtime Listener on table `messages` for INSERT & UPDATE (Read Status)
     const channel = supabase
       .channel('public:messages')
       .on(
@@ -117,21 +118,14 @@ export default function ChatWindow({
         { event: 'INSERT', schema: 'public', table: 'messages' },
         async (payload) => {
           const newMsg = payload.new as Message;
-          if (
-            (newMsg.sender_id === currentUser.id && newMsg.receiver_id === chatUser.id) ||
-            (newMsg.sender_id === chatUser.id && newMsg.receiver_id === currentUser.id)
-          ) {
-            setMessages((prev) => {
-              if (prev.some((m) => m.id === newMsg.id)) return prev;
-              return [...prev, newMsg];
-            });
-
-            if (newMsg.sender_id === chatUser.id) {
-              await markMessagesAsRead();
-            }
-
-            setTimeout(scrollToBottom, 100);
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === newMsg.id)) return prev;
+            return [...prev, newMsg];
+          });
+          if (chatUser && newMsg.sender_id === chatUser.id) {
+            await markMessagesAsRead();
           }
+          setTimeout(scrollToBottom, 100);
         }
       )
       .on(
@@ -149,7 +143,7 @@ export default function ChatWindow({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUser.id, chatUser.id, supabase]);
+  }, [currentUser.id, chatUser, supabase]);
 
   // Handle Send Message
   const handleSendMessage = async () => {
@@ -165,7 +159,7 @@ export default function ChatWindow({
           {
             content: contentToSend,
             sender_id: currentUser.id,
-            receiver_id: chatUser.id,
+            receiver_id: chatUser ? chatUser.id : null,
             is_read: false,
           },
         ])
@@ -193,7 +187,6 @@ export default function ChatWindow({
     }
   };
 
-  // Upload single file object
   const processSingleFile = async (selectedFile: File) => {
     setIsUploading(true);
     setUploadFileName(selectedFile.name);
@@ -245,7 +238,7 @@ export default function ChatWindow({
             file_name: selectedFile.name,
             file_size: fileSizeFormatted,
             sender_id: currentUser.id,
-            receiver_id: chatUser.id,
+            receiver_id: chatUser ? chatUser.id : null,
             is_read: false,
           },
         ])
@@ -257,7 +250,7 @@ export default function ChatWindow({
         const tempMsg: Message = {
           id: `temp-${Date.now()}`,
           sender_id: currentUser.id,
-          receiver_id: chatUser.id,
+          receiver_id: chatUser ? chatUser.id : null,
           content: selectedFile.name,
           attachment_url: publicUrl,
           file_name: selectedFile.name,
@@ -333,13 +326,17 @@ export default function ChatWindow({
     }
   };
 
+  const currentTitle = chatUser
+    ? (chatUser.display_name || chatUser.username)
+    : `# ${activeChannelName}`;
+
   return (
     <div
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
-      className="flex-1 h-full bg-[#000000] flex flex-col relative overflow-hidden select-none"
+      className="flex-1 h-full bg-[#121215] flex flex-col relative overflow-hidden select-none"
     >
       {/* Drag & Drop Visual Overlay */}
       {isDragging && (
@@ -349,13 +346,13 @@ export default function ChatWindow({
           </div>
           <h3 className="text-xl font-extrabold text-white">Lepaskan File di Sini</h3>
           <p className="text-xs text-zinc-400 mt-1">
-            File akan otomatis diunggah dan dikirim ke <span className="text-[#FF5C00] font-bold">@{chatUser.username}</span>
+            File akan otomatis diunggah dan dikirim ke <span className="text-[#FF5C00] font-bold">{currentTitle}</span>
           </p>
         </div>
       )}
 
-      {/* Top Header Bar */}
-      <div className="px-5 py-3.5 bg-[#121215] border-b border-zinc-800/80 flex items-center justify-between z-10">
+      {/* Top Header Bar Matching Design Image */}
+      <div className="px-5 py-3 bg-[#121215] border-b border-zinc-800/80 flex items-center justify-between z-10">
         <div className="flex items-center gap-3">
           <button
             onClick={onBackMobile}
@@ -364,25 +361,33 @@ export default function ChatWindow({
             <ArrowLeft className="w-5 h-5" />
           </button>
 
-          <div className="relative">
-            <div className="w-10 h-10 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center font-bold text-[#FF5C00]">
-              {chatUser.avatar_url ? (
-                <img src={chatUser.avatar_url} alt="" className="w-full h-full object-cover" />
-              ) : (
-                chatUser.username[0]?.toUpperCase()
-              )}
+          {chatUser ? (
+            <div className="relative">
+              <div className="w-9 h-9 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center font-bold text-[#FF5C00]">
+                {chatUser.avatar_url ? (
+                  <img src={chatUser.avatar_url} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  chatUser.username[0]?.toUpperCase()
+                )}
+              </div>
+              <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-[#121215]" />
             </div>
-            <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[#121215]" />
-          </div>
+          ) : (
+            <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center text-zinc-400">
+              <Hash className="w-4 h-4 text-zinc-300" />
+            </div>
+          )}
 
           <div>
             <h3 className="text-sm font-bold text-white leading-tight">
-              {chatUser.display_name || chatUser.username}
+              {currentTitle}
             </h3>
-            <span className="text-[11px] text-emerald-400 font-medium flex items-center gap-1.5 mt-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-              Online
-            </span>
+            {chatUser && (
+              <span className="text-[11px] text-emerald-400 font-medium flex items-center gap-1.5 mt-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                Online
+              </span>
+            )}
           </div>
         </div>
 
@@ -391,7 +396,7 @@ export default function ChatWindow({
           <button
             onClick={() => onStartCall(false)}
             title="Voice Call"
-            className="p-2.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-colors"
+            className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-colors"
           >
             <Phone className="w-4 h-4" />
           </button>
@@ -399,14 +404,14 @@ export default function ChatWindow({
           <button
             onClick={() => onStartCall(true)}
             title="Video Call"
-            className="p-2.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-colors"
+            className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-colors"
           >
             <Video className="w-4 h-4" />
           </button>
 
           <button
             title="More Options"
-            className="p-2.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-colors"
+            className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-colors"
           >
             <MoreVertical className="w-4 h-4" />
           </button>
@@ -414,12 +419,12 @@ export default function ChatWindow({
       </div>
 
       {/* Message Stream Area */}
-      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 bg-[#000000]">
+      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 bg-[#121215]">
         
         {/* Date Separator Pill */}
         <div className="flex justify-center my-3">
           <span className="bg-[#1c1c21] text-zinc-400 text-[10px] font-semibold px-3 py-1 rounded-full border border-zinc-800/60 shadow-sm">
-            Today, 9:30 AM
+            Today
           </span>
         </div>
 
@@ -432,25 +437,38 @@ export default function ChatWindow({
           return (
             <div
               key={msg.id}
-              className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
+              className={`flex items-start gap-3 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
             >
-              <div className="flex items-end gap-2 max-w-[85%] md:max-w-[65%]">
-                
-                {!isMe && (
-                  <div className="w-7 h-7 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center text-xs font-bold text-[#FF5C00] shrink-0 mb-1">
-                    {chatUser.avatar_url ? (
-                      <img src={chatUser.avatar_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      chatUser.username[0]?.toUpperCase()
-                    )}
-                  </div>
+              <div className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center text-xs font-bold text-[#FF5C00] shrink-0 mt-0.5">
+                {isMe ? (
+                  currentUser.avatar_url ? (
+                    <img src={currentUser.avatar_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    currentUser.username[0]?.toUpperCase()
+                  )
+                ) : chatUser?.avatar_url ? (
+                  <img src={chatUser.avatar_url} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  (chatUser?.username || 'K')[0]?.toUpperCase()
                 )}
+              </div>
+
+              <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[85%] md:max-w-[70%]`}>
+                
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-bold text-white">
+                    {isMe ? 'You' : (chatUser?.display_name || chatUser?.username || 'Kenji (31)')}
+                  </span>
+                  <span className="text-[10px] text-zinc-500">
+                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
 
                 <div
-                  className={`p-3.5 rounded-2xl relative shadow-md ${
+                  className={`p-3 rounded-2xl relative shadow-md ${
                     isMe
-                      ? 'bg-[#ff8a65] text-white rounded-br-none'
-                      : 'bg-[#1c1c21] text-zinc-100 border border-zinc-800/80 rounded-bl-none'
+                      ? 'bg-[#FF5C00] text-white rounded-tr-none'
+                      : 'bg-[#1c1c21] text-zinc-100 border border-zinc-800/80 rounded-tl-none'
                   }`}
                 >
                   {/* Image Attachment Lightbox */}
@@ -473,7 +491,7 @@ export default function ChatWindow({
                       </div>
                     </a>
                   ) : attachUrl || msg.file_name ? (
-                    /* Document / File Attachment Card (Clickable) */
+                    /* Document Card */
                     <a
                       href={attachUrl || '#'}
                       target="_blank"
@@ -497,19 +515,16 @@ export default function ChatWindow({
                     <p className="text-xs whitespace-pre-wrap leading-relaxed">{msg.content}</p>
                   )}
 
-                  {/* Timestamp & Real-time Read Status Checkmarks */}
-                  <div className="flex items-center justify-end gap-1 mt-1 text-[9px] opacity-90">
-                    <span>
-                      {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                    {isMe && (
-                      isRead ? (
-                        <CheckCheck className="w-3.5 h-3.5 text-[#FF5C00] stroke-[2.5]" />
+                  {/* Checkmarks */}
+                  {isMe && (
+                    <div className="flex justify-end mt-0.5">
+                      {isRead ? (
+                        <CheckCheck className="w-3.5 h-3.5 text-white stroke-[2.5]" />
                       ) : (
                         <Check className="w-3.5 h-3.5 text-white/70" />
-                      )
-                    )}
-                  </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
               </div>
@@ -520,7 +535,7 @@ export default function ChatWindow({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Uploading Progress Bar Container */}
+      {/* Uploading Progress Bar */}
       {isUploading && (
         <div className="px-6 py-1.5 bg-[#121215] border-t border-zinc-800/80">
           <div className="flex items-center justify-between text-[10px] text-zinc-400 mb-1">
@@ -536,7 +551,7 @@ export default function ChatWindow({
         </div>
       )}
 
-      {/* Bottom Message Input Bar */}
+      {/* Bottom Message Input Bar Matching Design Image */}
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -552,23 +567,23 @@ export default function ChatWindow({
           className="hidden"
         />
 
-        <div className="flex-1 bg-[#1c1c21] border border-zinc-800 rounded-full px-4 py-2.5 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
-            className="text-zinc-400 hover:text-white transition-colors shrink-0 disabled:opacity-50"
-          >
-            <Paperclip className="w-4 h-4" />
-          </button>
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isUploading}
+          className="w-10 h-10 bg-[#1c1c21] hover:bg-[#25252b] text-zinc-400 hover:text-white border border-zinc-800 rounded-full flex items-center justify-center shrink-0 transition-colors disabled:opacity-50"
+        >
+          <Plus className="w-5 h-5 stroke-[2.5]" />
+        </button>
 
+        <div className="flex-1 bg-[#1c1c21] border border-zinc-800 rounded-2xl px-4 py-2.5 flex items-center gap-3 shadow-inner">
           <input
             type="text"
             value={messageText}
             onChange={(e) => setMessageText(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={isUploading}
-            placeholder="Type a message..."
+            placeholder={`Message ${currentTitle}...`}
             className="flex-1 bg-transparent text-xs text-white placeholder-zinc-500 focus:outline-none"
           />
 
@@ -577,7 +592,7 @@ export default function ChatWindow({
             onClick={() => setMessageText((prev) => prev + ' 😊')}
             className="text-zinc-400 hover:text-white transition-colors shrink-0"
           >
-            <Smile className="w-4 h-4" />
+            <Smile className="w-5 h-5" />
           </button>
         </div>
 
@@ -585,9 +600,9 @@ export default function ChatWindow({
           type="button"
           onClick={handleSendMessage}
           disabled={!messageText.trim() || isUploading}
-          className="w-10 h-10 bg-[#ff8a65] hover:bg-[#ff7a52] text-white rounded-full flex items-center justify-center shrink-0 shadow-lg shadow-[#ff8a65]/20 transition-all disabled:opacity-40"
+          className="w-10 h-10 bg-[#FF5C00] hover:bg-[#ff701a] text-white rounded-2xl flex items-center justify-center shrink-0 shadow-lg shadow-[#FF5C00]/25 transition-all disabled:opacity-40 active:scale-[0.98]"
         >
-          <Send className="w-4 h-4" />
+          <Send className="w-4 h-4 fill-current stroke-[2.5]" />
         </button>
       </form>
 
