@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { User, Lock, LogIn, UserPlus, PhoneCall, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { User, Lock, LogIn, UserPlus, AlertCircle, CheckCircle2 } from 'lucide-react';
 import TopNavbar from '@/components/chat/TopNavbar';
 import ChatSidebar from '@/components/chat/ChatSidebar';
 import ChatWindow from '@/components/chat/ChatWindow';
@@ -258,26 +258,18 @@ export default function Page() {
     );
   }
 
-  // --- RENDER AUTH PAGE IF NOT LOGGED IN ---
+  // --- RENDER AUTH PAGE WITH REAL OIT LOGO ---
   if (!currentUser) {
     return (
       <div className="min-h-screen w-full bg-[#000000] flex flex-col items-center justify-center p-4 selection:bg-[#FF5C00] selection:text-white">
         
         {/* Top Logo & Title */}
         <div className="flex flex-col items-center mb-8 text-center">
-          <div className="w-20 h-20 bg-white rounded-3xl p-2.5 shadow-2xl shadow-[#FF5C00]/20 flex flex-col items-center justify-center relative mb-4 border border-zinc-200 overflow-hidden">
-            <div className="text-[7px] font-mono text-zinc-800 leading-tight tracking-widest text-center select-none opacity-80 mb-1">
-              BCEEBOTAPIHG<br />
-              GKIACOFNMI<br />
-              Au<br />
-              OFORτ?
-            </div>
-            
-            <div className="flex items-center gap-1 bg-[#FF5C00] text-white px-2 py-1 rounded-xl shadow-md">
-              <PhoneCall className="w-4 h-4 fill-current text-[#FF5C00] text-white" />
-              <span className="font-black text-sm tracking-tight text-white">QOit</span>
-            </div>
-          </div>
+          <img
+            src="/oit_logo.png"
+            alt="Oit Logo"
+            className="w-20 h-20 rounded-3xl object-cover shadow-2xl shadow-[#FF5C00]/25 mb-4 border border-zinc-800"
+          />
 
           <h1 className="text-4xl font-extrabold text-[#FF5C00] tracking-tight">
             Oit
@@ -487,7 +479,6 @@ export default function Page() {
         />
       )}
 
-      {/* LiveKit Video & Voice Call Modal (Matching User's Design Image) */}
       {callState?.active && (
         <VideoRoom
           roomName={callState.roomName}

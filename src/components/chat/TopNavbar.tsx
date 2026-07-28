@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { User } from '@/types';
-import { Search, QrCode, Settings, PhoneCall, LogOut } from 'lucide-react';
+import { Search, QrCode, Settings, LogOut } from 'lucide-react';
 
 interface TopNavbarProps {
   currentUser: User;
@@ -22,14 +22,13 @@ export default function TopNavbar({
   return (
     <header className="w-full bg-[#121215] border-b border-zinc-800/80 px-4 py-2.5 flex items-center justify-between z-20 shrink-0 select-none">
       
-      {/* Left: Branding */}
-      <div className="flex items-center gap-2.5">
-        <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center p-1 shadow-md">
-          <div className="flex items-center gap-0.5 bg-[#FF5C00] text-white px-1.5 py-0.5 rounded-lg text-[11px] font-black tracking-tight">
-            <PhoneCall className="w-3 h-3 fill-current" />
-            <span>QOit</span>
-          </div>
-        </div>
+      {/* Left: Branding with Real Oit Logo */}
+      <div className="flex items-center gap-3">
+        <img
+          src="/oit_logo.png"
+          alt="Oit Logo"
+          className="w-9 h-9 rounded-xl object-cover shadow-md border border-zinc-800"
+        />
         <h1 className="text-2xl font-extrabold text-[#FF5C00] tracking-tight">
           Oit
         </h1>
