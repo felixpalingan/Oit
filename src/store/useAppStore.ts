@@ -28,9 +28,9 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>((set) => ({
-  activeServerId: 'design-team',
-  activeChannelId: 'ui-ux-sync',
-  activeChannelName: 'ui-ux-sync',
+  activeServerId: null,
+  activeChannelId: null,
+  activeChannelName: '',
   activeCallRoomId: null,
   activeCallTargetUser: null,
   isCallVideo: true,
@@ -41,7 +41,7 @@ export const useAppStore = create<AppState>((set) => ({
   setActiveChannel: (id, name) =>
     set({
       activeChannelId: id,
-      activeChannelName: name || id || 'ui-ux-sync',
+      activeChannelName: name || id || '',
     }),
   setActiveCall: (roomId, targetUser = null, isVideo = true) =>
     set({

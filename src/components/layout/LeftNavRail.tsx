@@ -43,17 +43,7 @@ export default function LeftNavRail({
       (owned || []).forEach((s: Server) => allMap.set(s.id, s));
       memberServers.forEach((s: Server) => allMap.set(s.id, s));
 
-      const serverList = Array.from(allMap.values());
-
-      if (serverList.length === 0) {
-        const defaultServers: Server[] = [
-          { id: 'design-team', name: 'Design Team', owner_id: currentUser.id },
-          { id: 'dev-lounge', name: 'Dev Lounge', owner_id: currentUser.id },
-        ];
-        setServers(defaultServers);
-      } else {
-        setServers(serverList);
-      }
+      setServers(Array.from(allMap.values()));
     } catch (err) {
       console.error('Fetch servers error:', err);
     }
@@ -121,10 +111,10 @@ export default function LeftNavRail({
       {/* Top Section: Oit Logo & Server Icons List */}
       <div className="flex flex-col items-center gap-4 w-full px-2">
         
-        {/* Oit Logo (DM Mode) */}
+        {/* Oit Logo (DM & Landing Home Mode) */}
         <div
           onClick={() => handleSelectServer(null)}
-          title="Direct Messages & Oit Home"
+          title="Oit Home & Landing Page"
           className={`w-11 h-11 rounded-2xl flex items-center justify-center cursor-pointer hover:scale-105 transition-all ${
             activeServerId === null
               ? 'bg-[#FF5C00] border border-[#FF5C00] shadow-lg shadow-[#FF5C00]/30'

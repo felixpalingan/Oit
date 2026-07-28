@@ -6,6 +6,7 @@ import { User, Lock, LogIn, UserPlus, AlertCircle, CheckCircle2 } from 'lucide-r
 import LeftNavRail from '@/components/layout/LeftNavRail';
 import ChannelSidebar from '@/components/layout/ChannelSidebar';
 import ChatWindow from '@/components/chat/ChatWindow';
+import WelcomeHomeScreen from '@/components/dashboard/WelcomeHomeScreen';
 import ProfileModal from '@/components/profile/ProfileModal';
 import AddFriendModal from '@/components/friends/AddFriendModal';
 import VideoRoom from '@/components/chat/VideoRoom';
@@ -19,6 +20,7 @@ import { User as UserType, Message } from '@/types';
 
 export default function Page() {
   const {
+    activeServerId,
     activeChannelId,
     activeChannelName,
     activeCallRoomId,
@@ -547,6 +549,8 @@ export default function Page() {
     );
   }
 
+  const isHomeLanding = activeServerId === null && activeChatUser === null;
+
   // --- RENDER MAIN OIT DASHBOARD ---
   return (
     <div className="h-screen w-screen bg-[#141416] flex overflow-hidden font-sans relative select-none">
@@ -594,16 +598,26 @@ export default function Page() {
           />
         )}
 
-        {/* Chat Window Stream */}
-        <ChatWindow
-          currentUser={currentUser}
-          chatUser={activeChatUser}
-          onBackMobile={() => setActiveChatUser(null)}
-          onStartCall={(isVideo) => {
-            if (activeChatUser) initiateCall(activeChatUser, isVideo);
-            else initiateCall({ id: 'room-1', username: activeChannelName, display_name: activeChannelName, avatar_url: null }, isVideo);
-          }}
-        />
+        {/* Render Welcome Landing Home Screen if no chat/server is selected */}
+        {isHomeLanding ? (
+          <WelcomeHomeScreen
+            currentUser={currentUser}
+            onOpenCreateServer={() => setShowCreateServerModal(true)}
+            onOpenJoinServer={() => setShowJoinServerModal(true)}
+            onOpenAddFriend={() => setShowAddFriendModal(true)}
+          />
+        ) : (
+          /* Chat Window Stream */
+          <ChatWindow
+            currentUser={currentUser}
+            chatUser={activeChatUser}
+            onBackMobile={() => setActiveChatUser(null)}
+            onStartCall={(isVideo) => {
+              if (activeChatUser) initiateCall(activeChatUser, isVideo);
+              else initiateCall({ id: 'room-1', username: activeChannelName, display_name: activeChannelName, avatar_url: null }, isVideo);
+            }}
+          />
+        )}
       </main>
 
       {/* Modals & Realtime Ringing Handlers */}

@@ -61,7 +61,7 @@ export default function ChannelSidebar({
 
   const [textChannels, setTextChannels] = useState<Channel[]>([]);
   const [voiceChannels, setVoiceChannels] = useState<Channel[]>([]);
-  const [serverTitle, setServerTitle] = useState('Design Team');
+  const [serverTitle, setServerTitle] = useState('Server');
 
   const supabase = createClient();
 
@@ -78,7 +78,7 @@ export default function ChannelSidebar({
       if (srv) {
         setServerTitle(srv.name);
       } else {
-        setServerTitle(activeServerId === 'design-team' ? 'Design Team' : 'Server Oit');
+        setServerTitle('Server Oit');
       }
 
       const { data, error } = await supabase
@@ -87,21 +87,14 @@ export default function ChannelSidebar({
         .eq('server_id', activeServerId)
         .order('created_at', { ascending: true });
 
-      if (!error && data && data.length > 0) {
+      if (!error && data) {
         const text = data.filter((c: Channel) => c.type === 'text');
         const voice = data.filter((c: Channel) => c.type === 'voice');
         setTextChannels(text as Channel[]);
         setVoiceChannels(voice as Channel[]);
       } else {
-        setTextChannels([
-          { id: 'ui-ux-sync', server_id: activeServerId, name: 'ui-ux-sync', type: 'text' },
-          { id: 'general', server_id: activeServerId, name: 'general', type: 'text' },
-          { id: 'announcements', server_id: activeServerId, name: 'announcements', type: 'text' },
-        ]);
-        setVoiceChannels([
-          { id: 'lounge-voice', server_id: activeServerId, name: 'Lounge Voice', type: 'voice' },
-          { id: 'secret-room', server_id: activeServerId, name: 'Secret Room', type: 'voice', is_private: true },
-        ]);
+        setTextChannels([]);
+        setVoiceChannels([]);
       }
     } catch (err) {
       console.error('Fetch channels error:', err);
@@ -231,7 +224,7 @@ export default function ChannelSidebar({
               onClick={() => setActiveTab('groups')}
               className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
                 activeTab === 'groups'
-                  ? 'bg-[#1c1c21] text-white shadow-sm'
+                  ? 'bg-[#1c1c21] text-[#FF5C00] shadow-sm'
                   : 'text-zinc-500 hover:text-zinc-300'
               }`}
             >
