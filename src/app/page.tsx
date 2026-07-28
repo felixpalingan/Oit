@@ -323,7 +323,6 @@ export default function Page() {
     setIncomingCallPrompt(null);
   };
 
-  // Fix Issue 1: End Call Handler only disconnects current user!
   const handleEndCall = () => {
     clearCall();
   };
@@ -622,6 +621,11 @@ export default function Page() {
           }}
           onClose={() => setShowProfileModal(false)}
           onUpdate={(updated) => setCurrentUser((prev) => prev ? { ...prev, ...updated } : null)}
+          onLogout={() => {
+            setCurrentUser(null);
+            setActiveChatUser(null);
+            setActiveServer(null);
+          }}
         />
       )}
 

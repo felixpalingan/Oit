@@ -1,16 +1,13 @@
--- Jalankan skrip ini di SQL Editor Supabase Dashboard Anda untuk menghapus seluruh data ujicoba (Fresh Start back to 0)
+-- Skrip Pembersihan Data Sampah Lama (Fresh Start)
+-- Jalankan di SQL Editor Supabase Dashboard jika ingin mengosongkan seluruh data obrolan & server lama
 
--- 1. Hapus Seluruh Pesan & Lampiran
+-- 1. Kosongkan tabel pesan
 DELETE FROM public.messages;
 
--- 2. Hapus Seluruh Channels
+-- 2. Kosongkan tabel channel & server
 DELETE FROM public.channels;
-
--- 3. Hapus Seluruh Anggota Server
 DELETE FROM public.server_members;
-
--- 4. Hapus Seluruh Server
 DELETE FROM public.servers;
 
--- (Opsional) Hapus data profil pengguna lama jika ingin mengosongkan pengguna (auth users tetap dapat registrasi ulang)
--- DELETE FROM public.users;
+-- 3. Reset urutan atau verifikasi struktur tabel
+TRUNCATE TABLE public.messages RESTART IDENTITY CASCADE;

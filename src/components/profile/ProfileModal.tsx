@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Settings, Mic, Video, VideoOff, Save, Upload } from 'lucide-react';
+import { X, Settings, Mic, Video, VideoOff, Save, LogOut } from 'lucide-react';
 import { UserProfile } from '@/types';
 import { createClient } from '@/utils/supabase/client';
 
@@ -9,12 +9,14 @@ interface ProfileModalProps {
   profile: UserProfile;
   onClose: () => void;
   onUpdate: (updatedProfile: UserProfile) => void;
+  onLogout?: () => void;
 }
 
 export default function ProfileModal({
   profile,
   onClose,
   onUpdate,
+  onLogout,
 }: ProfileModalProps) {
   const [displayName, setDisplayName] = useState(profile.display_name || profile.username);
   const [aboutMe, setAboutMe] = useState(profile.bio || 'Navigating the digital ether.');
@@ -133,6 +135,20 @@ export default function ProfileModal({
 
     onUpdate(updated);
     onClose();
+  };
+
+  const handleLogoutAction = async () => {
+    try {
+      await supabase.auth.signOut();
+      localStorage.clear();
+      if (onLogout) onLogout();
+      onClose();
+    } catch (err) {
+      console.error('Logout error:', err);
+      localStorage.clear();
+      if (onLogout) onLogout();
+      onClose();
+    }
   };
 
   return (
@@ -322,24 +338,35 @@ export default function ProfileModal({
         </div>
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-end gap-3 pt-3 border-t border-zinc-800/80">
+        <div className="flex items-center justify-between pt-3 border-t border-zinc-800/80">
           <button
             type="button"
-            onClick={onClose}
-            className="px-5 py-3 bg-[#26262a] hover:bg-[#303036] text-zinc-200 font-extrabold rounded-2xl text-xs transition-colors"
+            onClick={handleLogoutAction}
+            className="px-5 py-3 bg-red-950/60 hover:bg-red-900 border border-red-800 text-red-300 font-extrabold rounded-2xl text-xs flex items-center gap-2 transition-colors"
           >
-            Cancel
+            <LogOut className="w-4 h-4" />
+            <span>Log Out</span>
           </button>
 
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={uploading}
-            className="px-6 py-3 bg-[#FF5C00] hover:bg-[#ff701a] text-white font-extrabold rounded-2xl text-xs shadow-lg shadow-[#FF5C00]/25 transition-all active:scale-[0.98] flex items-center gap-2 disabled:opacity-50"
-          >
-            <Save className="w-4 h-4" />
-            <span>{uploading ? 'Uploading...' : 'Save Changes'}</span>
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-5 py-3 bg-[#26262a] hover:bg-[#303036] text-zinc-200 font-extrabold rounded-2xl text-xs transition-colors"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={uploading}
+              className="px-6 py-3 bg-[#FF5C00] hover:bg-[#ff701a] text-white font-extrabold rounded-2xl text-xs shadow-lg shadow-[#FF5C00]/25 transition-all active:scale-[0.98] flex items-center gap-2 disabled:opacity-50"
+            >
+              <Save className="w-4 h-4" />
+              <span>{uploading ? 'Uploading...' : 'Save Changes'}</span>
+            </button>
+          </div>
         </div>
 
       </div>
