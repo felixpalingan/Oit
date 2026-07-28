@@ -11,6 +11,7 @@ interface LeftNavRailProps {
   onOpenProfile: () => void;
   onOpenNewChat: () => void;
   onOpenCreateServer?: () => void;
+  onSelectDMHome?: () => void;
 }
 
 export default function LeftNavRail({
@@ -18,12 +19,12 @@ export default function LeftNavRail({
   onOpenProfile,
   onOpenNewChat,
   onOpenCreateServer,
+  onSelectDMHome,
 }: LeftNavRailProps) {
   const { activeServerId, setActiveServer, setActiveChannel } = useAppStore();
   const [servers, setServers] = useState<Server[]>([]);
   const supabase = createClient();
 
-  // Fetch servers where user is owner or member
   const fetchServers = async () => {
     try {
       const { data: owned } = await supabase
@@ -84,13 +85,16 @@ export default function LeftNavRail({
     };
   }, [currentUser.id, supabase]);
 
-  // Issue 2 Fix: When switching servers, automatically fetch and activate the first channel of the new server
   const handleSelectServer = async (srvId: string | null) => {
     setActiveServer(srvId);
+
     if (!srvId) {
       setActiveChannel(null);
+      if (onSelectDMHome) onSelectDMHome();
       return;
     }
+
+    if (onSelectDMHome) onSelectDMHome();
 
     try {
       const { data: chans } = await supabase

@@ -25,6 +25,7 @@ export default function Page() {
     isCallVideo,
     isCallMinimized,
     knockNotification,
+    setActiveServer,
     setActiveCall,
     setIsCallMinimized,
     setKnockNotification,
@@ -239,13 +240,6 @@ export default function Page() {
       if (allUsers && allUsers.length > 0) {
         setUsersList(allUsers as UserType[]);
         await fetchMessagePreviews(sessionUser.id, allUsers as UserType[]);
-      } else {
-        const sampleUser: UserType = {
-          id: 'sample-1',
-          username: 'Sarah (26)',
-          display_name: 'Sarah (26)',
-          avatar_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
-        };
       }
     } catch (err) {
       console.error('Session user setup error:', err);
@@ -413,7 +407,7 @@ export default function Page() {
     );
   }
 
-  // --- RENDER AUTH PAGE (IMAGE 4 MATCH) ---
+  // --- RENDER AUTH PAGE ---
   if (!currentUser) {
     return (
       <div className="min-h-screen w-full bg-[#000000] flex flex-col items-center justify-center p-4 selection:bg-[#FF5C00] selection:text-white">
@@ -561,6 +555,7 @@ export default function Page() {
         onOpenProfile={() => setShowProfileModal(true)}
         onOpenNewChat={() => setShowAddFriendModal(true)}
         onOpenCreateServer={() => setShowCreateServerModal(true)}
+        onSelectDMHome={() => setActiveChatUser(null)}
       />
 
       {/* 2. Channel & DM Sidebar */}
@@ -568,13 +563,21 @@ export default function Page() {
         currentUser={currentUser}
         usersList={usersList}
         activeChatUser={activeChatUser}
-        onSelectUser={(u) => setActiveChatUser(u)}
+        onSelectUser={(u) => {
+          // FIX: When selecting a DM user, set activeChatUser AND clear server mode
+          setActiveChatUser(u);
+          setActiveServer(null);
+        }}
         onOpenNewChatModal={() => setShowAddFriendModal(true)}
         lastMessagesMap={lastMessagesMap}
         unreadCountsMap={unreadCountsMap}
         onKnockRoom={handleKnockRoom}
         onJoinVoiceCall={(c) => {
           setActiveCall(`vc_${c.id}`, { display_name: c.name }, false);
+        }}
+        onSelectChannel={() => {
+          // FIX: When selecting a server channel, clear activeChatUser!
+          setActiveChatUser(null);
         }}
       />
 
@@ -625,16 +628,18 @@ export default function Page() {
         />
       )}
 
-      {/* Create Server Modal (Ticket 1 & 2 Match) */}
+      {/* Create Server Modal */}
       {showCreateServerModal && currentUser && (
         <CreateServerModal
           currentUser={currentUser}
           onClose={() => setShowCreateServerModal(false)}
-          onCreated={() => {}}
+          onCreated={() => {
+            setActiveChatUser(null);
+          }}
         />
       )}
 
-      {/* Glassmorphism Security Check Password Modal (Image 1 Match) */}
+      {/* Glassmorphism Security Check Password Modal */}
       {securityCheckRoom && (
         <SecurityCheckModal
           roomTitle={securityCheckRoom.title}

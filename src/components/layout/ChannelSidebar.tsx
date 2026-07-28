@@ -25,6 +25,7 @@ interface ChannelSidebarProps {
   unreadCountsMap: Record<string, number>;
   onKnockRoom: (roomId: string, title: string) => void;
   onJoinVoiceCall?: (channel: Channel) => void;
+  onSelectChannel?: () => void;
 }
 
 export default function ChannelSidebar({
@@ -37,6 +38,7 @@ export default function ChannelSidebar({
   unreadCountsMap,
   onKnockRoom,
   onJoinVoiceCall,
+  onSelectChannel,
 }: ChannelSidebarProps) {
   const {
     activeServerId,
@@ -222,7 +224,10 @@ export default function ChannelSidebar({
                 return (
                   <div
                     key={c.id}
-                    onClick={() => setActiveChannel(c.id, c.name)}
+                    onClick={() => {
+                      setActiveChannel(c.id, c.name);
+                      if (onSelectChannel) onSelectChannel();
+                    }}
                     className={`flex items-center gap-2.5 px-3 py-2 rounded-xl cursor-pointer text-xs font-bold transition-all ${
                       isActive
                         ? 'bg-[#FF5C00] text-white shadow-md shadow-[#FF5C00]/20'
@@ -236,7 +241,7 @@ export default function ChannelSidebar({
               })}
             </div>
 
-            {/* VOICE CHANNELS GROUP (Issue 3 Fix: Triggers LiveKit Voice Call) */}
+            {/* VOICE CHANNELS GROUP */}
             <div className="space-y-1 pt-2">
               <div className="flex items-center justify-between px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-zinc-400">
                 <span>VOICE CHANNELS ({voiceChannels.length})</span>
@@ -254,6 +259,7 @@ export default function ChannelSidebar({
                   <div
                     key={c.id}
                     onClick={() => {
+                      if (onSelectChannel) onSelectChannel();
                       if (c.is_private) {
                         onKnockRoom(c.id, c.name);
                       } else if (onJoinVoiceCall) {
@@ -267,7 +273,7 @@ export default function ChannelSidebar({
                     }`}
                   >
                     <div className="flex items-center gap-2.5 truncate">
-                      <Volume2 className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-[#FF5C00]'}`} />
+                      <Volume2 className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#FF5C00]' : 'text-[#FF5C00]'}`} />
                       <span className="truncate">{c.name}</span>
                     </div>
 
