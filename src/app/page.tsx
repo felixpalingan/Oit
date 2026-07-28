@@ -108,7 +108,7 @@ export default function Page() {
     };
   }, [supabase]);
 
-  // Real-time Listener for Messages Previews & Realtime Incoming Call Signaling
+  // Real-time Listeners for Previews & Realtime Call Signaling (Incoming, Decline, End Call)
   useEffect(() => {
     if (!currentUser) return;
 
@@ -126,7 +126,7 @@ export default function Page() {
       )
       .subscribe();
 
-    // 2. Incoming Call Signaling Channel
+    // 2. Realtime Call Signaling Channel
     const callSignalingChannel = supabase
       .channel('global:call_signaling')
       .on('broadcast', { event: 'incoming_call' }, ({ payload }) => {
@@ -138,13 +138,24 @@ export default function Page() {
           });
         }
       })
+      .on('broadcast', { event: 'call_declined' }, ({ payload }) => {
+        if (payload?.roomName && callState?.roomName === payload.roomName) {
+          setCallState(null);
+        }
+      })
+      .on('broadcast', { event: 'call_ended' }, ({ payload }) => {
+        if (payload?.roomName) {
+          setCallState((prev) => (prev?.roomName === payload.roomName ? null : prev));
+          setIncomingCallPrompt((prev) => (prev?.roomName === payload.roomName ? null : prev));
+        }
+      })
       .subscribe();
 
     return () => {
       supabase.removeChannel(sidebarChannel);
       supabase.removeChannel(callSignalingChannel);
     };
-  }, [currentUser, usersList, supabase]);
+  }, [currentUser, usersList, callState?.roomName, supabase]);
 
   const handleSessionUser = async (sessionUser: { id: string; email?: string }) => {
     const uname = sessionUser.email?.split('@')[0] || 'user';
@@ -208,7 +219,7 @@ export default function Page() {
   const initiateCall = (chatUser: UserType, isVideo: boolean) => {
     const roomName = `call_${[currentUser?.id, chatUser.id].sort().join('_')}`;
 
-    // Send Realtime Broadcast Signal
+    // Broadcast incoming_call signal
     supabase.channel('global:call_signaling').send({
       type: 'broadcast',
       event: 'incoming_call',
@@ -221,6 +232,35 @@ export default function Page() {
     });
 
     setCallState({ active: true, roomName, isVideo });
+  };
+
+  // Decline Call Handler
+  const handleDeclineCall = () => {
+    if (incomingCallPrompt) {
+      supabase.channel('global:call_signaling').send({
+        type: 'broadcast',
+        event: 'call_declined',
+        payload: {
+          roomName: incomingCallPrompt.roomName,
+          targetUserId: incomingCallPrompt.caller.id,
+        },
+      });
+    }
+    setIncomingCallPrompt(null);
+  };
+
+  // End Call Handler
+  const handleEndCall = () => {
+    if (callState) {
+      supabase.channel('global:call_signaling').send({
+        type: 'broadcast',
+        event: 'call_ended',
+        payload: {
+          roomName: callState.roomName,
+        },
+      });
+    }
+    setCallState(null);
   };
 
   // Login & Register handler
@@ -490,7 +530,7 @@ export default function Page() {
 
       </div>
 
-      {/* Modals & Realtime Incoming Call Prompt */}
+      {/* Modals & Realtime Call Handlers */}
       {showProfileModal && (
         <ProfileModal
           profile={{
@@ -513,7 +553,7 @@ export default function Page() {
         />
       )}
 
-      {/* Incoming Call Ringing Prompt Modal */}
+      {/* Ringing Incoming Call Prompt Modal */}
       {incomingCallPrompt && (
         <IncomingCallModal
           caller={incomingCallPrompt.caller}
@@ -526,7 +566,7 @@ export default function Page() {
             });
             setIncomingCallPrompt(null);
           }}
-          onDecline={() => setIncomingCallPrompt(null)}
+          onDecline={handleDeclineCall}
         />
       )}
 
@@ -537,7 +577,7 @@ export default function Page() {
           currentUser={currentUser}
           chatUser={activeChatUser}
           isVideo={callState.isVideo}
-          onLeave={() => setCallState(null)}
+          onLeave={handleEndCall}
         />
       )}
 
