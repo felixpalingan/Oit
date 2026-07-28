@@ -87,14 +87,30 @@ export default function ChannelSidebar({
         .eq('server_id', activeServerId)
         .order('created_at', { ascending: true });
 
-      if (!error && data) {
+      if (!error && data && data.length > 0) {
         const text = data.filter((c: Channel) => c.type === 'text');
         const voice = data.filter((c: Channel) => c.type === 'voice');
         setTextChannels(text as Channel[]);
         setVoiceChannels(voice as Channel[]);
+
+        // Auto-select first channel if activeChannelId doesn't belong to this server
+        const isValid = data.some((c: Channel) => c.id === activeChannelId);
+        if (!isValid && text.length > 0) {
+          setActiveChannel(text[0].id, text[0].name);
+        }
       } else {
-        setTextChannels([]);
+        // Fallback default channel for server if table row doesn't exist yet
+        const defaultChan: Channel = {
+          id: `${activeServerId}-general`,
+          server_id: activeServerId,
+          name: 'general',
+          type: 'text',
+        };
+        setTextChannels([defaultChan]);
         setVoiceChannels([]);
+        if (!activeChannelId || activeChannelId !== defaultChan.id) {
+          setActiveChannel(defaultChan.id, defaultChan.name);
+        }
       }
     } catch (err) {
       console.error('Fetch channels error:', err);
@@ -224,7 +240,7 @@ export default function ChannelSidebar({
               onClick={() => setActiveTab('groups')}
               className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
                 activeTab === 'groups'
-                  ? 'bg-[#1c1c21] text-[#FF5C00] shadow-sm'
+                  ? 'bg-[#1c1c21] text-white shadow-sm'
                   : 'text-zinc-500 hover:text-zinc-300'
               }`}
             >
@@ -399,7 +415,7 @@ export default function ChannelSidebar({
                           {previewText}
                         </p>
                         {unreadCount > 0 && (
-                          <span className="bg-[#FF5C00] text-[#FF5C00] text-[10px] font-extrabold px-1.5 py-0.2 rounded-full shrink-0">
+                          <span className="bg-[#FF5C00] text-white text-[10px] font-extrabold px-1.5 py-0.2 rounded-full shrink-0">
                             {unreadCount}
                           </span>
                         )}
