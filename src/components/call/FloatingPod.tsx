@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useAppStore } from '@/store/useAppStore';
-import { Volume2, Maximize2 } from 'lucide-react';
+import { Maximize2 } from 'lucide-react';
 import { User } from '@/types';
 
 interface FloatingPodProps {
@@ -13,10 +13,8 @@ interface FloatingPodProps {
 export default function FloatingPod({ currentUser, onExpand }: FloatingPodProps) {
   const { activeCallTargetUser } = useAppStore();
 
-  const displayAvatar =
-    activeCallTargetUser?.avatar_url ||
-    currentUser.avatar_url ||
-    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150';
+  const userAvatar = activeCallTargetUser?.avatar_url || currentUser.avatar_url;
+  const initial = (activeCallTargetUser?.username || currentUser.username || 'U')[0].toUpperCase();
 
   return (
     <div
@@ -26,14 +24,18 @@ export default function FloatingPod({ currentUser, onExpand }: FloatingPodProps)
     >
       <div className="relative">
         {/* Animated Pulse Ring */}
-        <div className="absolute -inset-1 rounded-full bg-[#FF5C00]/40 animate-ping opacity-75" />
+        <div className="absolute -inset-1.5 rounded-full bg-[#FF5C00]/40 animate-ping opacity-75" />
 
         {/* Circular Avatar Pod with Orange Border */}
-        <div className="w-14 h-14 rounded-full bg-zinc-900 border-2 border-[#FF5C00] overflow-hidden shadow-2xl shadow-[#FF5C00]/40 relative z-10 flex items-center justify-center">
-          <img src={displayAvatar} alt="Live Call" className="w-full h-full object-cover" />
-          
+        <div className="w-14 h-14 rounded-full bg-[#161619] border-2 border-[#FF5C00] overflow-hidden shadow-2xl shadow-[#FF5C00]/40 relative z-10 flex items-center justify-center font-extrabold text-lg text-[#FF5C00]">
+          {userAvatar ? (
+            <img src={userAvatar} alt="Live Call" className="w-full h-full object-cover" />
+          ) : (
+            <span>{initial}</span>
+          )}
+
           {/* Hover Overlay Icon */}
-          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
+          <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
             <Maximize2 className="w-5 h-5 text-[#FF5C00]" />
           </div>
         </div>

@@ -11,7 +11,6 @@ import AddFriendModal from '@/components/friends/AddFriendModal';
 import VideoRoom from '@/components/chat/VideoRoom';
 import IncomingCallModal from '@/components/call/IncomingCallModal';
 import KnockNotification from '@/components/call/KnockNotification';
-import FloatingPod from '@/components/call/FloatingPod';
 import { useAppStore, KnockRequest } from '@/store/useAppStore';
 import { User as UserType, Message } from '@/types';
 
@@ -589,14 +588,6 @@ export default function Page() {
         />
       </main>
 
-      {/* 4. Bottom Right Floating Live Pod (Appears when Call is Minimized) */}
-      {activeCallRoomId && isCallMinimized && (
-        <FloatingPod
-          currentUser={currentUser}
-          onExpand={() => setIsCallMinimized(false)}
-        />
-      )}
-
       {/* Modals & Realtime Ringing Handlers */}
       {showProfileModal && (
         <ProfileModal
@@ -633,14 +624,16 @@ export default function Page() {
         />
       )}
 
-      {/* Full LiveKit Video / Voice Call Modal (Expanded state when not minimized) */}
-      {activeCallRoomId && !isCallMinimized && (
+      {/* Persistent LiveKit Video / Voice Call Component (Renders both Full Modal and Minimized Floating Pod View inside LiveKitRoom wrapper) */}
+      {activeCallRoomId && (
         <VideoRoom
           roomName={activeCallRoomId}
           currentUser={currentUser}
           chatUser={activeCallTargetUser}
           isVideo={isCallVideo}
+          isMinimized={isCallMinimized}
           onMinimize={() => setIsCallMinimized(true)}
+          onExpand={() => setIsCallMinimized(false)}
           onLeave={handleEndCall}
         />
       )}
