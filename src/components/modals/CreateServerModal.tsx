@@ -68,9 +68,13 @@ export default function CreateServerModal({
     const cleanChanName = channelName.trim().toLowerCase().replace(/\s+/g, '-') || 'general';
 
     try {
+      // Fetch active authenticated user ID from Supabase auth session
+      const { data: authData } = await supabase.auth.getUser();
+      const activeUserId = authData?.user?.id || currentUser.id;
+
       // 0. Ensure user row exists in public.users to satisfy foreign key constraint
       await supabase.from('users').upsert({
-        id: currentUser.id,
+        id: activeUserId,
         username: currentUser.username,
         display_name: currentUser.display_name || currentUser.username,
         avatar_url: currentUser.avatar_url,
@@ -83,7 +87,7 @@ export default function CreateServerModal({
           {
             name: serverName.trim(),
             icon_url: iconUrl,
-            owner_id: currentUser.id,
+            owner_id: activeUserId,
             is_private: isPrivate,
           },
         ])
@@ -97,7 +101,7 @@ export default function CreateServerModal({
       await supabase.from('server_members').insert([
         {
           server_id: createdServerId,
-          user_id: currentUser.id,
+          user_id: activeUserId,
           role: 'owner',
         },
       ]);
