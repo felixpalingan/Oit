@@ -200,12 +200,22 @@ export default function ChannelSidebar({
     setTimeout(() => setCopiedInvite(false), 2000);
   };
 
+  // Filter & Sort DM Users by Most Recent Message Timestamp
   const filteredUsers = usersList.filter((u) => {
     const q = searchQuery.toLowerCase();
     return (
       u.username.toLowerCase().includes(q) ||
       (u.display_name && u.display_name.toLowerCase().includes(q))
     );
+  });
+
+  const sortedUsers = [...filteredUsers].sort((a, b) => {
+    const timeA = lastMessagesMap[a.id] ? new Date(lastMessagesMap[a.id].created_at).getTime() : 0;
+    const timeB = lastMessagesMap[b.id] ? new Date(lastMessagesMap[b.id].created_at).getTime() : 0;
+    if (timeA !== timeB) {
+      return timeB - timeA; // Most recent chat first
+    }
+    return a.username.localeCompare(b.username);
   });
 
   const isServerMode = activeServerId !== null;
@@ -464,12 +474,12 @@ export default function ChannelSidebar({
             </div>
           </>
         ) : (
-          /* DM Mode */
+          /* DM Mode: SORTED BY MOST RECENT MESSAGE SENT/RECEIVED */
           <div className="space-y-1">
-            {filteredUsers.length === 0 ? (
+            {sortedUsers.length === 0 ? (
               <p className="text-xs text-zinc-500 text-center py-6">Tidak ada kontak obrolan.</p>
             ) : (
-              filteredUsers.map((u) => {
+              sortedUsers.map((u) => {
                 const isSelected = activeChatUser?.id === u.id;
                 const lastMsg = lastMessagesMap[u.id];
                 const unreadCount = unreadCountsMap[u.id] || 0;
