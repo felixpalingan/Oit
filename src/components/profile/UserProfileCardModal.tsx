@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, MessageSquare, Phone, Video, Calendar, User, ShieldCheck } from 'lucide-react';
+import { X, MessageSquare, Phone, Video, ShieldCheck } from 'lucide-react';
 import { User as UserType } from '@/types';
 import { createClient } from '@/utils/supabase/client';
 
@@ -49,20 +49,30 @@ export default function UserProfileCardModal({
   const bioText = userProfile.bio || 'Navigating the digital ether.';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 select-none animate-in fade-in duration-200">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 select-none animate-in fade-in duration-200"
+    >
       
       {/* Profile Card Container */}
-      <div className="w-full max-w-sm bg-[#161619] border border-zinc-800 rounded-3xl p-6 shadow-2xl flex flex-col space-y-5 text-white relative overflow-hidden">
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-sm bg-[#161619] border border-zinc-800 rounded-3xl p-6 shadow-2xl flex flex-col space-y-5 text-white relative overflow-hidden z-10"
+      >
         
         {/* Banner Top Gradient Header */}
         <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-r from-[#FF5C00]/30 via-purple-900/30 to-[#FF5C00]/20 border-b border-zinc-800/80" />
 
-        {/* Close Button */}
+        {/* Close Button Top Right */}
         <button
-          onClick={onClose}
-          className="absolute top-4 right-4 z-10 p-2 text-zinc-400 hover:text-white rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md transition-colors"
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
+          className="absolute top-4 right-4 z-20 p-2 text-zinc-300 hover:text-white rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md transition-colors cursor-pointer active:scale-95"
         >
-          <X className="w-4 h-4" />
+          <X className="w-5 h-5 stroke-[2.5]" />
         </button>
 
         {/* Avatar & Online Badge */}
@@ -118,7 +128,7 @@ export default function UserProfileCardModal({
                 onSendMessage();
                 onClose();
               }}
-              className="flex-1 py-3 bg-[#FF5C00] hover:bg-[#ff701a] text-white font-extrabold rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-[#FF5C00]/25 transition-all active:scale-[0.98]"
+              className="flex-1 py-3 bg-[#FF5C00] hover:bg-[#ff701a] text-white font-extrabold rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-[#FF5C00]/25 transition-all active:scale-[0.98] cursor-pointer"
             >
               <MessageSquare className="w-4 h-4" />
               <span>Send Message</span>
@@ -134,7 +144,7 @@ export default function UserProfileCardModal({
                   onClose();
                 }}
                 title="Voice Call"
-                className="p-3 bg-[#26262a] hover:bg-zinc-700 text-zinc-200 hover:text-white font-bold rounded-2xl text-xs transition-colors shrink-0"
+                className="p-3 bg-[#26262a] hover:bg-zinc-700 text-zinc-200 hover:text-white font-bold rounded-2xl text-xs transition-colors shrink-0 cursor-pointer"
               >
                 <Phone className="w-4 h-4" />
               </button>
@@ -146,13 +156,22 @@ export default function UserProfileCardModal({
                   onClose();
                 }}
                 title="Video Call"
-                className="p-3 bg-[#26262a] hover:bg-zinc-700 text-zinc-200 hover:text-white font-bold rounded-2xl text-xs transition-colors shrink-0"
+                className="p-3 bg-[#26262a] hover:bg-zinc-700 text-zinc-200 hover:text-white font-bold rounded-2xl text-xs transition-colors shrink-0 cursor-pointer"
               >
                 <Video className="w-4 h-4" />
               </button>
             </>
           )}
         </div>
+
+        {/* Close Button Footer */}
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-full py-2 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white font-bold rounded-xl text-xs transition-colors cursor-pointer mt-2"
+        >
+          Tutup Pop Up
+        </button>
 
       </div>
 
