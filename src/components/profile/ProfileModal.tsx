@@ -31,7 +31,6 @@ export default function ProfileModal({
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url || '');
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
   // Hardware Devices State
   const [mics, setMics] = useState<MediaDeviceInfo[]>([]);
@@ -243,7 +242,6 @@ export default function ProfileModal({
 
   const handleSave = async () => {
     setSaving(true);
-    setSaveStatus('Saving changes...');
 
     const updatedBio = aboutMe.trim();
     const updatedName = displayName.trim() || profile.username;
@@ -256,7 +254,8 @@ export default function ProfileModal({
     };
 
     try {
-      const { error } = await supabase
+      // 1. Try full upsert with bio column
+      const { error: fullErr } = await supabase
         .from('users')
         .upsert({
           id: profile.id,
@@ -266,8 +265,17 @@ export default function ProfileModal({
           avatar_url: avatarUrl || null,
         });
 
-      if (error) {
-        console.error('Error saving profile to Supabase:', error);
+      // 2. If bio column missing in Supabase, fallback to basic fields
+      if (fullErr && fullErr.message.includes('bio')) {
+        console.warn('Bio column not found in Supabase users table yet. Falling back to basic profile update.');
+        await supabase
+          .from('users')
+          .upsert({
+            id: profile.id,
+            username: profile.username,
+            display_name: updatedName,
+            avatar_url: avatarUrl || null,
+          });
       }
     } catch (err) {
       console.error('Save profile exception:', err);
@@ -356,7 +364,7 @@ export default function ProfileModal({
             </div>
 
             <div className="flex-1">
-              <h5 className="text-xs font-bold text-white">Avatar PFP</h5>
+              <h5 className="text-xs font-bold text-[#FFFFFF]">Avatar PFP</h5>
               <p className="text-[10px] sm:text-[11px] text-zinc-400 mt-1 leading-relaxed">
                 Klik lingkaran avatar untuk mengunggah foto profil baru. Otomatis diperbarui ke Supabase Storage & state aplikasi.
               </p>
