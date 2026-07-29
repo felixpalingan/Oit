@@ -1,123 +1,127 @@
-# ⚡ Oit — High-Voltage Spatial Communication Platform
+# ⚡ Oit — High-Voltage Instant Messaging & Live WebRTC Group Calls
 
-> **Oit** is a full-stack, real-time spatial communication and community platform engineered for high-density text messaging, low-latency LiveKit WebRTC voice & video calls, and dynamic community management. Designed with a custom **High-Voltage Dark** aesthetic (`#000000` base with `#FF5C00` Oit Orange primary accents), Oit bridges the gap between high-performance gaming hubs and professional spatial team collaboration tools.
+[![Production Live App](https://img.shields.io/badge/Production-Live%20App-ff5c00?style=for-the-badge&logo=vercel&logoColor=white)](https://oit-seven.vercel.app)
+[![Next.js 16](https://img.shields.io/badge/Next.js-16.2.12-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
+[![Supabase](https://img.shields.io/badge/Supabase-Database%20%26%20Realtime-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
+[![LiveKit WebRTC](https://img.shields.io/badge/LiveKit-Cloud%20WebRTC-FF4F00?style=for-the-badge&logo=livekit&logoColor=white)](https://livekit.io)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
----
+**Oit** adalah platform komunikasi *real-time full-stack* kelas enterprise yang menggabungkan obrolan pesan instan, komunikasi suara/video WebRTC latensi ultra-rendah, serta sistem server dan channel bergaya komunitatif. Dirancang dengan estetika **Oit Signature High-Voltage Dark** (`#000000` base, `#161619` surfaces, dan `#FF5C00` Vibrant Orange accent) serta sistem navigasi *responsive mobile-first*.
 
-## 🌟 Comprehensive Core Features & Architecture
-
-### 💬 1. Channel-Based Text Messaging (`channel_id` Architecture)
-- **Strict Channel Scope Matching**: Messages are explicitly linked to unique `channel_id`s or direct message pairs (`sender_id` / `receiver_id`).
-- **Real-Time Read Status Checkmarks (`is_read`)**: Single checkmark (`✔`) indicates message delivery, while double checkmarks (`✔✔`) update in real-time as soon as the recipient opens the chat.
-- **File & Image Drag-and-Drop Uploader**: Built-in drag-and-drop overlay supporting images, PDFs, and raw documents with an animated orange progress bar (`0% - 100%`) and Supabase Storage integration (`chat-attachments`).
-
-### 🎙️ 2. Multi-Participant WebRTC Voice & Video Infrastructure
-- **LiveKit Cloud Integration**: Powered by `@livekit/components-react` and `livekit-client` for HD video streaming, active speaker glowing borders, and screen sharing.
-- **Non-Disruptive Room Persistence**: When a participant leaves a voice channel, only their connection is closed—the voice room remains active for all remaining participants until the last person exits.
-- **Supabase Realtime Presence Tracking**: Uses `presence` channels (`presence_vc_<channel_id>`) to track and render all active participants inside each voice channel in real-time, displaying avatars, display names, and live audio pulses.
-- **Persistent Floating Live Pod (`● Live`)**: Minimizing a voice/video call shrinks the viewport into an interactive floating pod in the bottom-right corner (`bottom-6 right-6`), allowing users to browse text channels while maintaining 100% active WebRTC audio/video streams.
-
-### 🏰 3. Community Server & Channel Ecosystem
-- **Instant Server & Channel Creation**: Create public or private servers with initial text/voice channels that hydrate state and render in the UI instantly.
-- **Server Discovery & Invite Sharing**: Generate and copy unique Server Invite Codes (`Share2` button) to allow friends to paste and join private or public servers seamlessly.
-- **Channel Settings & Management (`EditChannelModal`)**: Inline channel renaming and deletion with confirmation dialogs.
-- **Isolasi Server Private**: Private servers are hidden from public explore lists and can only be accessed using exact Server Invite Codes.
-
-### 🚪 4. Spatial Security & Access Control
-- **Knock-Knock Door Access System**: Real-time Supabase broadcast signaling allowing users to request entry into locked voice/text channels with interactive **Approve** and **Deny** notification cards.
-- **Glassmorphism Security Check Modal**: Password-protected private channels with frosted-glass verification popups.
-- **Welcome Landing Home Screen**: Modern onboarding interface greeting new users with quick action cards for finding friends, joining servers, or creating communities.
-
-### 🎛️ 5. User Settings & Hardware Device Management
-- **Hardware Device Enumeration**: Integrated camera preview canvas and dynamic microphone input volume level meter in User Settings.
-- **Custom Profile Customization**: Modify display names, avatars, and bio text stored in Supabase Postgres.
-- **Zustand State Persistence**: Uses `zustand/middleware/persist` with `localStorage` to keep users on their active server and channel even across browser reloads (`F5`).
+🌐 **Live Demo**: [https://oit-seven.vercel.app](https://oit-seven.vercel.app)
 
 ---
 
-## 🛠️ Full-Stack Technology Stack
+## 🌟 Fitur Utama (A - Z Feature Spectrum)
 
-### **Frontend & User Interface**
-- **Framework**: [Next.js 16 (App Router & Turbopack)](https://nextjs.org/)
-- **Language**: TypeScript (Strict type safety)
-- **Styling**: Vanilla CSS Modules & Tailwind CSS (Custom `#141416` dark theme & `#FF5C00` primary token)
-- **State Management**: [Zustand](https://github.com/pmndrs/zustand) with `persist` middleware
-- **Icons**: [Lucide React](https://lucide.dev/)
+### 📱 1. Responsive Mobile-First UX & Slide-Out Drawer
+- **Single DOM Unified Drawer**: Navigasi mobile menggunakan *off-canvas drawer* 60fps CSS transform (`translate-x-0` vs `-translate-x-full`) yang halus tanpa duplikasi komponen DOM.
+- **Header Hamburger Menu (`☰`)**: Akses sekali sentuh ke daftar server dan channel dari layar HP.
+- **Ergonomi Sentuh Mobile**: Form, tombol, dan area pesan yang disesuaikan untuk layar HP berbagai ukuran.
 
-### **Backend, Database & Real-time Subscriptions**
-- **Database**: [Supabase Postgres](https://supabase.com/)
-- **Authentication**: Supabase Auth (Password & Session management)
-- **Real-time Engine**: Supabase Realtime Engine (Postgres Changes CDC, WebSockets & Presence Tracking)
-- **Cloud Storage**: Supabase Storage (`chat-attachments` bucket for media & avatars)
+### 📸 2. PFP Profile Picture & Server Icon Uploads
+- **Custom PFP Sejak Registrasi**: Pengguna dapat mengunggah foto profil (*Avatar*) sejak pertama kali mendaftar akun di **Register Screen**.
+- **Server Icon Customization**: Pemilik server dapat mengunggah logo/ikon server kustom saat membuat atau mengedit server.
+- **Supabase Storage Integration**: Terhubung ke bucket `chat-attachments` dengan *Base64 fallback* otomatis.
 
-### **WebRTC Communication Infrastructure**
-- **WebRTC Engine**: [LiveKit Cloud](https://livekit.io/)
-- **Client Libraries**: `livekit-client`, `@livekit/components-react`, `@livekit/components-styles`
-- **Server Token Generator**: `livekit-server-sdk` (Next.js Route Handler API)
+### 🎙️ 3. WebRTC Suara & Video Latensi Ultra-Rendah (LiveKit Cloud)
+- **Multi-Participant Rooms**: Panggilan grup tanpa batas waktu dengan transmisi audio/video HD.
+- **Pendeteksi Pembicara Aktif (*Active Speaker Glow*)**: Indikator visual menyala terang pada ubin peserta yang sedang berbicara.
+- **Floating Live Pod (`● Live`)**: Mengecilkan tampilan panggilan tanpa memutus koneksi WebRTC, memungkinkan pengguna tetap mengobrol pesan teks.
+- **Non-Disruptive Disconnect**: Meninggalkan panggilan hanya memutuskan sesi pengguna lokal tanpa mematikan ruang panggilan untuk anggota lain.
+
+### ⚡ 4. Pelacakan Presensi Suara Real-Time (Supabase CDC & Presence)
+- **Presensi Anggota Sebelum Bergabung**: Pengguna dapat melihat daftar anggota yang berada di dalam Voice Channel secara *real-time* dari sidebar **SEBELUM & SESUDAH** mengklik untuk bergabung.
+- **Status Read Centang Ganda (`✔` -> `✔✔`)**: Pesan obrolan memperbarui status pembacaan secara *real-time* saat penerima membuka obrolan.
+
+### 👥 5. Direktori Anggota & Manajemen Server Lengkap
+- **Modal Daftar Anggota Server (`Server Members`)**: Menampilkan seluruh anggota terdaftar lengkap dengan foto profil, tag username, dan lencana mahkota emas (`👑 Owner`).
+- **Pengaturan Detail Server (`Edit Server Settings`)**: Modal untuk mengubah nama server, mengunggah ikon baru, mengubah status Private/Public, atau menghapus server.
+- **Salin Kode Undangan (`Share2`)**: Menyalin ID Server sekali klik untuk membagikan akses ke kawan.
+
+### 🚪 6. Keamanan Private Channel & Sistem Door Knocking
+- **Keamanan Saluran Private (`🔒`)**: Channel private terlindungi oleh kata sandi.
+- **System Knock-Knock**: Calon pengunjung dapat melakukan "ketuk pintu" yang memicu notifikasi siaran *real-time* ke anggota ruangan untuk persetujuan masuk.
+
+### 🔊 7. Meteran Suara Mikrofon Asli (Web Audio API)
+- **Real-Time Input Metering**: Di modal **User Settings**, indikator volume mikrofon mengukur dan menampilkan level spektrum audio asli dari mikrofon fisik pengguna (`AudioContext` & `AnalyserNode`).
+
+### 💬 8. Urutan Obrolan DM Terbaru & Persistensi Halaman
+- **Sorting DM Berdasarkan Pesan Terakhir**: Daftar obrolan pribadi otomatis melompat ke atas setiap kali ada pesan baru yang terkirim/diterima.
+- **Zustand Persist Middleware**: Menyimpan status server & channel aktif di `localStorage`, sehingga tampilan tidak pernah reset saat menekan F5 / Reload browser.
 
 ---
 
-## 📐 Application Layout & Spatial Flow
+## 🛠️ Stack Teknologi (Tech Architecture)
+
+| Layer | Teknologi & Library | Deskripsi |
+| :--- | :--- | :--- |
+| **Frontend Framework** | **Next.js 16.2.12** (App Router & Turbopack) | Server-Side Rendering (SSR), API Routes, dan kompilasi instan. |
+| **UI Library & Styling** | **React 19**, **TailwindCSS**, **Lucide React** | Antarmuka komponen modular dengan estetika *Glassmorphic Dark*. |
+| **State Management** | **Zustand** + `persist` middleware | Manajemen status global ringan yang tersimpan di `localStorage`. |
+| **Database & Auth** | **Supabase Postgres Database & Auth** | Otentikasi sesi JWT, aturan keamanan RLS (*Row Level Security*). |
+| **Realtime Engine** | **Supabase CDC & Presence Channels** | Pelacakan presensi pengguna, siaran ketuk pintu, dan centang baca pesan. |
+| **Storage** | **Supabase Storage Engine** | Penyimpanan berkas media obrolan, avatar PFP, dan ikon server. |
+| **WebRTC Infrastructure**| **LiveKit Cloud Engine** | Server Media SFU WebRTC untuk panggilan suara, video, & *screen sharing*. |
+| **Visitor Analytics** | **Vercel Analytics (`@vercel/analytics`)** | Pelacakan statistik tayangan halaman & pengunjung situs *real-time*. |
+
+---
+
+## 📐 Arsitektur Sistem (System Architecture)
 
 ```
-+-----------------------------------------------------------------------------------+
-|  LeftNavRail (16)  | ChannelSidebar (64-72)  | ChatWindow / WelcomeHomeScreen   |
-+--------------------+-------------------------+------------------------------------+
-|  [Oit Logo / DM]   | Header: Server Title    | # general / Direct Message Title   |
-|                    |  [📋 Share Invite Code] |                                    |
-|  [S1] Server Icon  |                         | Message Stream Bubbles             |
-|  [S2] Server Icon  | TEXT CHANNELS           |  [Sender Avatar] Username - 10:42  |
-|                    |  # ui-ux-sync           |  [Sent Bubble (#FF5C00)] ✔✔        |
-|  [+] Create Server |  # general [⚙️]          |  [Received Bubble (#1C1C21)]       |
-|                    |                         |  [PDF / Image Lightbox Preview]    |
-|                    | VOICE CHANNELS          |                                    |
-|                    |  🔊 Lounge Voice        | Drag & Drop Upload Progress [66%]  |
-|                    |    ● Alex (Online)      |                                    |
-|                    |    ● Sarah (Online)     | Input Bar                          |
-|  [⚙️] Settings      |  🔒 Secret Room         |  [+] [ Message... ] [😊] [Send >]  |
-|  [Avatar] Profile  |                         |                                    |
-+--------------------+-------------------------+------------------------------------+
-|                      [Floating Live Pod (bottom-6 right-6)]                      |
-+-----------------------------------------------------------------------------------+
+[ Client Browser / Mobile HP ]
+              │
+              ├───► Next.js 16 App Router (UI Rendering & Zustand State)
+              │
+              ├───► Supabase Auth & Postgres Database (User Profiles, Servers, Channels, Messages)
+              │
+              ├───► Supabase Realtime CDC Engine (Presence Sync, Message Read Receipts, Knock Signaling)
+              │
+              ├───► LiveKit Cloud WebRTC SFU Server (Low-Latency Audio/Video Peer Connections)
+              │
+              └───► Supabase Storage Engine (User Avatars & Server Icon Images)
 ```
 
 ---
 
-## 🗄️ Database Schema & RLS Policies
+## 🗄️ Skema Database SQL (Database Schemas)
+
+Aplikasi Oit berjalan di atas struktur tabel Supabase Postgres yang efisien:
 
 ```sql
--- 1. Tabel Users
-CREATE TABLE public.users (
+-- 1. Tabel Profil Pengguna (public.users)
+CREATE TABLE IF NOT EXISTS public.users (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  username TEXT NOT NULL UNIQUE,
+  username TEXT UNIQUE NOT NULL,
   display_name TEXT,
   avatar_url TEXT,
-  bio TEXT,
+  bio TEXT DEFAULT 'Navigating the digital ether.',
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 2. Tabel Servers
-CREATE TABLE public.servers (
+-- 2. Tabel Server Komunitas (public.servers)
+CREATE TABLE IF NOT EXISTS public.servers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   icon_url TEXT,
   is_private BOOLEAN DEFAULT false,
-  owner_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  owner_id UUID NOT NULL,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 3. Tabel Server Members
-CREATE TABLE public.server_members (
+-- 3. Tabel Keanggotaan Server (public.server_members)
+CREATE TABLE IF NOT EXISTS public.server_members (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   server_id UUID NOT NULL REFERENCES public.servers(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL,
   role TEXT NOT NULL DEFAULT 'member',
   joined_at TIMESTAMPTZ DEFAULT now(),
   UNIQUE(server_id, user_id)
 );
 
--- 4. Tabel Channels
-CREATE TABLE public.channels (
+-- 4. Tabel Saluran Obrolan & Suara (public.channels)
+CREATE TABLE IF NOT EXISTS public.channels (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   server_id UUID NOT NULL REFERENCES public.servers(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
@@ -127,85 +131,57 @@ CREATE TABLE public.channels (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 5. Tabel Messages
-CREATE TABLE public.messages (
+-- 5. Tabel Pesan Obrolan (public.messages)
+CREATE TABLE IF NOT EXISTS public.messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  sender_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  receiver_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  channel_id TEXT,
   content TEXT,
+  sender_id UUID NOT NULL,
+  receiver_id UUID,
+  channel_id UUID,
   attachment_url TEXT,
   file_name TEXT,
   file_size TEXT,
   is_read BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT now()
 );
-
-CREATE INDEX idx_messages_channel_id ON public.messages(channel_id);
-
--- Enable RLS Policies
-ALTER TABLE public.servers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.server_members ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.channels ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Public select servers" ON public.servers FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public select server_members" ON public.server_members FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public select channels" ON public.channels FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public select messages" ON public.messages FOR ALL USING (true) WITH CHECK (true);
 ```
+
+> **Catatan Pembersihan Database**: Untuk mereset ulang seluruh data ke 0, gunakan skrip [supabase/wipe_clean_database.sql](file:///c:/Users/Felix/Documents/proyek/Oit/supabase/wipe_clean_database.sql).
 
 ---
 
-## ⚡ Local Setup & Installation Guide
+## ⚡ Panduan Instalasi Lokal (Local Setup Guide)
 
-### **Prerequisites**
-- Node.js 20+ or 22+
-- npm or pnpm
-- Supabase Project & LiveKit Cloud Credentials
+### 1. Prasyarat System
+- **Node.js**: `v20.x` atau lebih baru
+- **Package Manager**: `npm` atau `yarn`
 
-### **1. Clone Repository**
+### 2. Kloning & Instalasi Dependensi
 ```bash
 git clone https://github.com/felixpalingan/Oit.git
 cd Oit
-```
-
-### **2. Install Dependencies**
-```bash
 npm install
 ```
 
-### **3. Environment Variables Setup (`.env.local`)**
-Create a `.env.local` file in the root folder:
+### 3. Konfigurasi Environment Variables (`.env.local`)
+Buat berkas `.env.local` di direktori akar proyek:
 ```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-supabase-project.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://your-supabase-id.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 
-LIVEKIT_URL=wss://your-project.livekit.cloud
-NEXT_PUBLIC_LIVEKIT_URL=wss://your-project.livekit.cloud
+LIVEKIT_URL=wss://your-livekit-domain.livekit.cloud
 LIVEKIT_API_KEY=your-livekit-api-key
 LIVEKIT_API_SECRET=your-livekit-api-secret
 ```
 
-### **4. Run Development Server**
+### 4. Jalankan Server Dev Local
 ```bash
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Buka `http://localhost:3000` di peramban Anda.
 
 ---
 
-## 🚀 Production Build & Deployment
-
-To compile an optimized production build:
-```bash
-npm run build
-npm run start
-```
-Seamlessly deployable to **Vercel** with zero extra configuration required.
-
----
-
-## 📝 Developer Portfolio Ownership
-
-Developed with ❤️ by **Felix Palingan** as a premier full-stack developer portfolio project.
+## 👨‍💻 Lisensi & Hak Cipta
+Dirancang dan dikembangkan oleh **Felix Palingan** sebagai proyek portofolio kelas *Full-Stack Real-Time Communication Platform*.
+Lisensi di bawah **MIT License**.
