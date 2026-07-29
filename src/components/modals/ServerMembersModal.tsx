@@ -8,6 +8,7 @@ import { createClient } from '@/utils/supabase/client';
 interface ServerMembersModalProps {
   serverId: string;
   serverName: string;
+  onlineUserIds?: Set<string>;
   onClose: () => void;
 }
 
@@ -22,6 +23,7 @@ interface MemberItem {
 export default function ServerMembersModal({
   serverId,
   serverName,
+  onlineUserIds = new Set(),
   onClose,
 }: ServerMembersModalProps) {
   const [members, setMembers] = useState<MemberItem[]>([]);
@@ -100,43 +102,62 @@ export default function ServerMembersModal({
           ) : members.length === 0 ? (
             <p className="text-xs text-zinc-500 text-center py-6">Tidak ada anggota terdaftar.</p>
           ) : (
-            members.map((m) => (
-              <div
-                key={m.id}
-                className="p-3 bg-[#1c1c21] border border-zinc-800/80 rounded-2xl flex items-center justify-between"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center font-bold text-xs text-[#FF5C00]">
-                    {m.user.avatar_url ? (
-                      <img src={m.user.avatar_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      (m.user.username || 'U')[0]?.toUpperCase()
-                    )}
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-                      <span>{m.user.display_name || m.user.username}</span>
-                      {m.role === 'owner' && (
-                        <span title="Server Owner">
-                          <Crown className="w-3.5 h-3.5 text-amber-400" />
-                        </span>
-                      )}
-                    </h4>
-                    <p className="text-[10px] text-zinc-500">@{m.user.username}</p>
-                  </div>
-                </div>
+            members.map((m) => {
+              const isUserOnline = onlineUserIds.has(m.user_id);
 
-                <span
-                  className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase ${
-                    m.role === 'owner'
-                      ? 'bg-amber-950/60 border border-amber-800 text-amber-400'
-                      : 'bg-zinc-800 text-zinc-400'
-                  }`}
+              return (
+                <div
+                  key={m.id}
+                  className="p-3 bg-[#1c1c21] border border-zinc-800/80 rounded-2xl flex items-center justify-between"
                 >
-                  {m.role}
-                </span>
-              </div>
-            ))
+                  <div className="flex items-center gap-3">
+                    <div className="relative shrink-0">
+                      <div className="w-9 h-9 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center font-bold text-xs text-[#FF5C00]">
+                        {m.user.avatar_url ? (
+                          <img src={m.user.avatar_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          (m.user.username || 'U')[0]?.toUpperCase()
+                        )}
+                      </div>
+                      <div
+                        title={isUserOnline ? 'Online' : 'Offline'}
+                        className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-[#1c1c21] transition-colors ${
+                          isUserOnline ? 'bg-emerald-500' : 'bg-zinc-600'
+                        }`}
+                      />
+                    </div>
+
+                    <div>
+                      <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <span>{m.user.display_name || m.user.username}</span>
+                        {m.role === 'owner' && (
+                          <span title="Server Owner">
+                            <Crown className="w-3.5 h-3.5 text-amber-400" />
+                          </span>
+                        )}
+                      </h4>
+                      <p className="text-[10px] text-zinc-500 flex items-center gap-1">
+                        <span>@{m.user.username}</span>
+                        <span>•</span>
+                        <span className={isUserOnline ? 'text-emerald-400 font-semibold' : 'text-zinc-500'}>
+                          {isUserOnline ? 'Online' : 'Offline'}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <span
+                    className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase ${
+                      m.role === 'owner'
+                        ? 'bg-amber-950/60 border border-amber-800 text-amber-400'
+                        : 'bg-zinc-800 text-zinc-400'
+                    }`}
+                  >
+                    {m.role}
+                  </span>
+                </div>
+              );
+            })
           )}
         </div>
 

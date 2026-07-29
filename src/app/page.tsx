@@ -64,6 +64,9 @@ export default function Page() {
   const [activeChatUser, setActiveChatUser] = useState<UserType | null>(null);
   const [authChecking, setAuthChecking] = useState(true);
 
+  // Global Online Presence Set (Set of active User IDs)
+  const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set());
+
   // Server Hydration Trigger Key
   const [refreshServersKey, setRefreshServersKey] = useState(0);
 
@@ -155,10 +158,38 @@ export default function Page() {
     };
   }, [supabase]);
 
-  // Real-time Listeners for Previews, Call Signaling, and Knock-Knock Broadcasts
+  // Global Online Presence Channel & Realtime Signaling
   useEffect(() => {
     if (!currentUser) return;
 
+    // 1. Global Online Presence Channel
+    const globalPresenceChannel = supabase.channel('global_online_presence', {
+      config: { presence: { key: currentUser.id } },
+    });
+
+    globalPresenceChannel
+      .on('presence', { event: 'sync' }, () => {
+        const state = globalPresenceChannel.presenceState();
+        const onlineSet = new Set<string>();
+
+        Object.keys(state).forEach((key) => {
+          onlineSet.add(key);
+        });
+
+        // Always ensure self is online
+        onlineSet.add(currentUser.id);
+        setOnlineUserIds(onlineSet);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await globalPresenceChannel.track({
+            user_id: currentUser.id,
+            online_at: new Date().toISOString(),
+          });
+        }
+      });
+
+    // 2. Sidebar Messages Realtime Listener
     const sidebarChannel = supabase
       .channel('global:sidebar_previews')
       .on(
@@ -172,6 +203,7 @@ export default function Page() {
       )
       .subscribe();
 
+    // 3. Realtime Call Signaling Channel
     const callSignalingChannel = supabase
       .channel('global:call_signaling')
       .on('broadcast', { event: 'incoming_call' }, ({ payload }) => {
@@ -190,6 +222,7 @@ export default function Page() {
       })
       .subscribe();
 
+    // 4. Knock Knock Door Channel
     const roomRequestsChannel = supabase
       .channel('room_requests')
       .on('broadcast', { event: 'knock' }, ({ payload }) => {
@@ -211,6 +244,8 @@ export default function Page() {
       .subscribe();
 
     return () => {
+      globalPresenceChannel.untrack();
+      supabase.removeChannel(globalPresenceChannel);
       supabase.removeChannel(sidebarChannel);
       supabase.removeChannel(callSignalingChannel);
       supabase.removeChannel(roomRequestsChannel);
@@ -464,7 +499,7 @@ export default function Page() {
     );
   }
 
-  // --- RENDER DEDICATED AUTH PAGE (LOGIN & REGISTER WITH PFP UPLOAD) ---
+  // --- RENDER DEDICATED AUTH PAGE ---
   if (!currentUser) {
     return (
       <div className="min-h-screen w-full bg-[#000000] flex flex-col items-center justify-center p-4 selection:bg-[#FF5C00] selection:text-white select-none">
@@ -541,14 +576,12 @@ export default function Page() {
 
           <form onSubmit={(e) => { e.preventDefault(); handleAuthAction(mode); }} className="space-y-4">
             
-            {/* REGISTER SCREEN EXTRA FIELDS (AVATAR PFP & DISPLAY NAME) */}
             {mode === 'register' && (
               <div className="space-y-4 border-b border-zinc-800/80 pb-4 mb-2">
                 <label className="block text-[10px] font-extrabold uppercase tracking-wider text-[#FF5C00] text-center">
                   UPLOAD PROFIL PICTURE (PFP)
                 </label>
 
-                {/* Avatar File Input & Circle Selector */}
                 <div className="flex justify-center">
                   <input
                     type="file"
@@ -595,7 +628,6 @@ export default function Page() {
               </div>
             )}
 
-            {/* USERNAME FIELD */}
             <div>
               <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
                 USERNAME (TAG UNIK)
@@ -613,7 +645,6 @@ export default function Page() {
               </div>
             </div>
 
-            {/* PASSWORD FIELD */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400">
@@ -643,7 +674,6 @@ export default function Page() {
               </div>
             </div>
 
-            {/* CONFIRM PASSWORD FIELD FOR REGISTER */}
             {mode === 'register' && (
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
@@ -663,7 +693,6 @@ export default function Page() {
               </div>
             )}
 
-            {/* SUBMIT BUTTON */}
             <button
               type="submit"
               disabled={loading || uploadingAvatar}
@@ -741,6 +770,7 @@ export default function Page() {
         <ChannelSidebar
           currentUser={currentUser}
           usersList={usersList}
+          onlineUserIds={onlineUserIds}
           activeChatUser={activeChatUser}
           onSelectUser={(u) => {
             setActiveChatUser(u);
@@ -813,6 +843,7 @@ export default function Page() {
           <ChatWindow
             currentUser={currentUser}
             chatUser={activeChatUser}
+            isChatUserOnline={activeChatUser ? onlineUserIds.has(activeChatUser.id) : false}
             onBackMobile={() => setIsMobileDrawerOpen(true)}
             onStartCall={(isVideo) => {
               if (activeChatUser) initiateCall(activeChatUser, isVideo);
@@ -900,6 +931,7 @@ export default function Page() {
         <ServerMembersModal
           serverId={activeServerId}
           serverName={activeChannelName || 'Server'}
+          onlineUserIds={onlineUserIds}
           onClose={() => setShowMembersModal(false)}
         />
       )}

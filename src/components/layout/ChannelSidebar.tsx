@@ -22,6 +22,7 @@ import { createClient } from '@/utils/supabase/client';
 interface ChannelSidebarProps {
   currentUser: User;
   usersList: User[];
+  onlineUserIds?: Set<string>;
   activeChatUser: User | null;
   onSelectUser: (user: User) => void;
   onOpenNewChatModal: () => void;
@@ -40,6 +41,7 @@ interface ChannelSidebarProps {
 export default function ChannelSidebar({
   currentUser,
   usersList,
+  onlineUserIds = new Set(),
   activeChatUser,
   onSelectUser,
   onOpenNewChatModal,
@@ -213,7 +215,7 @@ export default function ChannelSidebar({
     const timeA = lastMessagesMap[a.id] ? new Date(lastMessagesMap[a.id].created_at).getTime() : 0;
     const timeB = lastMessagesMap[b.id] ? new Date(lastMessagesMap[b.id].created_at).getTime() : 0;
     if (timeA !== timeB) {
-      return timeB - timeA; // Most recent chat first
+      return timeB - timeA;
     }
     return a.username.localeCompare(b.username);
   });
@@ -474,13 +476,14 @@ export default function ChannelSidebar({
             </div>
           </>
         ) : (
-          /* DM Mode: SORTED BY MOST RECENT MESSAGE SENT/RECEIVED */
+          /* DM Mode: REAL-TIME ONLINE / OFFLINE STATUS BADGE */
           <div className="space-y-1">
             {sortedUsers.length === 0 ? (
               <p className="text-xs text-zinc-500 text-center py-6">Tidak ada kontak obrolan.</p>
             ) : (
               sortedUsers.map((u) => {
                 const isSelected = activeChatUser?.id === u.id;
+                const isUserOnline = onlineUserIds.has(u.id);
                 const lastMsg = lastMessagesMap[u.id];
                 const unreadCount = unreadCountsMap[u.id] || 0;
                 const previewText = lastMsg
@@ -505,7 +508,14 @@ export default function ChannelSidebar({
                           u.username[0]?.toUpperCase()
                         )}
                       </div>
-                      <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-[#161619]" />
+                      
+                      {/* REAL-TIME ONLINE (GREEN) / OFFLINE (GRAY) BADGE */}
+                      <div
+                        title={isUserOnline ? 'Online' : 'Offline'}
+                        className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-[#161619] transition-colors ${
+                          isUserOnline ? 'bg-emerald-500' : 'bg-zinc-600'
+                        }`}
+                      />
                     </div>
 
                     <div className="flex-1 overflow-hidden">

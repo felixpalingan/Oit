@@ -24,6 +24,7 @@ import {
 interface ChatWindowProps {
   currentUser: User;
   chatUser?: User | null;
+  isChatUserOnline?: boolean;
   onBackMobile: () => void;
   onStartCall: (isVideo: boolean) => void;
 }
@@ -31,6 +32,7 @@ interface ChatWindowProps {
 export default function ChatWindow({
   currentUser,
   chatUser,
+  isChatUserOnline = false,
   onBackMobile,
   onStartCall,
 }: ChatWindowProps) {
@@ -417,7 +419,11 @@ export default function ChatWindow({
                   chatUser.username[0]?.toUpperCase()
                 )}
               </div>
-              <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-[#121215]" />
+              <div
+                className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-[#121215] transition-colors ${
+                  isChatUserOnline ? 'bg-emerald-500' : 'bg-zinc-600'
+                }`}
+              />
             </div>
           ) : (
             <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center text-zinc-400 shrink-0">
@@ -430,9 +436,17 @@ export default function ChatWindow({
               {currentTitle}
             </h3>
             {chatUser && (
-              <span className="text-[10px] md:text-[11px] text-emerald-400 font-medium flex items-center gap-1 mt-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                Online
+              <span
+                className={`text-[10px] md:text-[11px] font-medium flex items-center gap-1 mt-0.5 transition-colors ${
+                  isChatUserOnline ? 'text-emerald-400' : 'text-zinc-500'
+                }`}
+              >
+                <span
+                  className={`w-1.5 h-1.5 rounded-full inline-block ${
+                    isChatUserOnline ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-600'
+                  }`}
+                />
+                {isChatUserOnline ? 'Online' : 'Offline'}
               </span>
             )}
           </div>
@@ -564,7 +578,7 @@ export default function ChatWindow({
                     <p className="text-xs whitespace-pre-wrap leading-relaxed">{msg.content}</p>
                   )}
 
-                  {/* Realtime Checkmarks (✔ Single, ✔✔ Double Checkmarks) */}
+                  {/* Realtime Checkmarks */}
                   {isMe && (
                     <div className="flex justify-end mt-0.5">
                       {isRead ? (
