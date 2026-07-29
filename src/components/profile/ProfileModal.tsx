@@ -27,9 +27,11 @@ export default function ProfileModal({
   } = useAppStore();
 
   const [displayName, setDisplayName] = useState(profile.display_name || profile.username);
-  const [aboutMe, setAboutMe] = useState(profile.bio || 'Navigating the digital ether.');
+  const [aboutMe, setAboutMe] = useState(profile.bio || '');
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url || '');
   const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
   // Hardware Devices State
   const [mics, setMics] = useState<MediaDeviceInfo[]>([]);
@@ -240,25 +242,40 @@ export default function ProfileModal({
   };
 
   const handleSave = async () => {
-    const updated: UserProfile = {
+    setSaving(true);
+    setSaveStatus('Saving changes...');
+
+    const updatedBio = aboutMe.trim();
+    const updatedName = displayName.trim() || profile.username;
+
+    const updatedProfile: UserProfile = {
       ...profile,
-      display_name: displayName,
-      bio: aboutMe,
+      display_name: updatedName,
+      bio: updatedBio,
       avatar_url: avatarUrl || null,
     };
 
     try {
-      await supabase.from('users').update({
-        display_name: displayName,
-        bio: aboutMe,
-        avatar_url: avatarUrl || null,
-      }).eq('id', profile.id);
-    } catch (err) {
-      console.error('User update error:', err);
-    }
+      const { error } = await supabase
+        .from('users')
+        .upsert({
+          id: profile.id,
+          username: profile.username,
+          display_name: updatedName,
+          bio: updatedBio,
+          avatar_url: avatarUrl || null,
+        });
 
-    onUpdate(updated);
-    handleSafeClose();
+      if (error) {
+        console.error('Error saving profile to Supabase:', error);
+      }
+    } catch (err) {
+      console.error('Save profile exception:', err);
+    } finally {
+      setSaving(false);
+      onUpdate(updatedProfile);
+      handleSafeClose();
+    }
   };
 
   const handleLogoutAction = async () => {
@@ -368,7 +385,7 @@ export default function ProfileModal({
               rows={3}
               value={aboutMe}
               onChange={(e) => setAboutMe(e.target.value)}
-              placeholder="Tulis sedikit tentang diri Anda..."
+              placeholder="Tulis deskripsi atau bio Anda di sini..."
               className="w-full px-4 py-3 bg-[#1c1c21] border border-zinc-800 rounded-2xl text-xs text-white focus:outline-none focus:border-[#FF5C00] transition-colors resize-none font-medium"
             />
           </div>
@@ -501,11 +518,11 @@ export default function ProfileModal({
             <button
               type="button"
               onClick={handleSave}
-              disabled={uploading}
+              disabled={uploading || saving}
               className="px-5 sm:px-6 py-2.5 sm:py-3 bg-[#FF5C00] hover:bg-[#ff701a] text-white font-extrabold rounded-2xl text-xs shadow-lg shadow-[#FF5C00]/25 transition-all active:scale-[0.98] flex items-center gap-2 disabled:opacity-50 cursor-pointer"
             >
               <Save className="w-4 h-4" />
-              <span>{uploading ? 'Uploading...' : 'Save Changes'}</span>
+              <span>{saving ? 'Saving...' : uploading ? 'Uploading...' : 'Save Changes'}</span>
             </button>
           </div>
         </div>
