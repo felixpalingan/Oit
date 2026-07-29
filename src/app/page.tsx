@@ -15,6 +15,8 @@ import KnockNotification from '@/components/call/KnockNotification';
 import SecurityCheckModal from '@/components/modals/SecurityCheckModal';
 import CreateServerModal from '@/components/modals/CreateServerModal';
 import JoinServerModal from '@/components/modals/JoinServerModal';
+import ServerMembersModal from '@/components/modals/ServerMembersModal';
+import EditServerModal from '@/components/modals/EditServerModal';
 import { useAppStore, KnockRequest } from '@/store/useAppStore';
 import { User as UserType, Message } from '@/types';
 
@@ -62,6 +64,9 @@ export default function Page() {
   const [showAddFriendModal, setShowAddFriendModal] = useState(false);
   const [showCreateServerModal, setShowCreateServerModal] = useState(false);
   const [showJoinServerModal, setShowJoinServerModal] = useState(false);
+  const [showMembersModal, setShowMembersModal] = useState(false);
+  const [showEditServerModal, setShowEditServerModal] = useState(false);
+
   const [securityCheckRoom, setSecurityCheckRoom] = useState<{ id: string; title: string } | null>(null);
   const [incomingCallPrompt, setIncomingCallPrompt] = useState<{ caller: UserType; roomName: string; isVideo: boolean } | null>(null);
 
@@ -553,7 +558,7 @@ export default function Page() {
         />
       )}
 
-      {/* SINGLE UNIFIED SIDEBAR CONTAINER (Desktop: Relative Side-by-Side | Mobile: Off-Canvas Drawer) */}
+      {/* SINGLE UNIFIED SIDEBAR CONTAINER */}
       <div
         className={`fixed md:relative inset-y-0 left-0 z-50 flex h-full shrink-0 shadow-2xl transition-transform duration-300 ease-in-out ${
           isMobileDrawerOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
@@ -611,6 +616,14 @@ export default function Page() {
             setShowJoinServerModal(true);
             setIsMobileDrawerOpen(false);
           }}
+          onOpenMembersModal={() => {
+            setShowMembersModal(true);
+            setIsMobileDrawerOpen(false);
+          }}
+          onOpenEditServerModal={() => {
+            setShowEditServerModal(true);
+            setIsMobileDrawerOpen(false);
+          }}
         />
       </div>
 
@@ -648,7 +661,7 @@ export default function Page() {
         )}
       </main>
 
-      {/* Modals & Realtime Ringing Handlers */}
+      {/* MODALS RENDERED AT APP ROOT LEVEL (FULL SCREEN OVERLAY) */}
       {showProfileModal && (
         <ProfileModal
           profile={{
@@ -697,6 +710,25 @@ export default function Page() {
             setActiveChatUser(null);
             setRefreshServersKey((prev) => prev + 1);
           }}
+        />
+      )}
+
+      {/* Server Members List Modal (Root Overlay) */}
+      {showMembersModal && activeServerId && (
+        <ServerMembersModal
+          serverId={activeServerId}
+          serverName={activeChannelName || 'Server'}
+          onClose={() => setShowMembersModal(false)}
+        />
+      )}
+
+      {/* Edit Server Details Modal (Root Overlay) */}
+      {showEditServerModal && activeServerId && (
+        <EditServerModal
+          serverId={activeServerId}
+          onClose={() => setShowEditServerModal(false)}
+          onUpdated={() => setRefreshServersKey((prev) => prev + 1)}
+          onDeleted={() => setRefreshServersKey((prev) => prev + 1)}
         />
       )}
 

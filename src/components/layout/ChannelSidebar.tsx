@@ -20,8 +20,6 @@ import { useAppStore } from '@/store/useAppStore';
 import { createClient } from '@/utils/supabase/client';
 import CreateChannelModal from '@/components/modals/CreateChannelModal';
 import EditChannelModal from '@/components/modals/EditChannelModal';
-import ServerMembersModal from '@/components/modals/ServerMembersModal';
-import EditServerModal from '@/components/modals/EditServerModal';
 
 interface ChannelSidebarProps {
   currentUser: User;
@@ -35,6 +33,8 @@ interface ChannelSidebarProps {
   onJoinVoiceCall?: (channel: Channel) => void;
   onSelectChannel?: () => void;
   onOpenJoinServer?: () => void;
+  onOpenMembersModal?: () => void;
+  onOpenEditServerModal?: () => void;
 }
 
 export default function ChannelSidebar({
@@ -49,6 +49,8 @@ export default function ChannelSidebar({
   onJoinVoiceCall,
   onSelectChannel,
   onOpenJoinServer,
+  onOpenMembersModal,
+  onOpenEditServerModal,
 }: ChannelSidebarProps) {
   const {
     activeServerId,
@@ -61,8 +63,6 @@ export default function ChannelSidebar({
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
-  const [showMembersModal, setShowMembersModal] = useState(false);
-  const [showEditServerModal, setShowEditServerModal] = useState(false);
   const [copiedInvite, setCopiedInvite] = useState(false);
 
   const [textChannels, setTextChannels] = useState<Channel[]>([]);
@@ -245,7 +245,7 @@ export default function ChannelSidebar({
             <>
               {/* Server Members List Button */}
               <button
-                onClick={() => setShowMembersModal(true)}
+                onClick={onOpenMembersModal}
                 title="Daftar Anggota Server"
                 className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
               >
@@ -254,7 +254,7 @@ export default function ChannelSidebar({
 
               {/* Server Settings Button */}
               <button
-                onClick={() => setShowEditServerModal(true)}
+                onClick={onOpenEditServerModal}
                 title="Pengaturan Detail Server"
                 className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
               >
@@ -562,23 +562,6 @@ export default function ChannelSidebar({
         <EditChannelModal
           channel={editingChannel}
           onClose={() => setEditingChannel(null)}
-          onUpdated={() => fetchChannels()}
-          onDeleted={() => fetchChannels()}
-        />
-      )}
-
-      {showMembersModal && activeServerId && (
-        <ServerMembersModal
-          serverId={activeServerId}
-          serverName={serverTitle}
-          onClose={() => setShowMembersModal(false)}
-        />
-      )}
-
-      {showEditServerModal && activeServerId && (
-        <EditServerModal
-          serverId={activeServerId}
-          onClose={() => setShowEditServerModal(false)}
           onUpdated={() => fetchChannels()}
           onDeleted={() => fetchChannels()}
         />
