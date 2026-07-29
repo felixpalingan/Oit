@@ -13,7 +13,7 @@ import {
   CheckCheck,
   Check,
   FileText,
-  ArrowLeft,
+  Menu,
   Download,
   ExternalLink,
   UploadCloud,
@@ -35,7 +35,7 @@ export default function ChatWindow({
   onStartCall,
 }: ChatWindowProps) {
   // 1. State Management (Zustand)
-  const { activeChannelId, activeChannelName } = useAppStore();
+  const { activeChannelId, activeChannelName, setIsMobileDrawerOpen } = useAppStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageText, setMessageText] = useState('');
   const [sendersMap, setSendersMap] = useState<Record<string, User>>({});
@@ -77,7 +77,7 @@ export default function ChatWindow({
     });
   };
 
-  // Bug 2 Fix: Mark messages as read in Supabase AND update local state instantly
+  // Mark messages as read
   const markMessagesAsRead = async () => {
     if (!chatUser) return;
     try {
@@ -100,7 +100,7 @@ export default function ChatWindow({
     }
   };
 
-  // Fetch profiles for all unique message senders
+  // Fetch profiles for message senders
   const fetchSenderProfiles = async (msgs: Message[]) => {
     const senderIds = Array.from(new Set(msgs.map((m) => m.sender_id).filter(Boolean)));
     if (senderIds.length === 0) return;
@@ -123,7 +123,6 @@ export default function ChatWindow({
     }
   };
 
-  // 2. Fetching & 3. Realtime Subscription with Clean Unsubscribe
   useEffect(() => {
     setMessages([]);
 
@@ -136,7 +135,6 @@ export default function ChatWindow({
             `and(sender_id.eq.${currentUser.id},receiver_id.eq.${chatUser.id}),and(sender_id.eq.${chatUser.id},receiver_id.eq.${currentUser.id})`
           );
         } else {
-          // Strict channel matching
           query = query.eq('channel_id', currentChannelId);
         }
 
@@ -159,7 +157,6 @@ export default function ChatWindow({
 
     fetchChannelMessages();
 
-    // Scoped Realtime Subscription
     const channelName = chatUser
       ? `dm:${[currentUser.id, chatUser.id].sort().join('_')}`
       : `channel:${currentChannelId}`;
@@ -210,7 +207,6 @@ export default function ChatWindow({
     };
   }, [currentUser.id, chatUser?.id, currentChannelId, supabase]);
 
-  // 4. Inserting Message Protocol
   const handleSendMessage = async () => {
     if (!messageText.trim()) return;
 
@@ -280,8 +276,6 @@ export default function ChatWindow({
           .getPublicUrl(filePath);
 
         publicUrl = publicUrlData?.publicUrl || '';
-      } else {
-        console.warn('Supabase storage upload notice:', uploadError.message);
       }
 
       if (!publicUrl || uploadError) {
@@ -312,29 +306,12 @@ export default function ChatWindow({
         .select()
         .single();
 
-      if (insertError) {
-        console.error('Database message insert error:', insertError);
-        const tempMsg: Message = {
-          id: `temp-${Date.now()}`,
-          sender_id: currentUser.id,
-          receiver_id: chatUser ? chatUser.id : null,
-          channel_id: chatUser ? null : currentChannelId,
-          content: selectedFile.name,
-          attachment_url: publicUrl,
-          file_name: selectedFile.name,
-          file_size: fileSizeFormatted,
-          is_read: false,
-          created_at: new Date().toISOString(),
-        };
-        setMessages((prev) => [...prev, tempMsg]);
-      } else if (insertedMsg) {
+      if (!insertError && insertedMsg) {
         setMessages((prev) => {
           if (prev.some((m) => m.id === insertedMsg.id)) return prev;
           return [...prev, insertedMsg as Message];
         });
       }
-
-      setUploadProgress(100);
     } catch (err) {
       console.error('File upload error:', err);
     } finally {
@@ -404,34 +381,36 @@ export default function ChatWindow({
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
-      className="flex-1 h-full bg-[#121215] flex flex-col relative overflow-hidden select-none"
+      className="flex-1 h-full bg-[#121215] flex flex-col relative overflow-hidden select-none w-full"
     >
       {/* Drag & Drop Visual Overlay */}
       {isDragging && (
         <div className="absolute inset-0 z-50 bg-[#000000]/90 backdrop-blur-md border-4 border-dashed border-[#FF5C00] m-3 rounded-3xl flex flex-col items-center justify-center pointer-events-none animate-pulse">
-          <div className="w-20 h-20 bg-[#FF5C00]/20 rounded-full flex items-center justify-center mb-4 shadow-xl shadow-[#FF5C00]/30">
-            <UploadCloud className="w-10 h-10 text-[#FF5C00]" />
+          <div className="w-16 h-16 bg-[#FF5C00]/20 rounded-full flex items-center justify-center mb-3 shadow-xl shadow-[#FF5C00]/30">
+            <UploadCloud className="w-8 h-8 text-[#FF5C00]" />
           </div>
-          <h3 className="text-xl font-extrabold text-white">Lepaskan File di Sini</h3>
+          <h3 className="text-lg font-extrabold text-white">Lepaskan File di Sini</h3>
           <p className="text-xs text-zinc-400 mt-1">
-            File akan otomatis diunggah dan dikirim ke <span className="text-[#FF5C00] font-bold">{currentTitle}</span>
+            File akan otomatis diunggah ke <span className="text-[#FF5C00] font-bold">{currentTitle}</span>
           </p>
         </div>
       )}
 
       {/* Top Header Bar */}
-      <div className="px-5 py-3 bg-[#121215] border-b border-zinc-800/80 flex items-center justify-between z-10">
-        <div className="flex items-center gap-3">
+      <div className="px-4 md:px-5 py-3 bg-[#121215] border-b border-zinc-800/80 flex items-center justify-between z-10 shrink-0">
+        <div className="flex items-center gap-2.5">
+          {/* Mobile Hamburger Drawer Toggle Button */}
           <button
-            onClick={onBackMobile}
-            className="md:hidden p-2 text-zinc-400 hover:text-white rounded-lg"
+            onClick={() => setIsMobileDrawerOpen(true)}
+            title="Open Channels Menu"
+            className="md:hidden p-2 text-zinc-300 hover:text-white rounded-xl bg-[#1c1c21] border border-zinc-800 active:scale-95 transition-all"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <Menu className="w-5 h-5 text-[#FF5C00]" />
           </button>
 
           {chatUser ? (
-            <div className="relative">
-              <div className="w-9 h-9 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center font-bold text-[#FF5C00]">
+            <div className="relative shrink-0">
+              <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center font-bold text-xs text-[#FF5C00]">
                 {chatUser.avatar_url ? (
                   <img src={chatUser.avatar_url} alt="" className="w-full h-full object-cover" />
                 ) : (
@@ -441,17 +420,17 @@ export default function ChatWindow({
               <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-[#121215]" />
             </div>
           ) : (
-            <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center text-zinc-400">
+            <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center text-zinc-400 shrink-0">
               <Hash className="w-4 h-4 text-zinc-300" />
             </div>
           )}
 
-          <div>
-            <h3 className="text-sm font-bold text-white leading-tight">
+          <div className="overflow-hidden max-w-[150px] sm:max-w-[240px] md:max-w-xs">
+            <h3 className="text-xs md:text-sm font-bold text-white leading-tight truncate">
               {currentTitle}
             </h3>
             {chatUser && (
-              <span className="text-[11px] text-emerald-400 font-medium flex items-center gap-1.5 mt-0.5">
+              <span className="text-[10px] md:text-[11px] text-emerald-400 font-medium flex items-center gap-1 mt-0.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
                 Online
               </span>
@@ -460,11 +439,11 @@ export default function ChatWindow({
         </div>
 
         {/* Action Call Buttons */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 md:gap-2">
           <button
             onClick={() => onStartCall(false)}
             title="Voice Call"
-            className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-colors"
+            className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-colors active:scale-95"
           >
             <Phone className="w-4 h-4" />
           </button>
@@ -472,14 +451,14 @@ export default function ChatWindow({
           <button
             onClick={() => onStartCall(true)}
             title="Video Call"
-            className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-colors"
+            className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-colors active:scale-95"
           >
             <Video className="w-4 h-4" />
           </button>
 
           <button
             title="More Options"
-            className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-colors"
+            className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-colors active:scale-95"
           >
             <MoreVertical className="w-4 h-4" />
           </button>
@@ -487,10 +466,10 @@ export default function ChatWindow({
       </div>
 
       {/* Message Stream Area */}
-      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 bg-[#121215]">
+      <div className="flex-1 overflow-y-auto px-3 md:px-6 py-4 space-y-4 bg-[#121215]">
         
         {/* Date Separator Pill */}
-        <div className="flex justify-center my-3">
+        <div className="flex justify-center my-2">
           <span className="bg-[#1c1c21] text-zinc-400 text-[10px] font-semibold px-3 py-1 rounded-full border border-zinc-800/60 shadow-sm">
             Today
           </span>
@@ -512,10 +491,10 @@ export default function ChatWindow({
           return (
             <div
               key={msg.id}
-              className={`flex items-start gap-3 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
+              className={`flex items-start gap-2.5 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
             >
               {/* Actual Sender Avatar */}
-              <div className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center text-xs font-bold text-[#FF5C00] shrink-0 mt-0.5">
+              <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center text-xs font-bold text-[#FF5C00] shrink-0 mt-0.5">
                 {senderAvatar ? (
                   <img src={senderAvatar} alt="" className="w-full h-full object-cover" />
                 ) : (
@@ -523,13 +502,13 @@ export default function ChatWindow({
                 )}
               </div>
 
-              <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[85%] md:max-w-[70%]`}>
+              <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[90%] sm:max-w-[80%] md:max-w-[70%]`}>
                 
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-bold text-white">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="text-[11px] md:text-xs font-bold text-white">
                     {senderName}
                   </span>
-                  <span className="text-[10px] text-zinc-500">
+                  <span className="text-[9px] md:text-[10px] text-zinc-500">
                     {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
@@ -549,11 +528,11 @@ export default function ChatWindow({
                       rel="noopener noreferrer"
                       className="block cursor-pointer hover:opacity-90 transition-opacity mb-1"
                     >
-                      <div className="rounded-xl overflow-hidden max-w-sm border border-white/20 relative group bg-black/40">
+                      <div className="rounded-xl overflow-hidden max-w-xs sm:max-w-sm border border-white/20 relative group bg-black/40">
                         <img
                           src={attachUrl}
                           alt={msg.file_name || 'Uploaded Image'}
-                          className="w-full h-auto object-cover max-h-72 rounded-lg"
+                          className="w-full h-auto object-cover max-h-64 md:max-h-72 rounded-lg"
                         />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-xs font-bold gap-1.5">
                           <ExternalLink className="w-4 h-4" /> Buka Gambar
@@ -567,16 +546,16 @@ export default function ChatWindow({
                       target="_blank"
                       rel="noopener noreferrer"
                       download={msg.file_name || msg.content || 'attachment'}
-                      className="flex items-center gap-3 p-3 bg-white/15 hover:bg-white/25 rounded-xl border border-white/30 transition-all cursor-pointer shadow-sm active:scale-[0.98]"
+                      className="flex items-center gap-2.5 p-2.5 bg-white/15 hover:bg-white/25 rounded-xl border border-white/30 transition-all cursor-pointer shadow-sm active:scale-[0.98]"
                     >
-                      <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center shrink-0">
-                        <FileText className="w-5 h-5 text-white" />
+                      <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center shrink-0">
+                        <FileText className="w-4 h-4 text-white" />
                       </div>
                       <div className="overflow-hidden flex-1">
-                        <p className="text-xs font-bold text-white truncate max-w-[180px]">
+                        <p className="text-xs font-bold text-white truncate max-w-[140px] sm:max-w-[180px]">
                           {msg.file_name || msg.content || 'Document'}
                         </p>
-                        <p className="text-[10px] text-white/80">{msg.file_size || 'Klik untuk unduh'}</p>
+                        <p className="text-[9px] text-white/80">{msg.file_size || 'Download'}</p>
                       </div>
                       <Download className="w-4 h-4 text-white shrink-0" />
                     </a>
@@ -585,7 +564,7 @@ export default function ChatWindow({
                     <p className="text-xs whitespace-pre-wrap leading-relaxed">{msg.content}</p>
                   )}
 
-                  {/* Bug 2 Fix: Realtime Checkmarks (✔ Single, ✔✔ Double Checkmarks) */}
+                  {/* Realtime Checkmarks (✔ Single, ✔✔ Double Checkmarks) */}
                   {isMe && (
                     <div className="flex justify-end mt-0.5">
                       {isRead ? (
@@ -607,9 +586,9 @@ export default function ChatWindow({
 
       {/* Uploading Progress Bar */}
       {isUploading && (
-        <div className="px-6 py-1.5 bg-[#121215] border-t border-zinc-800/80">
+        <div className="px-4 py-1.5 bg-[#121215] border-t border-zinc-800/80">
           <div className="flex items-center justify-between text-[10px] text-zinc-400 mb-1">
-            <span className="truncate">Uploading {uploadFileName}...</span>
+            <span className="truncate max-w-[200px]">Uploading {uploadFileName}...</span>
             <span className="font-bold text-[#FF5C00] ml-2">{uploadProgress}%</span>
           </div>
           <div className="w-full h-1 bg-zinc-800 rounded-full overflow-hidden">
@@ -627,7 +606,7 @@ export default function ChatWindow({
           e.preventDefault();
           handleSendMessage();
         }}
-        className="p-4 bg-[#121215] border-t border-zinc-800/80 flex items-center gap-3"
+        className="p-3 md:p-4 bg-[#121215] border-t border-zinc-800/80 flex items-center gap-2 md:gap-3 shrink-0"
       >
         <input
           type="file"
@@ -641,12 +620,12 @@ export default function ChatWindow({
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
-          className="w-10 h-10 bg-[#1c1c21] hover:bg-[#25252b] text-zinc-400 hover:text-white border border-zinc-800 rounded-full flex items-center justify-center shrink-0 transition-colors disabled:opacity-50"
+          className="w-9 h-9 md:w-10 md:h-10 bg-[#1c1c21] hover:bg-[#25252b] text-zinc-400 hover:text-white border border-zinc-800 rounded-full flex items-center justify-center shrink-0 transition-colors active:scale-95 disabled:opacity-50"
         >
-          <Plus className="w-5 h-5 stroke-[2.5]" />
+          <Plus className="w-4 h-4 md:w-5 md:h-5 stroke-[2.5]" />
         </button>
 
-        <div className="flex-1 bg-[#1c1c21] border border-zinc-800 rounded-2xl px-4 py-2.5 flex items-center gap-3 shadow-inner">
+        <div className="flex-1 bg-[#1c1c21] border border-zinc-800 rounded-2xl px-3 md:px-4 py-2 md:py-2.5 flex items-center gap-2 shadow-inner">
           <input
             type="text"
             value={messageText}
@@ -662,7 +641,7 @@ export default function ChatWindow({
             onClick={() => setMessageText((prev) => prev + ' 😊')}
             className="text-zinc-400 hover:text-white transition-colors shrink-0"
           >
-            <Smile className="w-5 h-5" />
+            <Smile className="w-4 h-4 md:w-5 md:h-5" />
           </button>
         </div>
 
@@ -670,7 +649,7 @@ export default function ChatWindow({
           type="button"
           onClick={handleSendMessage}
           disabled={!messageText.trim() || isUploading}
-          className="w-10 h-10 bg-[#FF5C00] hover:bg-[#ff701a] text-white rounded-2xl flex items-center justify-center shrink-0 shadow-lg shadow-[#FF5C00]/25 transition-all disabled:opacity-40 active:scale-[0.98]"
+          className="w-9 h-9 md:w-10 md:h-10 bg-[#FF5C00] hover:bg-[#ff701a] text-white rounded-2xl flex items-center justify-center shrink-0 shadow-lg shadow-[#FF5C00]/25 transition-all disabled:opacity-40 active:scale-95"
         >
           <Send className="w-4 h-4 fill-current stroke-[2.5]" />
         </button>

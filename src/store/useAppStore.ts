@@ -19,12 +19,14 @@ interface AppState {
   isCallVideo: boolean;
   isCallMinimized: boolean;
   knockNotification: KnockRequest | null;
+  isMobileDrawerOpen: boolean;
 
   setActiveServer: (id: string | null) => void;
   setActiveChannel: (id: string | null, name?: string) => void;
   setActiveCall: (roomId: string | null, targetUser?: any, isVideo?: boolean) => void;
   setIsCallMinimized: (minimized: boolean) => void;
   setKnockNotification: (knock: KnockRequest | null) => void;
+  setIsMobileDrawerOpen: (open: boolean) => void;
   clearCall: () => void;
 }
 
@@ -39,6 +41,7 @@ export const useAppStore = create<AppState>()(
       isCallVideo: true,
       isCallMinimized: false,
       knockNotification: null,
+      isMobileDrawerOpen: false,
 
       setActiveServer: (id) => set({ activeServerId: id }),
       setActiveChannel: (id, name) =>
@@ -55,6 +58,7 @@ export const useAppStore = create<AppState>()(
         }),
       setIsCallMinimized: (minimized) => set({ isCallMinimized: minimized }),
       setKnockNotification: (knock) => set({ knockNotification: knock }),
+      setIsMobileDrawerOpen: (open) => set({ isMobileDrawerOpen: open }),
       clearCall: () =>
         set({
           activeCallRoomId: null,

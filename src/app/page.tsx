@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { User, Lock, LogIn, UserPlus, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { User, Lock, LogIn, UserPlus, AlertCircle, CheckCircle2, X } from 'lucide-react';
 import LeftNavRail from '@/components/layout/LeftNavRail';
 import ChannelSidebar from '@/components/layout/ChannelSidebar';
 import ChatWindow from '@/components/chat/ChatWindow';
@@ -28,10 +28,12 @@ export default function Page() {
     isCallVideo,
     isCallMinimized,
     knockNotification,
+    isMobileDrawerOpen,
     setActiveServer,
     setActiveCall,
     setIsCallMinimized,
     setKnockNotification,
+    setIsMobileDrawerOpen,
     clearCall,
   } = useAppStore();
 
@@ -543,40 +545,112 @@ export default function Page() {
   return (
     <div className="h-screen w-screen bg-[#141416] flex overflow-hidden font-sans relative select-none">
       
-      {/* 1. Leftmost Vertical Navigation Rail */}
-      <LeftNavRail
-        currentUser={currentUser}
-        onOpenProfile={() => setShowProfileModal(true)}
-        onOpenNewChat={() => setShowAddFriendModal(true)}
-        onOpenCreateServer={() => setShowCreateServerModal(true)}
-        onSelectDMHome={() => setActiveChatUser(null)}
-        refreshKey={refreshServersKey}
-      />
+      {/* DESKTOP SIDEBARS (md:flex) */}
+      <div className="hidden md:flex h-full shrink-0">
+        <LeftNavRail
+          currentUser={currentUser}
+          onOpenProfile={() => setShowProfileModal(true)}
+          onOpenNewChat={() => setShowAddFriendModal(true)}
+          onOpenCreateServer={() => setShowCreateServerModal(true)}
+          onSelectDMHome={() => setActiveChatUser(null)}
+          refreshKey={refreshServersKey}
+        />
 
-      {/* 2. Channel & DM Sidebar */}
-      <ChannelSidebar
-        currentUser={currentUser}
-        usersList={usersList}
-        activeChatUser={activeChatUser}
-        onSelectUser={(u) => {
-          setActiveChatUser(u);
-          setActiveServer(null);
-        }}
-        onOpenNewChatModal={() => setShowAddFriendModal(true)}
-        lastMessagesMap={lastMessagesMap}
-        unreadCountsMap={unreadCountsMap}
-        onKnockRoom={handleKnockRoom}
-        onJoinVoiceCall={(c) => {
-          setActiveCall(`vc_${c.id}`, { display_name: c.name }, false);
-        }}
-        onSelectChannel={() => {
-          setActiveChatUser(null);
-        }}
-        onOpenJoinServer={() => setShowJoinServerModal(true)}
-      />
+        <ChannelSidebar
+          currentUser={currentUser}
+          usersList={usersList}
+          activeChatUser={activeChatUser}
+          onSelectUser={(u) => {
+            setActiveChatUser(u);
+            setActiveServer(null);
+          }}
+          onOpenNewChatModal={() => setShowAddFriendModal(true)}
+          lastMessagesMap={lastMessagesMap}
+          unreadCountsMap={unreadCountsMap}
+          onKnockRoom={handleKnockRoom}
+          onJoinVoiceCall={(c) => {
+            setActiveCall(`vc_${c.id}`, { display_name: c.name }, false);
+          }}
+          onSelectChannel={() => {
+            setActiveChatUser(null);
+          }}
+          onOpenJoinServer={() => setShowJoinServerModal(true)}
+        />
+      </div>
+
+      {/* MOBILE SLIDE-OUT DRAWER OVERLAY (< md) */}
+      {isMobileDrawerOpen && (
+        <div className="md:hidden fixed inset-0 z-50 flex bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="flex h-full shrink-0 shadow-2xl relative">
+            <LeftNavRail
+              currentUser={currentUser}
+              onOpenProfile={() => {
+                setShowProfileModal(true);
+                setIsMobileDrawerOpen(false);
+              }}
+              onOpenNewChat={() => {
+                setShowAddFriendModal(true);
+                setIsMobileDrawerOpen(false);
+              }}
+              onOpenCreateServer={() => {
+                setShowCreateServerModal(true);
+                setIsMobileDrawerOpen(false);
+              }}
+              onSelectDMHome={() => {
+                setActiveChatUser(null);
+                setIsMobileDrawerOpen(false);
+              }}
+              refreshKey={refreshServersKey}
+            />
+
+            <ChannelSidebar
+              currentUser={currentUser}
+              usersList={usersList}
+              activeChatUser={activeChatUser}
+              onSelectUser={(u) => {
+                setActiveChatUser(u);
+                setActiveServer(null);
+                setIsMobileDrawerOpen(false);
+              }}
+              onOpenNewChatModal={() => {
+                setShowAddFriendModal(true);
+                setIsMobileDrawerOpen(false);
+              }}
+              lastMessagesMap={lastMessagesMap}
+              unreadCountsMap={unreadCountsMap}
+              onKnockRoom={(id, title) => {
+                handleKnockRoom(id, title);
+                setIsMobileDrawerOpen(false);
+              }}
+              onJoinVoiceCall={(c) => {
+                setActiveCall(`vc_${c.id}`, { display_name: c.name }, false);
+                setIsMobileDrawerOpen(false);
+              }}
+              onSelectChannel={() => {
+                setActiveChatUser(null);
+                setIsMobileDrawerOpen(false);
+              }}
+              onOpenJoinServer={() => {
+                setShowJoinServerModal(true);
+                setIsMobileDrawerOpen(false);
+              }}
+            />
+          </div>
+
+          {/* Backdrop Tap to Close Mobile Drawer */}
+          <div
+            onClick={() => setIsMobileDrawerOpen(false)}
+            className="flex-1 h-full flex justify-end p-4 cursor-pointer"
+          >
+            <button className="p-2 text-white bg-zinc-800/80 rounded-full h-10 w-10 flex items-center justify-center">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 3. Main Content Stream Area */}
-      <main className="flex-1 h-full flex flex-col relative overflow-hidden bg-[#121215]">
+      <main className="flex-1 h-full flex flex-col relative overflow-hidden bg-[#121215] w-full">
         
         {/* Top Right Knock Knock Notification Badge */}
         {knockNotification && (
@@ -600,7 +674,7 @@ export default function Page() {
           <ChatWindow
             currentUser={currentUser}
             chatUser={activeChatUser}
-            onBackMobile={() => setActiveChatUser(null)}
+            onBackMobile={() => setIsMobileDrawerOpen(true)}
             onStartCall={(isVideo) => {
               if (activeChatUser) initiateCall(activeChatUser, isVideo);
               else initiateCall({ id: 'room-1', username: activeChannelName, display_name: activeChannelName, avatar_url: null }, isVideo);
