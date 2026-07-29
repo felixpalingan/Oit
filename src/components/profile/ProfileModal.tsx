@@ -43,7 +43,39 @@ export default function ProfileModal({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Active Stream References for Immediate Termination
+  const activeAudioStreamRef = useRef<MediaStream | null>(null);
+  const activeVideoStreamRef = useRef<MediaStream | null>(null);
+  const activeAudioContextRef = useRef<AudioContext | null>(null);
+  const animFrameIdRef = useRef<number | null>(null);
+
   const supabase = createClient();
+
+  // Helper Function: Safely Stop All Tracks & Close AudioContext
+  const stopAllMediaStreams = () => {
+    if (animFrameIdRef.current) {
+      cancelAnimationFrame(animFrameIdRef.current);
+      animFrameIdRef.current = null;
+    }
+    if (activeAudioStreamRef.current) {
+      activeAudioStreamRef.current.getTracks().forEach((track) => track.stop());
+      activeAudioStreamRef.current = null;
+    }
+    if (activeVideoStreamRef.current) {
+      activeVideoStreamRef.current.getTracks().forEach((track) => track.stop());
+      activeVideoStreamRef.current = null;
+    }
+    if (activeAudioContextRef.current && activeAudioContextRef.current.state !== 'closed') {
+      activeAudioContextRef.current.close().catch(() => {});
+      activeAudioContextRef.current = null;
+    }
+  };
+
+  const handleSafeClose = () => {
+    stopAllMediaStreams();
+    onClose();
+  };
 
   // Enumerate Media Hardware Devices
   useEffect(() => {
@@ -71,20 +103,23 @@ export default function ProfileModal({
     getDevices();
   }, []);
 
-  // REAL Microphone Audio Volume Meter via Web Audio API with strict cleanup protocol
+  // REAL Microphone Audio Volume Meter via Web Audio API
   useEffect(() => {
-    let audioStream: MediaStream | null = null;
-    let audioContext: AudioContext | null = null;
-    let animFrameId: number;
-
     async function startMicMeter() {
       try {
-        audioStream = await navigator.mediaDevices.getUserMedia({
+        if (activeAudioStreamRef.current) {
+          activeAudioStreamRef.current.getTracks().forEach((t) => t.stop());
+        }
+
+        const audioStream = await navigator.mediaDevices.getUserMedia({
           audio: selectedMic ? { deviceId: { exact: selectedMic } } : true,
           video: false,
         });
+        activeAudioStreamRef.current = audioStream;
 
-        audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        activeAudioContextRef.current = audioContext;
+
         const analyser = audioContext.createAnalyser();
         analyser.fftSize = 256;
 
@@ -94,16 +129,16 @@ export default function ProfileModal({
         const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
         const checkVolume = () => {
+          if (!activeAudioContextRef.current || activeAudioContextRef.current.state === 'closed') return;
           analyser.getByteFrequencyData(dataArray);
           let sum = 0;
           for (let i = 0; i < dataArray.length; i++) {
             sum += dataArray[i];
           }
           const average = sum / dataArray.length;
-          // Scale 0 - 64 average to 0 - 100%
           const pct = Math.min(100, Math.round((average / 64) * 100));
           setMicVolume(pct);
-          animFrameId = requestAnimationFrame(checkVolume);
+          animFrameIdRef.current = requestAnimationFrame(checkVolume);
         };
 
         checkVolume();
@@ -115,28 +150,32 @@ export default function ProfileModal({
 
     startMicMeter();
 
-    // STRICT CLEANUP PROTOCOL: Stop all tracks and close AudioContext
     return () => {
-      if (animFrameId) cancelAnimationFrame(animFrameId);
-      if (audioStream) {
-        audioStream.getTracks().forEach((track) => track.stop());
+      if (animFrameIdRef.current) cancelAnimationFrame(animFrameIdRef.current);
+      if (activeAudioStreamRef.current) {
+        activeAudioStreamRef.current.getTracks().forEach((track) => track.stop());
       }
-      if (audioContext && audioContext.state !== 'closed') {
-        audioContext.close();
+      if (activeAudioContextRef.current && activeAudioContextRef.current.state !== 'closed') {
+        activeAudioContextRef.current.close().catch(() => {});
       }
     };
   }, [selectedMic]);
 
   // Camera Preview Stream
   useEffect(() => {
-    let stream: MediaStream | null = null;
     async function startCamera() {
       if (!isPreviewCamOn || !videoRef.current) return;
       try {
-        stream = await navigator.mediaDevices.getUserMedia({
+        if (activeVideoStreamRef.current) {
+          activeVideoStreamRef.current.getTracks().forEach((t) => t.stop());
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia({
           video: selectedCam ? { deviceId: { exact: selectedCam } } : true,
           audio: false,
         });
+        activeVideoStreamRef.current = stream;
+
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
@@ -147,8 +186,8 @@ export default function ProfileModal({
     startCamera();
 
     return () => {
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
+      if (activeVideoStreamRef.current) {
+        activeVideoStreamRef.current.getTracks().forEach((track) => track.stop());
       }
     };
   }, [selectedCam, isPreviewCamOn]);
@@ -188,7 +227,6 @@ export default function ProfileModal({
         }
       }
 
-      // Base64 Fallback
       const reader = new FileReader();
       reader.onload = () => {
         setAvatarUrl(reader.result as string);
@@ -220,10 +258,11 @@ export default function ProfileModal({
     }
 
     onUpdate(updated);
-    onClose();
+    handleSafeClose();
   };
 
   const handleLogoutAction = async () => {
+    stopAllMediaStreams();
     try {
       await supabase.auth.signOut();
       localStorage.clear();
@@ -238,10 +277,16 @@ export default function ProfileModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 select-none animate-in fade-in duration-200">
+    <div
+      onClick={handleSafeClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 select-none animate-in fade-in duration-200"
+    >
       
       {/* User Settings Modal Container */}
-      <div className="w-full max-w-2xl bg-[#161619] border border-zinc-800 rounded-3xl p-5 sm:p-7 shadow-2xl flex flex-col space-y-6 text-white max-h-[92vh] overflow-y-auto relative">
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-2xl bg-[#161619] border border-zinc-800 rounded-3xl p-5 sm:p-7 shadow-2xl flex flex-col space-y-6 text-white max-h-[92vh] overflow-y-auto relative z-10"
+      >
         
         {/* Top Header */}
         <div className="flex items-center justify-between border-b border-zinc-800/80 pb-4">
@@ -252,14 +297,15 @@ export default function ProfileModal({
             </h3>
           </div>
           <button
-            onClick={onClose}
-            className="p-2 text-zinc-400 hover:text-white rounded-xl hover:bg-zinc-800 transition-colors"
+            type="button"
+            onClick={handleSafeClose}
+            className="p-2 text-zinc-400 hover:text-white rounded-xl hover:bg-zinc-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* TICKET 1: PROFILE DETAILS & IDENTITIES */}
+        {/* SECTION 1: PROFILE DETAILS & IDENTITIES */}
         <div className="space-y-4">
           <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-[#FF5C00] flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-[#FF5C00]" />
@@ -328,7 +374,7 @@ export default function ProfileModal({
           </div>
         </div>
 
-        {/* TICKET 2 & TICKET 3: WEBRTC DEVICE ENUMERATION & REALTIME MIC METER */}
+        {/* SECTION 2: WEBRTC DEVICE ENUMERATION & REALTIME MIC METER */}
         <div className="space-y-4 border-t border-zinc-800/80 pt-4">
           <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-[#FF5C00] flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-[#FF5C00]" />
@@ -336,7 +382,7 @@ export default function ProfileModal({
           </h4>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Microphone Dropdown (Ticket 2) */}
+            {/* Microphone Dropdown */}
             <div>
               <label className="block text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mb-2">
                 MIKROFON (AUDIO INPUT)
@@ -360,7 +406,7 @@ export default function ProfileModal({
                 </select>
               </div>
 
-              {/* TICKET 3: REALTIME MIC VOLUME METER VISUALIZER */}
+              {/* REALTIME MIC VOLUME METER VISUALIZER */}
               <div className="mt-3 space-y-1 bg-[#121215] p-3 rounded-2xl border border-zinc-800/80">
                 <div className="flex items-center justify-between text-[10px] text-zinc-300 font-bold">
                   <span className="flex items-center gap-1">
@@ -377,7 +423,7 @@ export default function ProfileModal({
               </div>
             </div>
 
-            {/* Video Source Dropdown (Ticket 2) */}
+            {/* Video Source Dropdown */}
             <div>
               <label className="block text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mb-2">
                 KAMERA (VIDEO INPUT)
@@ -404,14 +450,14 @@ export default function ProfileModal({
           </div>
 
           {/* Camera Preview Box */}
-          <div className="relative w-full h-40 bg-[#1c1c21] border border-zinc-800 rounded-2xl overflow-hidden flex items-center justify-center">
+          <div className="relative w-full h-40 bg-[#1c1c21] border border-zinc-800 rounded-2xl overflow-hidden flex items-center justify-center pointer-events-auto">
             {isPreviewCamOn ? (
               <video
                 ref={videoRef}
                 autoPlay
                 playsInline
                 muted
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover pointer-events-none"
               />
             ) : (
               <div className="flex flex-col items-center justify-center text-zinc-500 space-y-1">
@@ -423,7 +469,7 @@ export default function ProfileModal({
             <button
               type="button"
               onClick={() => setIsPreviewCamOn(!isPreviewCamOn)}
-              className="absolute bottom-3 right-3 p-2 bg-black/60 hover:bg-black/80 text-white rounded-xl backdrop-blur-md transition-colors text-xs font-semibold flex items-center gap-1.5"
+              className="absolute bottom-3 right-3 p-2 bg-black/60 hover:bg-black/80 text-white rounded-xl backdrop-blur-md transition-colors text-xs font-semibold flex items-center gap-1.5 cursor-pointer z-10"
             >
               {isPreviewCamOn ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4" />}
               <span>{isPreviewCamOn ? 'Disable' : 'Enable'}</span>
@@ -437,7 +483,7 @@ export default function ProfileModal({
           <button
             type="button"
             onClick={handleLogoutAction}
-            className="px-4 sm:px-5 py-2.5 sm:py-3 bg-red-950/60 hover:bg-red-900 border border-red-800 text-red-300 font-extrabold rounded-2xl text-xs flex items-center gap-2 transition-colors"
+            className="px-4 sm:px-5 py-2.5 sm:py-3 bg-red-950/60 hover:bg-red-900 border border-red-800 text-red-300 font-extrabold rounded-2xl text-xs flex items-center gap-2 transition-colors cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
             <span>Log Out</span>
@@ -446,8 +492,8 @@ export default function ProfileModal({
           <div className="flex items-center gap-2 sm:gap-3">
             <button
               type="button"
-              onClick={onClose}
-              className="px-4 sm:px-5 py-2.5 sm:py-3 bg-[#26262a] hover:bg-[#303036] text-zinc-200 font-extrabold rounded-2xl text-xs transition-colors"
+              onClick={handleSafeClose}
+              className="px-4 sm:px-5 py-2.5 sm:py-3 bg-[#26262a] hover:bg-[#303036] text-zinc-200 font-extrabold rounded-2xl text-xs transition-colors cursor-pointer"
             >
               Cancel
             </button>
@@ -456,7 +502,7 @@ export default function ProfileModal({
               type="button"
               onClick={handleSave}
               disabled={uploading}
-              className="px-5 sm:px-6 py-2.5 sm:py-3 bg-[#FF5C00] hover:bg-[#ff701a] text-white font-extrabold rounded-2xl text-xs shadow-lg shadow-[#FF5C00]/25 transition-all active:scale-[0.98] flex items-center gap-2 disabled:opacity-50"
+              className="px-5 sm:px-6 py-2.5 sm:py-3 bg-[#FF5C00] hover:bg-[#ff701a] text-white font-extrabold rounded-2xl text-xs shadow-lg shadow-[#FF5C00]/25 transition-all active:scale-[0.98] flex items-center gap-2 disabled:opacity-50 cursor-pointer"
             >
               <Save className="w-4 h-4" />
               <span>{uploading ? 'Uploading...' : 'Save Changes'}</span>
