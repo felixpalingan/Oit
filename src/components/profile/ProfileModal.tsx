@@ -30,6 +30,9 @@ export default function ProfileModal({
   const [selectedCam, setSelectedCam] = useState<string>('');
   const [isPreviewCamOn, setIsPreviewCamOn] = useState(true);
 
+  // Real Microphone Volume Meter Level (0 - 100%)
+  const [micVolume, setMicVolume] = useState<number>(0);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const supabase = createClient();
@@ -53,6 +56,61 @@ export default function ProfileModal({
     }
     getDevices();
   }, []);
+
+  // REAL Microphone Audio Volume Meter via Web Audio API
+  useEffect(() => {
+    let audioStream: MediaStream | null = null;
+    let audioContext: AudioContext | null = null;
+    let animFrameId: number;
+
+    async function startMicMeter() {
+      try {
+        audioStream = await navigator.mediaDevices.getUserMedia({
+          audio: selectedMic ? { deviceId: { exact: selectedMic } } : true,
+          video: false,
+        });
+
+        audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+
+        const source = audioContext.createMediaStreamSource(audioStream);
+        source.connect(analyser);
+
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+        const checkVolume = () => {
+          analyser.getByteFrequencyData(dataArray);
+          let sum = 0;
+          for (let i = 0; i < dataArray.length; i++) {
+            sum += dataArray[i];
+          }
+          const average = sum / dataArray.length;
+          // Scale 0 - 128 to 0 - 100%
+          const pct = Math.min(100, Math.round((average / 64) * 100));
+          setMicVolume(pct);
+          animFrameId = requestAnimationFrame(checkVolume);
+        };
+
+        checkVolume();
+      } catch (err) {
+        console.warn('Mic meter error:', err);
+        setMicVolume(0);
+      }
+    }
+
+    startMicMeter();
+
+    return () => {
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+      if (audioStream) {
+        audioStream.getTracks().forEach((track) => track.stop());
+      }
+      if (audioContext && audioContext.state !== 'closed') {
+        audioContext.close();
+      }
+    };
+  }, [selectedMic]);
 
   // Camera Preview Stream
   useEffect(() => {
@@ -155,13 +213,13 @@ export default function ProfileModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 select-none animate-in fade-in duration-200">
       
       {/* User Settings Modal Container */}
-      <div className="w-full max-w-2xl bg-[#161619] border border-zinc-800 rounded-3xl p-7 shadow-2xl flex flex-col space-y-6 text-white max-h-[90vh] overflow-y-auto relative">
+      <div className="w-full max-w-2xl bg-[#161619] border border-zinc-800 rounded-3xl p-5 sm:p-7 shadow-2xl flex flex-col space-y-6 text-white max-h-[92vh] overflow-y-auto relative">
         
         {/* Top Header */}
         <div className="flex items-center justify-between border-b border-zinc-800/80 pb-4">
           <div className="flex items-center gap-2">
             <Settings className="w-5 h-5 text-[#FF5C00]" />
-            <h3 className="text-lg font-black text-white tracking-tight">
+            <h3 className="text-base sm:text-lg font-black text-white tracking-tight">
               User Settings
             </h3>
           </div>
@@ -181,7 +239,7 @@ export default function ProfileModal({
           </h4>
 
           {/* Avatar Upload Box */}
-          <div className="flex items-center gap-5 p-4 bg-[#1c1c21] border border-zinc-800 rounded-2xl">
+          <div className="flex items-center gap-4 sm:gap-5 p-4 bg-[#1c1c21] border border-zinc-800 rounded-2xl">
             <input
               type="file"
               ref={fileInputRef}
@@ -192,12 +250,12 @@ export default function ProfileModal({
 
             <div
               onClick={() => fileInputRef.current?.click()}
-              className="w-20 h-20 rounded-full bg-zinc-800 border-2 border-dashed border-[#FF5C00] overflow-hidden flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity shrink-0 relative group"
+              className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-zinc-800 border-2 border-dashed border-[#FF5C00] overflow-hidden flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity shrink-0 relative group"
             >
               {avatarUrl ? (
                 <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
-                <span className="text-2xl font-extrabold text-[#FF5C00]">
+                <span className="text-xl sm:text-2xl font-extrabold text-[#FF5C00]">
                   {(displayName || 'U')[0].toUpperCase()}
                 </span>
               )}
@@ -208,7 +266,7 @@ export default function ProfileModal({
 
             <div className="flex-1">
               <h5 className="text-xs font-bold text-white">Avatar Image</h5>
-              <p className="text-[11px] text-zinc-400 mt-1 leading-relaxed">
+              <p className="text-[10px] sm:text-[11px] text-zinc-400 mt-1 leading-relaxed">
                 Click on the circle to upload a new profile picture. Supports PNG, JPG, WEBP.
               </p>
             </div>
@@ -273,11 +331,19 @@ export default function ProfileModal({
                 </select>
               </div>
 
-              {/* Volume Indicator Bar */}
-              <div className="mt-2 flex items-center gap-2">
-                <Mic className="w-3.5 h-3.5 text-zinc-500" />
-                <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                  <div className="h-full bg-[#FF5C00] w-3/5 rounded-full animate-pulse" />
+              {/* REAL Microphone Volume Indicator Bar */}
+              <div className="mt-2.5 space-y-1">
+                <div className="flex items-center justify-between text-[10px] text-zinc-400 font-semibold">
+                  <span className="flex items-center gap-1">
+                    <Mic className="w-3 h-3 text-[#FF5C00]" /> Realtime Audio Input:
+                  </span>
+                  <span className="text-[#FF5C00] font-bold">{micVolume}%</span>
+                </div>
+                <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden p-0.5 border border-zinc-700">
+                  <div
+                    className="h-full bg-gradient-to-r from-emerald-500 via-[#FF5C00] to-red-500 rounded-full transition-all duration-75"
+                    style={{ width: `${micVolume}%` }}
+                  />
                 </div>
               </div>
             </div>
@@ -342,17 +408,17 @@ export default function ProfileModal({
           <button
             type="button"
             onClick={handleLogoutAction}
-            className="px-5 py-3 bg-red-950/60 hover:bg-red-900 border border-red-800 text-red-300 font-extrabold rounded-2xl text-xs flex items-center gap-2 transition-colors"
+            className="px-4 sm:px-5 py-2.5 sm:py-3 bg-red-950/60 hover:bg-red-900 border border-red-800 text-red-300 font-extrabold rounded-2xl text-xs flex items-center gap-2 transition-colors"
           >
             <LogOut className="w-4 h-4" />
             <span>Log Out</span>
           </button>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-3 bg-[#26262a] hover:bg-[#303036] text-zinc-200 font-extrabold rounded-2xl text-xs transition-colors"
+              className="px-4 sm:px-5 py-2.5 sm:py-3 bg-[#26262a] hover:bg-[#303036] text-zinc-200 font-extrabold rounded-2xl text-xs transition-colors"
             >
               Cancel
             </button>
@@ -361,7 +427,7 @@ export default function ProfileModal({
               type="button"
               onClick={handleSave}
               disabled={uploading}
-              className="px-6 py-3 bg-[#FF5C00] hover:bg-[#ff701a] text-white font-extrabold rounded-2xl text-xs shadow-lg shadow-[#FF5C00]/25 transition-all active:scale-[0.98] flex items-center gap-2 disabled:opacity-50"
+              className="px-5 sm:px-6 py-2.5 sm:py-3 bg-[#FF5C00] hover:bg-[#ff701a] text-white font-extrabold rounded-2xl text-xs shadow-lg shadow-[#FF5C00]/25 transition-all active:scale-[0.98] flex items-center gap-2 disabled:opacity-50"
             >
               <Save className="w-4 h-4" />
               <span>{uploading ? 'Uploading...' : 'Save Changes'}</span>

@@ -13,13 +13,15 @@ import {
   Compass,
   Share2,
   Check,
-  User as UserIcon,
+  Users,
 } from 'lucide-react';
 import { User, Message, Channel } from '@/types';
 import { useAppStore } from '@/store/useAppStore';
 import { createClient } from '@/utils/supabase/client';
 import CreateChannelModal from '@/components/modals/CreateChannelModal';
 import EditChannelModal from '@/components/modals/EditChannelModal';
+import ServerMembersModal from '@/components/modals/ServerMembersModal';
+import EditServerModal from '@/components/modals/EditServerModal';
 
 interface ChannelSidebarProps {
   currentUser: User;
@@ -59,6 +61,8 @@ export default function ChannelSidebar({
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
+  const [showMembersModal, setShowMembersModal] = useState(false);
+  const [showEditServerModal, setShowEditServerModal] = useState(false);
   const [copiedInvite, setCopiedInvite] = useState(false);
 
   const [textChannels, setTextChannels] = useState<Channel[]>([]);
@@ -228,17 +232,35 @@ export default function ChannelSidebar({
     <div className="w-64 md:w-72 h-full bg-[#161619] border-r border-zinc-800/80 flex flex-col shrink-0 select-none z-20">
       
       {/* Header Bar */}
-      <div className="px-5 py-4 border-b border-zinc-800/80 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h2 className="text-sm font-extrabold text-white truncate max-w-[140px]">
+      <div className="px-4 md:px-5 py-4 border-b border-zinc-800/80 flex items-center justify-between">
+        <div className="flex items-center gap-1.5 truncate max-w-[140px]">
+          <h2 className="text-sm font-extrabold text-white truncate">
             {isServerMode ? serverTitle : 'Messages'}
           </h2>
-          {isServerMode && <ChevronDown className="w-4 h-4 text-zinc-400" />}
+          {isServerMode && <ChevronDown className="w-4 h-4 text-zinc-400 shrink-0" />}
         </div>
 
         <div className="flex items-center gap-1">
           {isServerMode ? (
             <>
+              {/* Server Members List Button */}
+              <button
+                onClick={() => setShowMembersModal(true)}
+                title="Daftar Anggota Server"
+                className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+              >
+                <Users className="w-4 h-4 text-zinc-300 hover:text-white" />
+              </button>
+
+              {/* Server Settings Button */}
+              <button
+                onClick={() => setShowEditServerModal(true)}
+                title="Pengaturan Detail Server"
+                className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+              >
+                <Settings className="w-4 h-4 text-zinc-300 hover:text-white" />
+              </button>
+
               {/* Copy Server Invite Code Button */}
               <button
                 onClick={handleCopyInviteCode}
@@ -373,7 +395,7 @@ export default function ChannelSidebar({
               })}
             </div>
 
-            {/* VOICE CHANNELS GROUP WITH REALTIME PARTICIPANTS LIST (EVEN BEFORE JOINING) */}
+            {/* VOICE CHANNELS GROUP WITH REALTIME PARTICIPANTS LIST */}
             <div className="space-y-1 pt-2">
               <div className="flex items-center justify-between px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-zinc-400">
                 <span>VOICE CHANNELS ({voiceChannels.length})</span>
@@ -433,7 +455,7 @@ export default function ChannelSidebar({
                       </div>
                     </div>
 
-                    {/* Realtime Participants List (Visible BEFORE and AFTER joining) */}
+                    {/* Realtime Participants List */}
                     {participants.length > 0 && (
                       <div className="pl-6 pr-2 py-1 space-y-1">
                         {participants.map((p, idx) => (
@@ -540,6 +562,23 @@ export default function ChannelSidebar({
         <EditChannelModal
           channel={editingChannel}
           onClose={() => setEditingChannel(null)}
+          onUpdated={() => fetchChannels()}
+          onDeleted={() => fetchChannels()}
+        />
+      )}
+
+      {showMembersModal && activeServerId && (
+        <ServerMembersModal
+          serverId={activeServerId}
+          serverName={serverTitle}
+          onClose={() => setShowMembersModal(false)}
+        />
+      )}
+
+      {showEditServerModal && activeServerId && (
+        <EditServerModal
+          serverId={activeServerId}
+          onClose={() => setShowEditServerModal(false)}
           onUpdated={() => fetchChannels()}
           onDeleted={() => fetchChannels()}
         />
