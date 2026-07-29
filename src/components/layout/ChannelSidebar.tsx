@@ -18,8 +18,6 @@ import {
 import { User, Message, Channel } from '@/types';
 import { useAppStore } from '@/store/useAppStore';
 import { createClient } from '@/utils/supabase/client';
-import CreateChannelModal from '@/components/modals/CreateChannelModal';
-import EditChannelModal from '@/components/modals/EditChannelModal';
 
 interface ChannelSidebarProps {
   currentUser: User;
@@ -35,6 +33,8 @@ interface ChannelSidebarProps {
   onOpenJoinServer?: () => void;
   onOpenMembersModal?: () => void;
   onOpenEditServerModal?: () => void;
+  onOpenCreateChannelModal?: () => void;
+  onOpenEditChannelModal?: (channel: Channel) => void;
 }
 
 export default function ChannelSidebar({
@@ -51,6 +51,8 @@ export default function ChannelSidebar({
   onOpenJoinServer,
   onOpenMembersModal,
   onOpenEditServerModal,
+  onOpenCreateChannelModal,
+  onOpenEditChannelModal,
 }: ChannelSidebarProps) {
   const {
     activeServerId,
@@ -61,8 +63,6 @@ export default function ChannelSidebar({
 
   const [activeTab, setActiveTab] = useState<'direct' | 'groups'>('direct');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
-  const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
   const [copiedInvite, setCopiedInvite] = useState(false);
 
   const [textChannels, setTextChannels] = useState<Channel[]>([]);
@@ -70,12 +70,11 @@ export default function ChannelSidebar({
   const [serverTitle, setServerTitle] = useState('Server');
 
   // Supabase Realtime Server-Wide Voice Room Presence State
-  // Maps voice_channel_id -> User[]
   const [voiceRoomMembersMap, setVoiceRoomMembersMap] = useState<Record<string, User[]>>({});
 
   const supabase = createClient();
 
-  // Server-Wide Realtime Presence Listener: Track who is inside WHICH Voice Channel
+  // Server-Wide Realtime Presence Listener
   useEffect(() => {
     if (!activeServerId || !currentUser) return;
 
@@ -151,7 +150,6 @@ export default function ChannelSidebar({
         setTextChannels(text as Channel[]);
         setVoiceChannels(voice as Channel[]);
 
-        // Auto-select first channel if activeChannelId doesn't belong to this server
         const isValid = data.some((c: Channel) => c.id === activeChannelId);
         if (!isValid && text.length > 0) {
           setActiveChannel(text[0].id, text[0].name);
@@ -200,22 +198,6 @@ export default function ChannelSidebar({
     navigator.clipboard.writeText(activeServerId);
     setCopiedInvite(true);
     setTimeout(() => setCopiedInvite(false), 2000);
-  };
-
-  const handleChannelCreatedLocally = (newChan: Channel) => {
-    if (newChan.type === 'text') {
-      setTextChannels((prev) => {
-        const filtered = prev.filter((c) => c.id !== newChan.id);
-        return [...filtered, newChan];
-      });
-    } else {
-      setVoiceChannels((prev) => {
-        const filtered = prev.filter((c) => c.id !== newChan.id);
-        return [...filtered, newChan];
-      });
-    }
-    setActiveChannel(newChan.id, newChan.name);
-    setTimeout(fetchChannels, 300);
   };
 
   const filteredUsers = usersList.filter((u) => {
@@ -283,7 +265,7 @@ export default function ChannelSidebar({
               </button>
 
               <button
-                onClick={() => setShowCreateChannelModal(true)}
+                onClick={onOpenCreateChannelModal}
                 title="Create Channel"
                 className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
               >
@@ -351,7 +333,7 @@ export default function ChannelSidebar({
               <div className="flex items-center justify-between px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-zinc-400">
                 <span>TEXT CHANNELS ({textChannels.length})</span>
                 <button
-                  onClick={() => setShowCreateChannelModal(true)}
+                  onClick={onOpenCreateChannelModal}
                   className="hover:text-white"
                 >
                   <Plus className="w-3.5 h-3.5" />
@@ -383,7 +365,7 @@ export default function ChannelSidebar({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        setEditingChannel(c);
+                        if (onOpenEditChannelModal) onOpenEditChannelModal(c);
                       }}
                       title="Edit Channel Settings"
                       className="opacity-0 group-hover:opacity-100 p-1 hover:bg-black/30 rounded-md transition-opacity"
@@ -400,7 +382,7 @@ export default function ChannelSidebar({
               <div className="flex items-center justify-between px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-zinc-400">
                 <span>VOICE CHANNELS ({voiceChannels.length})</span>
                 <button
-                  onClick={() => setShowCreateChannelModal(true)}
+                  onClick={onOpenCreateChannelModal}
                   className="hover:text-white"
                 >
                   <Plus className="w-3.5 h-3.5" />
@@ -445,7 +427,7 @@ export default function ChannelSidebar({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            setEditingChannel(c);
+                            if (onOpenEditChannelModal) onOpenEditChannelModal(c);
                           }}
                           title="Edit Channel Settings"
                           className="opacity-0 group-hover:opacity-100 p-1 hover:bg-black/30 rounded-md transition-opacity"
@@ -547,25 +529,6 @@ export default function ChannelSidebar({
         )}
 
       </div>
-
-      {showCreateChannelModal && activeServerId && (
-        <CreateChannelModal
-          serverId={activeServerId}
-          onClose={() => setShowCreateChannelModal(false)}
-          onChannelCreated={(created) => {
-            handleChannelCreatedLocally(created);
-          }}
-        />
-      )}
-
-      {editingChannel && (
-        <EditChannelModal
-          channel={editingChannel}
-          onClose={() => setEditingChannel(null)}
-          onUpdated={() => fetchChannels()}
-          onDeleted={() => fetchChannels()}
-        />
-      )}
 
     </div>
   );

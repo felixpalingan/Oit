@@ -17,8 +17,10 @@ import CreateServerModal from '@/components/modals/CreateServerModal';
 import JoinServerModal from '@/components/modals/JoinServerModal';
 import ServerMembersModal from '@/components/modals/ServerMembersModal';
 import EditServerModal from '@/components/modals/EditServerModal';
+import CreateChannelModal from '@/components/modals/CreateChannelModal';
+import EditChannelModal from '@/components/modals/EditChannelModal';
 import { useAppStore, KnockRequest } from '@/store/useAppStore';
-import { User as UserType, Message } from '@/types';
+import { User as UserType, Message, Channel } from '@/types';
 
 export default function Page() {
   const {
@@ -32,6 +34,7 @@ export default function Page() {
     knockNotification,
     isMobileDrawerOpen,
     setActiveServer,
+    setActiveChannel,
     setActiveCall,
     setIsCallMinimized,
     setKnockNotification,
@@ -66,6 +69,8 @@ export default function Page() {
   const [showJoinServerModal, setShowJoinServerModal] = useState(false);
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [showEditServerModal, setShowEditServerModal] = useState(false);
+  const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
+  const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
 
   const [securityCheckRoom, setSecurityCheckRoom] = useState<{ id: string; title: string } | null>(null);
   const [incomingCallPrompt, setIncomingCallPrompt] = useState<{ caller: UserType; roomName: string; isVideo: boolean } | null>(null);
@@ -624,6 +629,14 @@ export default function Page() {
             setShowEditServerModal(true);
             setIsMobileDrawerOpen(false);
           }}
+          onOpenCreateChannelModal={() => {
+            setShowCreateChannelModal(true);
+            setIsMobileDrawerOpen(false);
+          }}
+          onOpenEditChannelModal={(chan) => {
+            setEditingChannel(chan);
+            setIsMobileDrawerOpen(false);
+          }}
         />
       </div>
 
@@ -661,7 +674,7 @@ export default function Page() {
         )}
       </main>
 
-      {/* MODALS RENDERED AT APP ROOT LEVEL (FULL SCREEN OVERLAY) */}
+      {/* ALL MODALS RENDERED AT APP ROOT LEVEL (FULL SCREEN BACKDROP OVERLAY) */}
       {showProfileModal && (
         <ProfileModal
           profile={{
@@ -710,6 +723,27 @@ export default function Page() {
             setActiveChatUser(null);
             setRefreshServersKey((prev) => prev + 1);
           }}
+        />
+      )}
+
+      {/* Create Channel Modal (Root Overlay) */}
+      {showCreateChannelModal && activeServerId && (
+        <CreateChannelModal
+          serverId={activeServerId}
+          onClose={() => setShowCreateChannelModal(false)}
+          onChannelCreated={(created) => {
+            setActiveChannel(created.id, created.name);
+          }}
+        />
+      )}
+
+      {/* Edit Channel Modal (Root Overlay) */}
+      {editingChannel && (
+        <EditChannelModal
+          channel={editingChannel}
+          onClose={() => setEditingChannel(null)}
+          onUpdated={() => {}}
+          onDeleted={() => {}}
         />
       )}
 
