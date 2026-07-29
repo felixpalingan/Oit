@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, Settings, Mic, Video, VideoOff, Save, LogOut } from 'lucide-react';
 import { UserProfile } from '@/types';
 import { createClient } from '@/utils/supabase/client';
+import { useAppStore } from '@/store/useAppStore';
 
 interface ProfileModalProps {
   profile: UserProfile;
@@ -18,6 +19,13 @@ export default function ProfileModal({
   onUpdate,
   onLogout,
 }: ProfileModalProps) {
+  const {
+    selectedAudioDeviceId,
+    selectedVideoDeviceId,
+    setSelectedAudioDeviceId,
+    setSelectedVideoDeviceId,
+  } = useAppStore();
+
   const [displayName, setDisplayName] = useState(profile.display_name || profile.username);
   const [aboutMe, setAboutMe] = useState(profile.bio || 'Navigating the digital ether.');
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url || '');
@@ -26,8 +34,8 @@ export default function ProfileModal({
   // Hardware Devices State
   const [mics, setMics] = useState<MediaDeviceInfo[]>([]);
   const [cams, setCams] = useState<MediaDeviceInfo[]>([]);
-  const [selectedMic, setSelectedMic] = useState<string>('');
-  const [selectedCam, setSelectedCam] = useState<string>('');
+  const [selectedMic, setSelectedMic] = useState<string>(selectedAudioDeviceId || '');
+  const [selectedCam, setSelectedCam] = useState<string>(selectedVideoDeviceId || '');
   const [isPreviewCamOn, setIsPreviewCamOn] = useState(true);
 
   // Real Microphone Volume Meter Level (0 - 100%)
@@ -48,8 +56,14 @@ export default function ProfileModal({
         setMics(audioInputs);
         setCams(videoInputs);
 
-        if (audioInputs.length > 0) setSelectedMic(audioInputs[0].deviceId);
-        if (videoInputs.length > 0) setSelectedCam(videoInputs[0].deviceId);
+        if (!selectedMic && audioInputs.length > 0) {
+          setSelectedMic(audioInputs[0].deviceId);
+          setSelectedAudioDeviceId(audioInputs[0].deviceId);
+        }
+        if (!selectedCam && videoInputs.length > 0) {
+          setSelectedCam(videoInputs[0].deviceId);
+          setSelectedVideoDeviceId(videoInputs[0].deviceId);
+        }
       } catch (err) {
         console.warn('Could not enumerate media devices:', err);
       }
@@ -57,7 +71,7 @@ export default function ProfileModal({
     getDevices();
   }, []);
 
-  // REAL Microphone Audio Volume Meter via Web Audio API
+  // REAL Microphone Audio Volume Meter via Web Audio API with strict cleanup protocol
   useEffect(() => {
     let audioStream: MediaStream | null = null;
     let audioContext: AudioContext | null = null;
@@ -86,6 +100,7 @@ export default function ProfileModal({
             sum += dataArray[i];
           }
           const average = sum / dataArray.length;
+          // Scale 0 - 64 average to 0 - 100%
           const pct = Math.min(100, Math.round((average / 64) * 100));
           setMicVolume(pct);
           animFrameId = requestAnimationFrame(checkVolume);
@@ -100,6 +115,7 @@ export default function ProfileModal({
 
     startMicMeter();
 
+    // STRICT CLEANUP PROTOCOL: Stop all tracks and close AudioContext
     return () => {
       if (animFrameId) cancelAnimationFrame(animFrameId);
       if (audioStream) {
@@ -136,6 +152,18 @@ export default function ProfileModal({
       }
     };
   }, [selectedCam, isPreviewCamOn]);
+
+  // Handle Audio Device Dropdown Selection
+  const handleMicChange = (deviceId: string) => {
+    setSelectedMic(deviceId);
+    setSelectedAudioDeviceId(deviceId);
+  };
+
+  // Handle Video Device Dropdown Selection
+  const handleCamChange = (deviceId: string) => {
+    setSelectedCam(deviceId);
+    setSelectedVideoDeviceId(deviceId);
+  };
 
   // Handle Avatar Upload
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -231,11 +259,11 @@ export default function ProfileModal({
           </button>
         </div>
 
-        {/* SECTION 1: PROFILE DETAILS */}
+        {/* TICKET 1: PROFILE DETAILS & IDENTITIES */}
         <div className="space-y-4">
           <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-[#FF5C00] flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-[#FF5C00]" />
-            PROFILE DETAILS
+            PEMBARUAN PROFIL & IDENTITAS
           </h4>
 
           {/* Avatar Upload Box */}
@@ -265,9 +293,9 @@ export default function ProfileModal({
             </div>
 
             <div className="flex-1">
-              <h5 className="text-xs font-bold text-white">Avatar Image</h5>
+              <h5 className="text-xs font-bold text-white">Avatar PFP</h5>
               <p className="text-[10px] sm:text-[11px] text-zinc-400 mt-1 leading-relaxed">
-                Click on the circle to upload a new profile picture. Supports PNG, JPG, WEBP.
+                Klik lingkaran avatar untuk mengunggah foto profil baru. Otomatis diperbarui ke Supabase Storage & state aplikasi.
               </p>
             </div>
           </div>
@@ -275,50 +303,50 @@ export default function ProfileModal({
           {/* Display Name Input */}
           <div>
             <label className="block text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mb-2">
-              DISPLAY NAME
+              DISPLAY NAME (NAMA TAMPILAN)
             </label>
             <input
               type="text"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              className="w-full px-4 py-3 bg-[#1c1c21] border border-zinc-800 rounded-2xl text-xs text-white focus:outline-none focus:border-[#FF5C00] transition-colors"
+              className="w-full px-4 py-3 bg-[#1c1c21] border border-zinc-800 rounded-2xl text-xs text-white focus:outline-none focus:border-[#FF5C00] transition-colors font-medium"
             />
           </div>
 
           {/* About Me Textarea */}
           <div>
             <label className="block text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mb-2">
-              ABOUT ME
+              ABOUT ME (BIO PENGGUNA)
             </label>
             <textarea
               rows={3}
               value={aboutMe}
               onChange={(e) => setAboutMe(e.target.value)}
               placeholder="Tulis sedikit tentang diri Anda..."
-              className="w-full px-4 py-3 bg-[#1c1c21] border border-zinc-800 rounded-2xl text-xs text-white focus:outline-none focus:border-[#FF5C00] transition-colors resize-none"
+              className="w-full px-4 py-3 bg-[#1c1c21] border border-zinc-800 rounded-2xl text-xs text-white focus:outline-none focus:border-[#FF5C00] transition-colors resize-none font-medium"
             />
           </div>
         </div>
 
-        {/* SECTION 2: HARDWARE DEVICES */}
+        {/* TICKET 2 & TICKET 3: WEBRTC DEVICE ENUMERATION & REALTIME MIC METER */}
         <div className="space-y-4 border-t border-zinc-800/80 pt-4">
           <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-[#FF5C00] flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-[#FF5C00]" />
-            HARDWARE DEVICES
+            MANAJEMEN PERANGKAT WEBRTC & MIC TEST
           </h4>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Microphone Dropdown */}
+            {/* Microphone Dropdown (Ticket 2) */}
             <div>
               <label className="block text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mb-2">
-                MICROPHONE INPUT
+                MIKROFON (AUDIO INPUT)
               </label>
               <div className="relative">
                 <Mic className="w-4 h-4 text-zinc-500 absolute left-3.5 top-3.5" />
                 <select
                   value={selectedMic}
-                  onChange={(e) => setSelectedMic(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-[#1c1c21] border border-zinc-800 rounded-2xl text-xs text-white focus:outline-none focus:border-[#FF5C00] transition-colors appearance-none cursor-pointer"
+                  onChange={(e) => handleMicChange(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-[#1c1c21] border border-zinc-800 rounded-2xl text-xs text-white focus:outline-none focus:border-[#FF5C00] transition-colors appearance-none cursor-pointer font-medium"
                 >
                   {mics.length > 0 ? (
                     mics.map((m) => (
@@ -332,34 +360,34 @@ export default function ProfileModal({
                 </select>
               </div>
 
-              {/* REAL Microphone Volume Indicator Bar */}
-              <div className="mt-2.5 space-y-1">
-                <div className="flex items-center justify-between text-[10px] text-zinc-400 font-semibold">
+              {/* TICKET 3: REALTIME MIC VOLUME METER VISUALIZER */}
+              <div className="mt-3 space-y-1 bg-[#121215] p-3 rounded-2xl border border-zinc-800/80">
+                <div className="flex items-center justify-between text-[10px] text-zinc-300 font-bold">
                   <span className="flex items-center gap-1">
-                    <Mic className="w-3 h-3 text-[#FF5C00]" /> Realtime Audio Input:
+                    <Mic className="w-3 h-3 text-[#FF5C00] animate-pulse" /> Live Volume Input:
                   </span>
-                  <span className="text-[#FF5C00] font-bold">{micVolume}%</span>
+                  <span className="text-[#FF5C00] font-extrabold">{micVolume}%</span>
                 </div>
-                <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden p-0.5 border border-zinc-700">
+                <div className="w-full h-2.5 bg-zinc-900 rounded-full overflow-hidden p-0.5 border border-zinc-800">
                   <div
-                    className="h-full bg-gradient-to-r from-emerald-500 via-[#FF5C00] to-red-500 rounded-full transition-all duration-75"
+                    className="h-full bg-gradient-to-r from-emerald-500 via-[#FF5C00] to-red-500 rounded-full transition-all duration-75 shadow-sm shadow-[#FF5C00]/50"
                     style={{ width: `${micVolume}%` }}
                   />
                 </div>
               </div>
             </div>
 
-            {/* Video Source Dropdown */}
+            {/* Video Source Dropdown (Ticket 2) */}
             <div>
               <label className="block text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mb-2">
-                VIDEO SOURCE
+                KAMERA (VIDEO INPUT)
               </label>
               <div className="relative">
                 <Video className="w-4 h-4 text-zinc-500 absolute left-3.5 top-3.5" />
                 <select
                   value={selectedCam}
-                  onChange={(e) => setSelectedCam(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-[#1c1c21] border border-zinc-800 rounded-2xl text-xs text-white focus:outline-none focus:border-[#FF5C00] transition-colors appearance-none cursor-pointer"
+                  onChange={(e) => handleCamChange(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-[#1c1c21] border border-zinc-800 rounded-2xl text-xs text-white focus:outline-none focus:border-[#FF5C00] transition-colors appearance-none cursor-pointer font-medium"
                 >
                   {cams.length > 0 ? (
                     cams.map((c) => (

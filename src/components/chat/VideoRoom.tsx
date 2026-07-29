@@ -39,6 +39,7 @@ export default function VideoRoom({
   onExpand,
   onLeave,
 }: VideoRoomProps) {
+  const { activeChannelName, selectedAudioDeviceId, selectedVideoDeviceId } = useAppStore();
   const [token, setToken] = useState<string>('');
   const [wsUrl, setWsUrl] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
@@ -77,7 +78,6 @@ export default function VideoRoom({
     fetchToken();
   }, [roomName, currentUser.username]);
 
-  const { activeChannelName } = useAppStore();
   const targetName = chatUser
     ? (chatUser.display_name || chatUser.username)
     : (activeChannelName ? `# ${activeChannelName}` : 'Voice Room');
@@ -95,10 +95,15 @@ export default function VideoRoom({
     );
   }
 
+  const audioOptions = selectedAudioDeviceId ? { deviceId: selectedAudioDeviceId } : true;
+  const videoOptions = isVideo
+    ? (selectedVideoDeviceId ? { deviceId: selectedVideoDeviceId } : true)
+    : false;
+
   return (
     <LiveKitRoom
-      video={isVideo}
-      audio={true}
+      video={videoOptions}
+      audio={audioOptions}
       token={token}
       serverUrl={wsUrl}
       data-lk-theme="default"
