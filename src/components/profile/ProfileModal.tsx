@@ -86,7 +86,6 @@ export default function ProfileModal({
             sum += dataArray[i];
           }
           const average = sum / dataArray.length;
-          // Scale 0 - 128 to 0 - 100%
           const pct = Math.min(100, Math.round((average / 64) * 100));
           setMicVolume(pct);
           animFrameId = requestAnimationFrame(checkVolume);
@@ -185,6 +184,7 @@ export default function ProfileModal({
     try {
       await supabase.from('users').update({
         display_name: displayName,
+        bio: aboutMe,
         avatar_url: avatarUrl || null,
       }).eq('id', profile.id);
     } catch (err) {
@@ -294,6 +294,7 @@ export default function ProfileModal({
               rows={3}
               value={aboutMe}
               onChange={(e) => setAboutMe(e.target.value)}
+              placeholder="Tulis sedikit tentang diri Anda..."
               className="w-full px-4 py-3 bg-[#1c1c21] border border-zinc-800 rounded-2xl text-xs text-white focus:outline-none focus:border-[#FF5C00] transition-colors resize-none"
             />
           </div>

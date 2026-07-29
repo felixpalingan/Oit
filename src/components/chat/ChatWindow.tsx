@@ -27,6 +27,7 @@ interface ChatWindowProps {
   isChatUserOnline?: boolean;
   onBackMobile: () => void;
   onStartCall: (isVideo: boolean) => void;
+  onOpenUserProfile?: (user: User) => void;
 }
 
 export default function ChatWindow({
@@ -35,6 +36,7 @@ export default function ChatWindow({
   isChatUserOnline = false,
   onBackMobile,
   onStartCall,
+  onOpenUserProfile,
 }: ChatWindowProps) {
   // 1. State Management (Zustand)
   const { activeChannelId, activeChannelName, setIsMobileDrawerOpen } = useAppStore();
@@ -411,8 +413,12 @@ export default function ChatWindow({
           </button>
 
           {chatUser ? (
-            <div className="relative shrink-0">
-              <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center font-bold text-xs text-[#FF5C00]">
+            <div
+              onClick={() => onOpenUserProfile && onOpenUserProfile(chatUser)}
+              className="relative shrink-0 cursor-pointer group"
+              title="Lihat Profil Pengguna"
+            >
+              <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center font-bold text-xs text-[#FF5C00] group-hover:border-[#FF5C00] transition-colors">
                 {chatUser.avatar_url ? (
                   <img src={chatUser.avatar_url} alt="" className="w-full h-full object-cover" />
                 ) : (
@@ -431,7 +437,10 @@ export default function ChatWindow({
             </div>
           )}
 
-          <div className="overflow-hidden max-w-[150px] sm:max-w-[240px] md:max-w-xs">
+          <div
+            onClick={() => chatUser && onOpenUserProfile && onOpenUserProfile(chatUser)}
+            className={`overflow-hidden max-w-[150px] sm:max-w-[240px] md:max-w-xs ${chatUser ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+          >
             <h3 className="text-xs md:text-sm font-bold text-white leading-tight truncate">
               {currentTitle}
             </h3>
@@ -507,8 +516,12 @@ export default function ChatWindow({
               key={msg.id}
               className={`flex items-start gap-2.5 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
             >
-              {/* Actual Sender Avatar */}
-              <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center text-xs font-bold text-[#FF5C00] shrink-0 mt-0.5">
+              {/* Actual Sender Avatar (Clickable to view User Profile) */}
+              <div
+                onClick={() => senderProfile && onOpenUserProfile && onOpenUserProfile(senderProfile)}
+                title={`Lihat Profil @${senderProfile?.username || ''}`}
+                className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center text-xs font-bold text-[#FF5C00] shrink-0 mt-0.5 cursor-pointer hover:border-[#FF5C00] transition-colors"
+              >
                 {senderAvatar ? (
                   <img src={senderAvatar} alt="" className="w-full h-full object-cover" />
                 ) : (
@@ -519,7 +532,10 @@ export default function ChatWindow({
               <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[90%] sm:max-w-[80%] md:max-w-[70%]`}>
                 
                 <div className="flex items-center gap-1.5 mb-1">
-                  <span className="text-[11px] md:text-xs font-bold text-white">
+                  <span
+                    onClick={() => senderProfile && onOpenUserProfile && onOpenUserProfile(senderProfile)}
+                    className="text-[11px] md:text-xs font-bold text-white cursor-pointer hover:underline"
+                  >
                     {senderName}
                   </span>
                   <span className="text-[9px] md:text-[10px] text-zinc-500">

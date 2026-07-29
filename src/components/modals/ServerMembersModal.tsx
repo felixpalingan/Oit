@@ -10,6 +10,7 @@ interface ServerMembersModalProps {
   serverName: string;
   onlineUserIds?: Set<string>;
   onClose: () => void;
+  onOpenUserProfile?: (user: UserType) => void;
 }
 
 interface MemberItem {
@@ -25,6 +26,7 @@ export default function ServerMembersModal({
   serverName,
   onlineUserIds = new Set(),
   onClose,
+  onOpenUserProfile,
 }: ServerMembersModalProps) {
   const [members, setMembers] = useState<MemberItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -108,11 +110,16 @@ export default function ServerMembersModal({
               return (
                 <div
                   key={m.id}
-                  className="p-3 bg-[#1c1c21] border border-zinc-800/80 rounded-2xl flex items-center justify-between"
+                  onClick={() => {
+                    if (onOpenUserProfile) {
+                      onOpenUserProfile(m.user);
+                    }
+                  }}
+                  className="p-3 bg-[#1c1c21] border border-zinc-800/80 hover:border-[#FF5C00] rounded-2xl flex items-center justify-between cursor-pointer transition-all group"
                 >
                   <div className="flex items-center gap-3">
                     <div className="relative shrink-0">
-                      <div className="w-9 h-9 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center font-bold text-xs text-[#FF5C00]">
+                      <div className="w-9 h-9 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center font-bold text-xs text-[#FF5C00] group-hover:border-[#FF5C00] transition-colors">
                         {m.user.avatar_url ? (
                           <img src={m.user.avatar_url} alt="" className="w-full h-full object-cover" />
                         ) : (
@@ -128,7 +135,7 @@ export default function ServerMembersModal({
                     </div>
 
                     <div>
-                      <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <h4 className="text-xs font-bold text-white group-hover:text-[#FF5C00] flex items-center gap-1.5 transition-colors">
                         <span>{m.user.display_name || m.user.username}</span>
                         {m.role === 'owner' && (
                           <span title="Server Owner">

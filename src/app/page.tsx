@@ -8,6 +8,7 @@ import ChannelSidebar from '@/components/layout/ChannelSidebar';
 import ChatWindow from '@/components/chat/ChatWindow';
 import WelcomeHomeScreen from '@/components/dashboard/WelcomeHomeScreen';
 import ProfileModal from '@/components/profile/ProfileModal';
+import UserProfileCardModal from '@/components/profile/UserProfileCardModal';
 import AddFriendModal from '@/components/friends/AddFriendModal';
 import VideoRoom from '@/components/chat/VideoRoom';
 import IncomingCallModal from '@/components/call/IncomingCallModal';
@@ -83,6 +84,9 @@ export default function Page() {
   const [showEditServerModal, setShowEditServerModal] = useState(false);
   const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
+
+  // User Profile Card Modal Target State
+  const [selectedUserProfileCard, setSelectedUserProfileCard] = useState<UserType | null>(null);
 
   const [securityCheckRoom, setSecurityCheckRoom] = useState<{ id: string; title: string } | null>(null);
   const [incomingCallPrompt, setIncomingCallPrompt] = useState<{ caller: UserType; roomName: string; isVideo: boolean } | null>(null);
@@ -162,7 +166,6 @@ export default function Page() {
   useEffect(() => {
     if (!currentUser) return;
 
-    // 1. Global Online Presence Channel
     const globalPresenceChannel = supabase.channel('global_online_presence', {
       config: { presence: { key: currentUser.id } },
     });
@@ -176,7 +179,6 @@ export default function Page() {
           onlineSet.add(key);
         });
 
-        // Always ensure self is online
         onlineSet.add(currentUser.id);
         setOnlineUserIds(onlineSet);
       })
@@ -189,7 +191,6 @@ export default function Page() {
         }
       });
 
-    // 2. Sidebar Messages Realtime Listener
     const sidebarChannel = supabase
       .channel('global:sidebar_previews')
       .on(
@@ -203,7 +204,6 @@ export default function Page() {
       )
       .subscribe();
 
-    // 3. Realtime Call Signaling Channel
     const callSignalingChannel = supabase
       .channel('global:call_signaling')
       .on('broadcast', { event: 'incoming_call' }, ({ payload }) => {
@@ -222,7 +222,6 @@ export default function Page() {
       })
       .subscribe();
 
-    // 4. Knock Knock Door Channel
     const roomRequestsChannel = supabase
       .channel('room_requests')
       .on('broadcast', { event: 'knock' }, ({ payload }) => {
@@ -301,7 +300,6 @@ export default function Page() {
     }
   };
 
-  // Register PFP Image Upload Handler
   const handleRegisterAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -324,7 +322,6 @@ export default function Page() {
         }
       }
 
-      // Base64 Fallback
       const reader = new FileReader();
       reader.onload = () => {
         setRegisterAvatarUrl(reader.result as string);
@@ -337,7 +334,6 @@ export default function Page() {
     }
   };
 
-  // Trigger Outgoing Knock Knock Door Request & Open Security Check Modal
   const handleKnockRoom = (roomId: string, title: string) => {
     setSecurityCheckRoom({ id: roomId, title });
   };
@@ -359,7 +355,6 @@ export default function Page() {
     setSecurityCheckRoom(null);
   };
 
-  // Trigger Outgoing Call Signaling to Target User
   const initiateCall = (chatUser: UserType, isVideo: boolean) => {
     const roomName = `call_${[currentUser?.id, chatUser.id].sort().join('_')}`;
 
@@ -377,7 +372,6 @@ export default function Page() {
     setActiveCall(roomName, chatUser, isVideo);
   };
 
-  // Approve Knock Handler
   const handleApproveKnock = (knock: KnockRequest) => {
     const roomName = `room_${knock.roomName}`;
     supabase.channel('room_requests').send({
@@ -392,12 +386,10 @@ export default function Page() {
     setKnockNotification(null);
   };
 
-  // Deny Knock Handler
   const handleDenyKnock = (knock: KnockRequest) => {
     setKnockNotification(null);
   };
 
-  // Decline Call Handler
   const handleDeclineCall = () => {
     if (incomingCallPrompt) {
       supabase.channel('global:call_signaling').send({
@@ -416,7 +408,6 @@ export default function Page() {
     clearCall();
   };
 
-  // Login & Register handler
   const handleAuthAction = async (action: 'login' | 'register') => {
     setErrorMsg('');
     setSuccessMsg('');
@@ -849,6 +840,7 @@ export default function Page() {
               if (activeChatUser) initiateCall(activeChatUser, isVideo);
               else initiateCall({ id: 'room-1', username: activeChannelName, display_name: activeChannelName, avatar_url: null }, isVideo);
             }}
+            onOpenUserProfile={(u) => setSelectedUserProfileCard(u)}
           />
         )}
       </main>
@@ -860,7 +852,7 @@ export default function Page() {
             id: currentUser.id,
             username: currentUser.username,
             display_name: currentUser.display_name,
-            bio: 'Navigating the digital ether.',
+            bio: currentUser.bio || 'Navigating the digital ether.',
             avatar_url: currentUser.avatar_url,
           }}
           onClose={() => setShowProfileModal(false)}
@@ -870,6 +862,20 @@ export default function Page() {
             setActiveChatUser(null);
             setActiveServer(null);
           }}
+        />
+      )}
+
+      {/* User Profile Card Popup Modal */}
+      {selectedUserProfileCard && (
+        <UserProfileCardModal
+          targetUser={selectedUserProfileCard}
+          isOnline={onlineUserIds.has(selectedUserProfileCard.id)}
+          onClose={() => setSelectedUserProfileCard(null)}
+          onSendMessage={() => {
+            setActiveChatUser(selectedUserProfileCard);
+            setActiveServer(null);
+          }}
+          onStartCall={(isVideo) => initiateCall(selectedUserProfileCard, isVideo)}
         />
       )}
 
@@ -933,6 +939,7 @@ export default function Page() {
           serverName={activeChannelName || 'Server'}
           onlineUserIds={onlineUserIds}
           onClose={() => setShowMembersModal(false)}
+          onOpenUserProfile={(u) => setSelectedUserProfileCard(u)}
         />
       )}
 
