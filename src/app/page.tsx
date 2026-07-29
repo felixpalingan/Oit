@@ -68,8 +68,9 @@ export default function Page() {
   // Global Online Presence Set (Set of active User IDs)
   const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set());
 
-  // Server Hydration Trigger Key
+  // Hydration Trigger Keys
   const [refreshServersKey, setRefreshServersKey] = useState(0);
+  const [refreshChannelsKey, setRefreshChannelsKey] = useState(0);
 
   // Message Previews & Unread Counts Mapping
   const [lastMessagesMap, setLastMessagesMap] = useState<Record<string, Message>>({});
@@ -806,6 +807,7 @@ export default function Page() {
             setEditingChannel(chan);
             setIsMobileDrawerOpen(false);
           }}
+          refreshChannelsTrigger={refreshChannelsKey}
         />
       </div>
 
@@ -918,6 +920,7 @@ export default function Page() {
           onClose={() => setShowCreateChannelModal(false)}
           onChannelCreated={(created) => {
             setActiveChannel(created.id, created.name);
+            setRefreshChannelsKey((prev) => prev + 1);
           }}
         />
       )}
@@ -927,8 +930,8 @@ export default function Page() {
         <EditChannelModal
           channel={editingChannel}
           onClose={() => setEditingChannel(null)}
-          onUpdated={() => {}}
-          onDeleted={() => {}}
+          onUpdated={() => setRefreshChannelsKey((prev) => prev + 1)}
+          onDeleted={() => setRefreshChannelsKey((prev) => prev + 1)}
         />
       )}
 

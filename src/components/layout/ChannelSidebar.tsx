@@ -36,6 +36,7 @@ interface ChannelSidebarProps {
   onOpenEditServerModal?: () => void;
   onOpenCreateChannelModal?: () => void;
   onOpenEditChannelModal?: (channel: Channel) => void;
+  refreshChannelsTrigger?: number;
 }
 
 export default function ChannelSidebar({
@@ -55,6 +56,7 @@ export default function ChannelSidebar({
   onOpenEditServerModal,
   onOpenCreateChannelModal,
   onOpenEditChannelModal,
+  refreshChannelsTrigger = 0,
 }: ChannelSidebarProps) {
   const {
     activeServerId,
@@ -193,7 +195,7 @@ export default function ChannelSidebar({
         supabase.removeChannel(channelSub);
       };
     }
-  }, [activeServerId, supabase]);
+  }, [activeServerId, refreshChannelsTrigger, supabase]);
 
   const handleCopyInviteCode = () => {
     if (!activeServerId) return;
@@ -476,7 +478,7 @@ export default function ChannelSidebar({
             </div>
           </>
         ) : (
-          /* DM Mode: REAL-TIME ONLINE / OFFLINE STATUS BADGE */
+          /* DM Mode */
           <div className="space-y-1">
             {sortedUsers.length === 0 ? (
               <p className="text-xs text-zinc-500 text-center py-6">Tidak ada kontak obrolan.</p>
@@ -509,7 +511,6 @@ export default function ChannelSidebar({
                         )}
                       </div>
                       
-                      {/* REAL-TIME ONLINE (GREEN) / OFFLINE (GRAY) BADGE */}
                       <div
                         title={isUserOnline ? 'Online' : 'Offline'}
                         className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-[#161619] transition-colors ${
@@ -535,7 +536,7 @@ export default function ChannelSidebar({
                           {previewText}
                         </p>
                         {unreadCount > 0 && (
-                          <span className="bg-[#FF5C00] text-white text-[10px] font-extrabold px-1.5 py-0.2 rounded-full shrink-0">
+                          <span className="bg-[#FF5C00] text-[#FFFFFF] text-[10px] font-extrabold px-1.5 py-0.2 rounded-full shrink-0">
                             {unreadCount}
                           </span>
                         )}
