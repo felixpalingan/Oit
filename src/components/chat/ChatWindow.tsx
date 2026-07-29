@@ -19,6 +19,7 @@ import {
   UploadCloud,
   Hash,
   Plus,
+  Eye,
 } from 'lucide-react';
 
 interface ChatWindowProps {
@@ -28,6 +29,7 @@ interface ChatWindowProps {
   onBackMobile: () => void;
   onStartCall: (isVideo: boolean) => void;
   onOpenUserProfile?: (user: User) => void;
+  onOpenImageLightbox?: (url: string, fileName?: string) => void;
 }
 
 export default function ChatWindow({
@@ -37,6 +39,7 @@ export default function ChatWindow({
   onBackMobile,
   onStartCall,
   onOpenUserProfile,
+  onOpenImageLightbox,
 }: ChatWindowProps) {
   // 1. State Management (Zustand)
   const { activeChannelId, activeChannelName, setIsMobileDrawerOpen } = useAppStore();
@@ -550,12 +553,10 @@ export default function ChatWindow({
                       : 'bg-[#1c1c21] text-zinc-100 border border-zinc-800/80 rounded-tl-none'
                   }`}
                 >
-                  {/* Image Attachment */}
+                  {/* Image Attachment - Click to view in Lightbox Modal instead of new tab */}
                   {attachUrl && isImg ? (
-                    <a
-                      href={attachUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <div
+                      onClick={() => onOpenImageLightbox && onOpenImageLightbox(attachUrl, msg.file_name || msg.content || 'image.png')}
                       className="block cursor-pointer hover:opacity-90 transition-opacity mb-1"
                     >
                       <div className="rounded-xl overflow-hidden max-w-xs sm:max-w-sm border border-white/20 relative group bg-black/40">
@@ -564,11 +565,11 @@ export default function ChatWindow({
                           alt={msg.file_name || 'Uploaded Image'}
                           className="w-full h-auto object-cover max-h-64 md:max-h-72 rounded-lg"
                         />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-xs font-bold gap-1.5">
-                          <ExternalLink className="w-4 h-4" /> Buka Gambar
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-xs font-bold gap-1.5">
+                          <Eye className="w-4 h-4" /> Lihat & Download Gambar
                         </div>
                       </div>
-                    </a>
+                    </div>
                   ) : attachUrl || msg.file_name ? (
                     /* Document Card */
                     <a

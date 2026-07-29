@@ -9,6 +9,7 @@ import ChatWindow from '@/components/chat/ChatWindow';
 import WelcomeHomeScreen from '@/components/dashboard/WelcomeHomeScreen';
 import ProfileModal from '@/components/profile/ProfileModal';
 import UserProfileCardModal from '@/components/profile/UserProfileCardModal';
+import ImageLightboxModal from '@/components/modals/ImageLightboxModal';
 import AddFriendModal from '@/components/friends/AddFriendModal';
 import VideoRoom from '@/components/chat/VideoRoom';
 import IncomingCallModal from '@/components/call/IncomingCallModal';
@@ -86,8 +87,9 @@ export default function Page() {
   const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
 
-  // User Profile Card Modal Target State
+  // User Profile Card & Image Lightbox Target State
   const [selectedUserProfileCard, setSelectedUserProfileCard] = useState<UserType | null>(null);
+  const [selectedLightboxImage, setSelectedLightboxImage] = useState<{ url: string; fileName: string } | null>(null);
 
   const [securityCheckRoom, setSecurityCheckRoom] = useState<{ id: string; title: string } | null>(null);
   const [incomingCallPrompt, setIncomingCallPrompt] = useState<{ caller: UserType; roomName: string; isVideo: boolean } | null>(null);
@@ -843,6 +845,7 @@ export default function Page() {
               else initiateCall({ id: 'room-1', username: activeChannelName, display_name: activeChannelName, avatar_url: null }, isVideo);
             }}
             onOpenUserProfile={(u) => setSelectedUserProfileCard(u)}
+            onOpenImageLightbox={(url, fileName) => setSelectedLightboxImage({ url, fileName: fileName || 'image.png' })}
           />
         )}
       </main>
@@ -864,6 +867,15 @@ export default function Page() {
             setActiveChatUser(null);
             setActiveServer(null);
           }}
+        />
+      )}
+
+      {/* Full-Screen Image Lightbox Modal Overlay */}
+      {selectedLightboxImage && (
+        <ImageLightboxModal
+          imageUrl={selectedLightboxImage.url}
+          fileName={selectedLightboxImage.fileName}
+          onClose={() => setSelectedLightboxImage(null)}
         />
       )}
 
