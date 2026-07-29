@@ -545,14 +545,38 @@ export default function Page() {
   return (
     <div className="h-screen w-screen bg-[#141416] flex overflow-hidden font-sans relative select-none">
       
-      {/* DESKTOP SIDEBARS (md:flex) */}
-      <div className="hidden md:flex h-full shrink-0">
+      {/* MOBILE BACKDROP OVERLAY WHEN DRAWER IS OPEN */}
+      {isMobileDrawerOpen && (
+        <div
+          onClick={() => setIsMobileDrawerOpen(false)}
+          className="md:hidden fixed inset-0 z-40 bg-black/80 backdrop-blur-sm transition-opacity"
+        />
+      )}
+
+      {/* SINGLE UNIFIED SIDEBAR CONTAINER (Desktop: Relative Side-by-Side | Mobile: Off-Canvas Drawer) */}
+      <div
+        className={`fixed md:relative inset-y-0 left-0 z-50 flex h-full shrink-0 shadow-2xl transition-transform duration-300 ease-in-out ${
+          isMobileDrawerOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        }`}
+      >
         <LeftNavRail
           currentUser={currentUser}
-          onOpenProfile={() => setShowProfileModal(true)}
-          onOpenNewChat={() => setShowAddFriendModal(true)}
-          onOpenCreateServer={() => setShowCreateServerModal(true)}
-          onSelectDMHome={() => setActiveChatUser(null)}
+          onOpenProfile={() => {
+            setShowProfileModal(true);
+            setIsMobileDrawerOpen(false);
+          }}
+          onOpenNewChat={() => {
+            setShowAddFriendModal(true);
+            setIsMobileDrawerOpen(false);
+          }}
+          onOpenCreateServer={() => {
+            setShowCreateServerModal(true);
+            setIsMobileDrawerOpen(false);
+          }}
+          onSelectDMHome={() => {
+            setActiveChatUser(null);
+            setIsMobileDrawerOpen(false);
+          }}
           refreshKey={refreshServersKey}
         />
 
@@ -563,93 +587,34 @@ export default function Page() {
           onSelectUser={(u) => {
             setActiveChatUser(u);
             setActiveServer(null);
+            setIsMobileDrawerOpen(false);
           }}
-          onOpenNewChatModal={() => setShowAddFriendModal(true)}
+          onOpenNewChatModal={() => {
+            setShowAddFriendModal(true);
+            setIsMobileDrawerOpen(false);
+          }}
           lastMessagesMap={lastMessagesMap}
           unreadCountsMap={unreadCountsMap}
-          onKnockRoom={handleKnockRoom}
+          onKnockRoom={(id, title) => {
+            handleKnockRoom(id, title);
+            setIsMobileDrawerOpen(false);
+          }}
           onJoinVoiceCall={(c) => {
             setActiveCall(`vc_${c.id}`, { display_name: c.name }, false);
+            setIsMobileDrawerOpen(false);
           }}
           onSelectChannel={() => {
             setActiveChatUser(null);
+            setIsMobileDrawerOpen(false);
           }}
-          onOpenJoinServer={() => setShowJoinServerModal(true)}
+          onOpenJoinServer={() => {
+            setShowJoinServerModal(true);
+            setIsMobileDrawerOpen(false);
+          }}
         />
       </div>
 
-      {/* MOBILE SLIDE-OUT DRAWER OVERLAY (< md) */}
-      {isMobileDrawerOpen && (
-        <div className="md:hidden fixed inset-0 z-50 flex bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="flex h-full shrink-0 shadow-2xl relative">
-            <LeftNavRail
-              currentUser={currentUser}
-              onOpenProfile={() => {
-                setShowProfileModal(true);
-                setIsMobileDrawerOpen(false);
-              }}
-              onOpenNewChat={() => {
-                setShowAddFriendModal(true);
-                setIsMobileDrawerOpen(false);
-              }}
-              onOpenCreateServer={() => {
-                setShowCreateServerModal(true);
-                setIsMobileDrawerOpen(false);
-              }}
-              onSelectDMHome={() => {
-                setActiveChatUser(null);
-                setIsMobileDrawerOpen(false);
-              }}
-              refreshKey={refreshServersKey}
-            />
-
-            <ChannelSidebar
-              currentUser={currentUser}
-              usersList={usersList}
-              activeChatUser={activeChatUser}
-              onSelectUser={(u) => {
-                setActiveChatUser(u);
-                setActiveServer(null);
-                setIsMobileDrawerOpen(false);
-              }}
-              onOpenNewChatModal={() => {
-                setShowAddFriendModal(true);
-                setIsMobileDrawerOpen(false);
-              }}
-              lastMessagesMap={lastMessagesMap}
-              unreadCountsMap={unreadCountsMap}
-              onKnockRoom={(id, title) => {
-                handleKnockRoom(id, title);
-                setIsMobileDrawerOpen(false);
-              }}
-              onJoinVoiceCall={(c) => {
-                setActiveCall(`vc_${c.id}`, { display_name: c.name }, false);
-                setIsMobileDrawerOpen(false);
-              }}
-              onSelectChannel={() => {
-                setActiveChatUser(null);
-                setIsMobileDrawerOpen(false);
-              }}
-              onOpenJoinServer={() => {
-                setShowJoinServerModal(true);
-                setIsMobileDrawerOpen(false);
-              }}
-            />
-          </div>
-
-          {/* Backdrop Tap to Close Mobile Drawer */}
-          <div
-            onClick={() => setIsMobileDrawerOpen(false)}
-            className="flex-1 h-full flex justify-end p-4 cursor-pointer"
-          >
-            <button className="p-2 text-white bg-zinc-800/80 rounded-full h-10 w-10 flex items-center justify-center">
-              <X className="w-6 h-6" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 3. Main Content Stream Area */}
+      {/* MAIN CONTENT STREAM AREA */}
       <main className="flex-1 h-full flex flex-col relative overflow-hidden bg-[#121215] w-full">
         
         {/* Top Right Knock Knock Notification Badge */}
