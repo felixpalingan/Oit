@@ -70,9 +70,9 @@ export default function UserProfileCardModal({
             e.stopPropagation();
             onClose();
           }}
-          className="absolute top-4 right-4 z-20 p-2 text-zinc-300 hover:text-white rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md transition-colors cursor-pointer active:scale-95"
+          className="absolute top-4 right-4 z-20 p-2 text-zinc-300 hover:text-white rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md transition-colors cursor-pointer active:scale-95 border border-white/10"
         >
-          <X className="w-5 h-5 stroke-[2.5]" />
+          <X className="w-4 h-4 stroke-[2.5]" />
         </button>
 
         {/* Avatar & Online Badge */}
@@ -163,15 +163,6 @@ export default function UserProfileCardModal({
             </>
           )}
         </div>
-
-        {/* Close Button Footer */}
-        <button
-          type="button"
-          onClick={onClose}
-          className="w-full py-2 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white font-bold rounded-xl text-xs transition-colors cursor-pointer mt-2"
-        >
-          Tutup Pop Up
-        </button>
 
       </div>
 
