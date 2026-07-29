@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { User, Lock, LogIn, UserPlus, AlertCircle, CheckCircle2, X } from 'lucide-react';
+import { User, Lock, LogIn, UserPlus, AlertCircle, CheckCircle2, X, Upload, Sparkles } from 'lucide-react';
 import LeftNavRail from '@/components/layout/LeftNavRail';
 import ChannelSidebar from '@/components/layout/ChannelSidebar';
 import ChatWindow from '@/components/chat/ChatWindow';
@@ -43,11 +43,20 @@ export default function Page() {
   } = useAppStore();
 
   const [mode, setMode] = useState<'login' | 'register'>('login');
+  
+  // Auth Form State
   const [username, setUsername] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [registerAvatarUrl, setRegisterAvatarUrl] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  const registerFileInputRef = useRef<HTMLInputElement>(null);
 
   // Main Dashboard State
   const [currentUser, setCurrentUser] = useState<UserType | null>(null);
@@ -150,7 +159,6 @@ export default function Page() {
   useEffect(() => {
     if (!currentUser) return;
 
-    // 1. Sidebar Messages Realtime Listener
     const sidebarChannel = supabase
       .channel('global:sidebar_previews')
       .on(
@@ -164,7 +172,6 @@ export default function Page() {
       )
       .subscribe();
 
-    // 2. Realtime Call Signaling Channel
     const callSignalingChannel = supabase
       .channel('global:call_signaling')
       .on('broadcast', { event: 'incoming_call' }, ({ payload }) => {
@@ -183,7 +190,6 @@ export default function Page() {
       })
       .subscribe();
 
-    // 3. Supabase Realtime "Knock-Knock" Room Requests Channel
     const roomRequestsChannel = supabase
       .channel('room_requests')
       .on('broadcast', { event: 'knock' }, ({ payload }) => {
@@ -257,6 +263,42 @@ export default function Page() {
       }
     } catch (err) {
       console.error('Session user setup error:', err);
+    }
+  };
+
+  // Register PFP Image Upload Handler
+  const handleRegisterAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingAvatar(true);
+    try {
+      const fileExt = file.name.split('.').pop() || 'png';
+      const filePath = `avatars/register_${Date.now()}.${fileExt}`;
+
+      const { error: uploadErr } = await supabase.storage
+        .from('chat-attachments')
+        .upload(filePath, file, { upsert: true });
+
+      if (!uploadErr) {
+        const { data } = supabase.storage.from('chat-attachments').getPublicUrl(filePath);
+        if (data?.publicUrl) {
+          setRegisterAvatarUrl(data.publicUrl);
+          setUploadingAvatar(false);
+          return;
+        }
+      }
+
+      // Base64 Fallback
+      const reader = new FileReader();
+      reader.onload = () => {
+        setRegisterAvatarUrl(reader.result as string);
+        setUploadingAvatar(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Avatar upload error:', err);
+      setUploadingAvatar(false);
     }
   };
 
@@ -354,8 +396,17 @@ export default function Page() {
       return;
     }
 
+    if (action === 'register') {
+      if (password !== confirmPassword) {
+        setErrorMsg('Konfirmasi password tidak cocok.');
+        return;
+      }
+    }
+
     setLoading(true);
-    const email = `${username.trim().toLowerCase()}@oit.app`;
+    const cleanUsername = username.trim().toLowerCase().replace(/\s+/g, '_');
+    const email = `${cleanUsername}@oit.app`;
+    const finalDisplayName = displayName.trim() || username.trim();
 
     try {
       if (action === 'register') {
@@ -363,19 +414,21 @@ export default function Page() {
           email,
           password,
           options: {
-            data: { username: username.trim() },
+            data: { username: cleanUsername, display_name: finalDisplayName },
           },
         });
 
         if (error) throw error;
+
         if (data.user) {
-          await supabase.from('users').insert({
+          await supabase.from('users').upsert({
             id: data.user.id,
-            username: username.trim().toLowerCase(),
-            display_name: username.trim(),
+            username: cleanUsername,
+            display_name: finalDisplayName,
+            avatar_url: registerAvatarUrl,
           });
 
-          setSuccessMsg('Akun Oit berhasil dibuat! Silakan klik LOGIN untuk masuk.');
+          setSuccessMsg('Akun Oit berhasil dibuat dengan PFP! Silakan klik LOGIN untuk masuk.');
           setMode('login');
         }
       } else {
@@ -411,31 +464,67 @@ export default function Page() {
     );
   }
 
-  // --- RENDER AUTH PAGE ---
+  // --- RENDER DEDICATED AUTH PAGE (LOGIN & REGISTER WITH PFP UPLOAD) ---
   if (!currentUser) {
     return (
-      <div className="min-h-screen w-full bg-[#000000] flex flex-col items-center justify-center p-4 selection:bg-[#FF5C00] selection:text-white">
+      <div className="min-h-screen w-full bg-[#000000] flex flex-col items-center justify-center p-4 selection:bg-[#FF5C00] selection:text-white select-none">
         
         {/* Top Logo & Title */}
-        <div className="flex flex-col items-center mb-8 text-center">
+        <div className="flex flex-col items-center mb-6 text-center">
           <img
             src="/oit_logo.png"
             alt="Oit Logo"
-            className="w-20 h-20 rounded-3xl object-cover shadow-2xl shadow-[#FF5C00]/25 mb-4 border border-zinc-800"
+            className="w-16 h-16 md:w-20 md:h-20 rounded-3xl object-cover shadow-2xl shadow-[#FF5C00]/25 mb-3 border border-zinc-800"
           />
 
-          <h1 className="text-4xl font-extrabold text-[#FF5C00] tracking-tight">
+          <h1 className="text-3xl md:text-4xl font-extrabold text-[#FF5C00] tracking-tight">
             Oit
           </h1>
           
-          <p className="text-xs text-zinc-400 font-medium tracking-wide mt-1.5">
-            High-Voltage Communication
+          <p className="text-xs text-zinc-400 font-medium tracking-wide mt-1">
+            High-Voltage Communication Platform
           </p>
         </div>
 
-        {/* Auth Form Card */}
-        <div className="w-full max-w-sm bg-[#121212] border border-zinc-800/80 rounded-2xl p-7 shadow-2xl shadow-black/80 text-zinc-100">
+        {/* Auth Form Container */}
+        <div className="w-full max-w-md bg-[#121215] border border-zinc-800 rounded-3xl p-6 sm:p-7 shadow-2xl text-zinc-100 relative">
           
+          {/* Mode Switch Tabs (LOGIN vs REGISTER) */}
+          <div className="flex p-1 bg-[#1a1a1e] rounded-2xl border border-zinc-800/80 mb-6">
+            <button
+              type="button"
+              onClick={() => {
+                setMode('login');
+                setErrorMsg('');
+                setSuccessMsg('');
+              }}
+              className={`flex-1 py-2.5 text-xs font-black rounded-xl transition-all ${
+                mode === 'login'
+                  ? 'bg-[#FF5C00] text-white shadow-md shadow-[#FF5C00]/20'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              LOGIN
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setMode('register');
+                setErrorMsg('');
+                setSuccessMsg('');
+              }}
+              className={`flex-1 py-2.5 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                mode === 'register'
+                  ? 'bg-[#FF5C00] text-white shadow-md shadow-[#FF5C00]/20'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>REGISTER</span>
+            </button>
+          </div>
+
           {errorMsg && (
             <div className="mb-5 p-3 bg-red-950/50 border border-red-800/60 rounded-xl flex items-center gap-2.5 text-xs text-red-300">
               <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
@@ -450,88 +539,147 @@ export default function Page() {
             </div>
           )}
 
-          <form onSubmit={(e) => { e.preventDefault(); handleAuthAction(mode); }} className="space-y-5">
+          <form onSubmit={(e) => { e.preventDefault(); handleAuthAction(mode); }} className="space-y-4">
             
+            {/* REGISTER SCREEN EXTRA FIELDS (AVATAR PFP & DISPLAY NAME) */}
+            {mode === 'register' && (
+              <div className="space-y-4 border-b border-zinc-800/80 pb-4 mb-2">
+                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-[#FF5C00] text-center">
+                  UPLOAD PROFIL PICTURE (PFP)
+                </label>
+
+                {/* Avatar File Input & Circle Selector */}
+                <div className="flex justify-center">
+                  <input
+                    type="file"
+                    ref={registerFileInputRef}
+                    onChange={handleRegisterAvatarUpload}
+                    accept="image/*"
+                    className="hidden"
+                  />
+
+                  <div
+                    onClick={() => registerFileInputRef.current?.click()}
+                    className="w-20 h-20 rounded-full bg-[#1c1c21] border-2 border-dashed border-[#FF5C00] hover:border-white overflow-hidden flex flex-col items-center justify-center cursor-pointer transition-all group relative shrink-0 shadow-lg shadow-[#FF5C00]/10"
+                  >
+                    {registerAvatarUrl ? (
+                      <>
+                        <img src={registerAvatarUrl} alt="PFP" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-[10px] font-bold">
+                          Ganti
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-5 h-5 text-[#FF5C00] mb-1 group-hover:scale-110 transition-transform" />
+                        <span className="text-[9px] font-extrabold uppercase text-zinc-400 group-hover:text-white">
+                          {uploadingAvatar ? 'Uploading...' : 'Set PFP'}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
+                    DISPLAY NAME (NAMA TAMPILAN)
+                  </label>
+                  <input
+                    type="text"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder="Contoh: Alex Rivers"
+                    className="w-full px-4 py-2.5 bg-[#1c1c21] border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#FF5C00] transition-all"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* USERNAME FIELD */}
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-400 mb-2">
-                USERNAME
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
+                USERNAME (TAG UNIK)
               </label>
               <div className="relative">
-                <User className="w-4 h-4 text-zinc-500 absolute left-3.5 top-3.5" />
+                <User className="w-4 h-4 text-zinc-500 absolute left-3.5 top-3" />
                 <input
                   type="text"
                   required
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter your username"
-                  className="w-full pl-10 pr-4 py-3 bg-[#1a1a1a] border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#FF5C00] transition-all"
+                  placeholder="Contoh: alex_rivers"
+                  className="w-full pl-10 pr-4 py-2.5 bg-[#1c1c21] border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#FF5C00] transition-all"
                 />
               </div>
             </div>
 
+            {/* PASSWORD FIELD */}
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400">
                   PASSWORD
                 </label>
-                <button
-                  type="button"
-                  onClick={() => alert('Reset password via admin Supabase.')}
-                  className="text-[11px] font-medium text-[#FF5C00] hover:underline"
-                >
-                  Forgot?
-                </button>
+                {mode === 'login' && (
+                  <button
+                    type="button"
+                    onClick={() => alert('Reset password via admin Supabase.')}
+                    className="text-[10px] font-medium text-[#FF5C00] hover:underline"
+                  >
+                    Lupa Password?
+                  </button>
+                )}
               </div>
 
               <div className="relative">
-                <Lock className="w-4 h-4 text-zinc-500 absolute left-3.5 top-3.5" />
+                <Lock className="w-4 h-4 text-zinc-500 absolute left-3.5 top-3" />
                 <input
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-4 py-3 bg-[#1a1a1a] border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#FF5C00] transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 bg-[#1c1c21] border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#FF5C00] transition-all"
                 />
               </div>
             </div>
 
+            {/* CONFIRM PASSWORD FIELD FOR REGISTER */}
+            {mode === 'register' && (
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
+                  KONFIRMASI PASSWORD
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-zinc-500 absolute left-3.5 top-3" />
+                  <input
+                    type="password"
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Ulangi password..."
+                    className="w-full pl-10 pr-4 py-2.5 bg-[#1c1c21] border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#FF5C00] transition-all"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* SUBMIT BUTTON */}
             <button
-              type="button"
-              disabled={loading}
-              onClick={() => handleAuthAction('login')}
-              className="w-full bg-[#FF5C00] hover:bg-[#ff701a] text-white font-bold py-3.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-[#FF5C00]/25 transition-all active:scale-[0.99] disabled:opacity-50 mt-6"
+              type="submit"
+              disabled={loading || uploadingAvatar}
+              className="w-full bg-[#FF5C00] hover:bg-[#ff701a] text-white font-extrabold py-3 px-4 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-[#FF5C00]/25 transition-all active:scale-[0.98] disabled:opacity-50 mt-4"
             >
-              {loading && mode === 'login' ? (
+              {loading ? (
                 <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-              ) : (
+              ) : mode === 'login' ? (
                 <>
-                  <span>LOGIN</span>
+                  <span>MASUK (LOGIN)</span>
                   <LogIn className="w-4 h-4 stroke-[2.5]" />
                 </>
-              )}
-            </button>
-
-            <div className="flex items-center my-4">
-              <div className="flex-1 border-t border-zinc-800" />
-              <span className="px-3 text-[10px] uppercase font-bold text-zinc-500 tracking-wider">
-                OR
-              </span>
-              <div className="flex-1 border-t border-zinc-800" />
-            </div>
-
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => handleAuthAction('register')}
-              className="w-full bg-transparent border border-[#FF5C00] text-[#FF5C00] hover:bg-[#FF5C00]/10 font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition-all active:scale-[0.99] disabled:opacity-50"
-            >
-              {loading && mode === 'register' ? (
-                <span className="animate-spin w-4 h-4 border-2 border-[#FF5C00] border-t-transparent rounded-full" />
               ) : (
                 <>
-                  <span>REGISTER</span>
-                  <UserPlus className="w-4 h-4" />
+                  <span>BUAT AKUN BARU (REGISTER)</span>
+                  <UserPlus className="w-4 h-4 stroke-[2.5]" />
                 </>
               )}
             </button>
@@ -539,7 +687,7 @@ export default function Page() {
 
         </div>
 
-        <div className="mt-8 text-center text-[11px] text-zinc-500 space-x-2">
+        <div className="mt-6 text-center text-[10px] text-zinc-500 space-x-2">
           <a href="#" className="hover:text-zinc-400">Privacy Policy</a>
           <span>•</span>
           <a href="#" className="hover:text-zinc-400">Terms of Service</a>
