@@ -12,6 +12,7 @@ interface LeftNavRailProps {
   onOpenNewChat: () => void;
   onOpenCreateServer?: () => void;
   onSelectDMHome?: () => void;
+  hasUnreadMessages?: boolean;
   refreshKey?: number;
 }
 
@@ -21,6 +22,7 @@ export default function LeftNavRail({
   onOpenNewChat,
   onOpenCreateServer,
   onSelectDMHome,
+  hasUnreadMessages = false,
   refreshKey = 0,
 }: LeftNavRailProps) {
   const { activeServerId, setActiveServer, setActiveChannel } = useAppStore();
@@ -117,7 +119,7 @@ export default function LeftNavRail({
         <div
           onClick={() => handleSelectServer(null)}
           title="Oit Home & Landing Page"
-          className={`w-11 h-11 rounded-2xl flex items-center justify-center cursor-pointer hover:scale-105 transition-all ${
+          className={`w-11 h-11 rounded-2xl flex items-center justify-center cursor-pointer hover:scale-105 transition-all relative ${
             activeServerId === null
               ? 'bg-[#FF5C00] border border-[#FF5C00] shadow-lg shadow-[#FF5C00]/30'
               : 'bg-[#121215] border border-zinc-800'
@@ -128,6 +130,11 @@ export default function LeftNavRail({
             alt="Oit"
             className="w-9 h-9 rounded-xl object-cover"
           />
+
+          {/* Discord-Style Notification Dot */}
+          {hasUnreadMessages && activeServerId !== null && (
+            <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-[#FF5C00] rounded-full border-2 border-[#0a0a0c] animate-pulse shadow-md" />
+          )}
         </div>
 
         <div className="w-8 h-[1px] bg-zinc-800/80 my-1" />
@@ -167,7 +174,7 @@ export default function LeftNavRail({
           <button
             onClick={onOpenCreateServer}
             title="Create a Server"
-            className="w-11 h-11 rounded-full bg-[#161619] hover:bg-[#FF5C00] text-zinc-400 hover:text-white flex items-center justify-center transition-all shadow-md group shrink-0"
+            className="w-11 h-11 rounded-full bg-[#161619] hover:bg-[#FF5C00] text-zinc-400 hover:text-white flex items-center justify-center transition-all shadow-md group shrink-0 cursor-pointer"
           >
             <Plus className="w-5 h-5 stroke-[2.5] group-hover:scale-110 transition-transform" />
           </button>
@@ -180,7 +187,7 @@ export default function LeftNavRail({
         <button
           onClick={onOpenProfile}
           title="User Settings"
-          className="w-11 h-11 text-zinc-500 hover:text-zinc-200 hover:bg-[#161619] rounded-2xl flex items-center justify-center transition-colors"
+          className="w-11 h-11 text-zinc-500 hover:text-zinc-200 hover:bg-[#161619] rounded-2xl flex items-center justify-center transition-colors cursor-pointer"
         >
           <Settings className="w-5 h-5" />
         </button>

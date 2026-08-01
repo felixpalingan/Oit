@@ -101,6 +101,20 @@ export default function ChatWindow({
     });
   };
 
+  // Helper: Trigger Browser Push Notification
+  const triggerBrowserPushNotification = (title: string, body: string, iconUrl?: string | null) => {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      try {
+        new Notification(title, {
+          body: body || 'Anda menerima pesan baru.',
+          icon: iconUrl || '/oit_logo.png',
+        });
+      } catch (err) {
+        console.warn('Browser notification trigger error:', err);
+      }
+    }
+  };
+
   // Mark messages as read
   const markMessagesAsRead = async () => {
     if (!chatUser) return;
@@ -205,6 +219,16 @@ export default function ChatWindow({
             });
 
             await fetchSenderProfiles([newMsg]);
+
+            if (newMsg.sender_id !== currentUser.id) {
+              const sender = sendersMap[newMsg.sender_id] || chatUser;
+              const senderTitle = sender ? (sender.display_name || sender.username) : 'Member Oit';
+              triggerBrowserPushNotification(
+                `Pesan dari ${senderTitle}`,
+                newMsg.content || 'Mengirim lampiran berkas.',
+                sender?.avatar_url
+              );
+            }
 
             if (chatUser && newMsg.sender_id === chatUser.id) {
               await markMessagesAsRead();
@@ -470,6 +494,52 @@ export default function ChatWindow({
     }
   };
 
+  // Helper Function: Render Text Content with Interactive Clickable Mentions
+  const renderFormattedContent = (content: string) => {
+    if (!content) return null;
+
+    const mentionRegex = /@([a-zA-Z0-9_-]+)/g;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = mentionRegex.exec(content)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(content.substring(lastIndex, match.index));
+      }
+
+      const mentionUsername = match[1];
+      const targetUser = usersList.find(
+        (u) =>
+          u.username.toLowerCase() === mentionUsername.toLowerCase() ||
+          (u.display_name && u.display_name.toLowerCase() === mentionUsername.toLowerCase())
+      );
+
+      parts.push(
+        <span
+          key={`mention-${match.index}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (targetUser && onOpenUserProfile) {
+              onOpenUserProfile(targetUser);
+            }
+          }}
+          className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-[#FF5C00]/30 hover:bg-[#FF5C00]/50 text-[#FF5C00] hover:text-white font-extrabold cursor-pointer border border-[#FF5C00]/50 transition-all mx-0.5 shadow-sm"
+        >
+          @{mentionUsername}
+        </span>
+      );
+
+      lastIndex = mentionRegex.lastIndex;
+    }
+
+    if (lastIndex < content.length) {
+      parts.push(content.substring(lastIndex));
+    }
+
+    return parts;
+  };
+
   const currentTitle = chatUser
     ? (chatUser.display_name || chatUser.username)
     : `# ${activeChannelName}`;
@@ -480,6 +550,9 @@ export default function ChatWindow({
     const name = (u.display_name || u.username).toLowerCase();
     return name.includes(mentionSearch);
   });
+
+  const myUsernameTag = currentUser.username.toLowerCase();
+  const myDisplayNameTag = (currentUser.display_name || '').toLowerCase();
 
   return (
     <div
@@ -613,6 +686,13 @@ export default function ChatWindow({
           const isImg = isImageFile(attachUrl, msg.file_name || msg.content);
           const isRead = msg.is_read;
 
+          // Check if message mentions CURRENT USER (Highlight condition)
+          const lowerContent = (msg.content || '').toLowerCase();
+          const isMentioningMe = !isMe && (
+            lowerContent.includes(`@${myUsernameTag}`) ||
+            (myDisplayNameTag && lowerContent.includes(`@${myDisplayNameTag}`))
+          );
+
           // Find quoted parent message for Ticket 8
           const parentMsg = msg.reply_to_id ? messages.find((m) => m.id === msg.reply_to_id) : null;
           const parentSender = parentMsg ? sendersMap[parentMsg.sender_id] : null;
@@ -621,7 +701,9 @@ export default function ChatWindow({
           return (
             <div
               key={msg.id}
-              className={`flex items-start gap-2.5 group relative ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
+              className={`flex items-start gap-2.5 group relative p-1.5 rounded-2xl transition-all ${
+                isMentioningMe ? 'bg-[#FF5C00]/10 border-l-4 border-[#FF5C00] pl-3' : ''
+              } ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
             >
               {/* Actual Sender Avatar (Clickable to view User Profile) */}
               <div
@@ -649,13 +731,12 @@ export default function ChatWindow({
                     {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
 
-                  {/* Ticket 7: (diedit) tag */}
                   {msg.is_edited && !msg.is_deleted && (
                     <span className="text-[9px] text-zinc-500 italic font-medium">(diedit)</span>
                   )}
                 </div>
 
-                {/* TICKET 8: QUOTED PARENT MESSAGE SNIPPET */}
+                {/* QUOTED PARENT MESSAGE SNIPPET */}
                 {parentMsg && (
                   <div className="mb-1.5 p-2 bg-[#18181c] border-l-2 border-[#FF5C00] rounded-r-xl text-[10px] text-zinc-400 max-w-full overflow-hidden">
                     <span className="font-bold text-[#FF5C00] mr-1">Replying to @{parentSenderName}:</span>
@@ -666,12 +747,14 @@ export default function ChatWindow({
                 {/* MESSAGE BUBBLE CONTAINER */}
                 <div
                   className={`p-3 rounded-2xl relative shadow-md group/bubble ${
-                    isMe
+                    isMentioningMe
+                      ? 'bg-[#1e1c18] border-2 border-[#FF5C00] text-zinc-100'
+                      : isMe
                       ? 'bg-[#FF5C00] text-white rounded-tr-none'
                       : 'bg-[#1c1c21] text-zinc-100 border border-zinc-800/80 rounded-tl-none'
                   }`}
                 >
-                  {/* TICKET 7: HOVER ACTION BAR (Reply, Edit, Delete) */}
+                  {/* HOVER ACTION BAR (Reply, Edit, Delete) */}
                   {!msg.is_deleted && (
                     <div
                       className={`absolute -top-3.5 ${
@@ -711,7 +794,7 @@ export default function ChatWindow({
                     </div>
                   )}
 
-                  {/* TICKET 7: DELETED MESSAGE UI */}
+                  {/* DELETED MESSAGE UI */}
                   {msg.is_deleted ? (
                     <p className="text-xs italic text-zinc-400 font-medium flex items-center gap-1.5">
                       <Trash2 className="w-3.5 h-3.5 text-zinc-500" />
@@ -781,8 +864,10 @@ export default function ChatWindow({
                       <Download className="w-4 h-4 text-white shrink-0" />
                     </a>
                   ) : (
-                    /* Text Content */
-                    <p className="text-xs whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                    /* Text Content with Interactive Clickable Mentions */
+                    <p className="text-xs whitespace-pre-wrap leading-relaxed">
+                      {renderFormattedContent(msg.content || '')}
+                    </p>
                   )}
 
                   {/* Realtime Checkmarks */}
@@ -821,7 +906,7 @@ export default function ChatWindow({
         </div>
       )}
 
-      {/* TICKET 8: QUOTE REPLY PREVIEW BAR */}
+      {/* QUOTE REPLY PREVIEW BAR */}
       {replyingToMessage && (
         <div className="px-4 py-2 bg-[#18181c] border-t border-zinc-800 flex items-center justify-between z-20 animate-in slide-in-from-bottom-2 duration-150">
           <div className="flex items-center gap-2 overflow-hidden">
@@ -845,7 +930,7 @@ export default function ChatWindow({
         </div>
       )}
 
-      {/* TICKET 8: MENTIONS OVERLAY DROPDOWN (@username) */}
+      {/* MENTIONS OVERLAY DROPDOWN (@username) */}
       {showMentionOverlay && filteredMentionUsers.length > 0 && (
         <div className="mx-4 mb-1 p-2 bg-[#18181c] border border-zinc-800 rounded-2xl shadow-2xl z-30 max-h-40 overflow-y-auto space-y-1 animate-in zoom-in-95 duration-100">
           <div className="px-2 py-1 text-[10px] font-extrabold text-[#FF5C00] uppercase tracking-wider flex items-center gap-1">

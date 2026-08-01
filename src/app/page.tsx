@@ -742,6 +742,7 @@ export default function Page() {
       >
         <LeftNavRail
           currentUser={currentUser}
+          hasUnreadMessages={Object.values(unreadCountsMap).reduce((a, b) => a + b, 0) > 0}
           onOpenProfile={() => {
             setShowProfileModal(true);
             setIsMobileDrawerOpen(false);
