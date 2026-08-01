@@ -22,6 +22,7 @@ import ServerMembersSidebar from '@/components/layout/ServerMembersSidebar';
 import EditServerModal from '@/components/modals/EditServerModal';
 import CreateChannelModal from '@/components/modals/CreateChannelModal';
 import EditChannelModal from '@/components/modals/EditChannelModal';
+import ToastNotification, { ToastItem } from '@/components/ui/ToastNotification';
 import { useAppStore, KnockRequest } from '@/store/useAppStore';
 import { User as UserType, Message, Channel } from '@/types';
 
@@ -91,6 +92,9 @@ export default function Page() {
   // User Profile Card & Image Lightbox Target State
   const [selectedUserProfileCard, setSelectedUserProfileCard] = useState<UserType | null>(null);
   const [selectedLightboxImage, setSelectedLightboxImage] = useState<{ url: string; fileName: string } | null>(null);
+
+  // Floating Toast Notification State (Tickets 13 & 14)
+  const [toastNotification, setToastNotification] = useState<ToastItem | null>(null);
 
   const [securityCheckRoom, setSecurityCheckRoom] = useState<{ id: string; title: string } | null>(null);
   const [incomingCallPrompt, setIncomingCallPrompt] = useState<{ caller: UserType; roomName: string; isVideo: boolean } | null>(null);
@@ -227,11 +231,33 @@ export default function Page() {
       )
       .subscribe();
 
-    // Instant Kick & Ban Membership Verification Loop
+    // Instant Kick, Ban & Deleted Entity Verification Loop (Ticket 14)
     const checkMembership = async () => {
-      if (!activeServerId || !currentUser) return;
-      try {
-        // 1. Check if banned
+      if (!currentUser) return;
+
+      if (activeServerId) {
+        // 1. Check if server still exists
+        const { data: serverExists } = await supabase
+          .from('servers')
+          .select('id')
+          .eq('id', activeServerId)
+          .maybeSingle();
+
+        if (!serverExists) {
+          setActiveServer(null);
+          setActiveChannel(null);
+          setActiveChatUser(null);
+          setRefreshServersKey((prev) => prev + 1);
+          setToastNotification({
+            id: `toast-${Date.now()}`,
+            type: 'warning',
+            title: 'Akses Ditolak',
+            message: 'Ruangan ini sudah tidak tersedia atau telah dihapus.',
+          });
+          return;
+        }
+
+        // 2. Check if banned
         const { data: ban } = await supabase
           .from('server_bans')
           .select('id')
@@ -244,10 +270,16 @@ export default function Page() {
           setActiveChannel(null);
           setActiveChatUser(null);
           setRefreshServersKey((prev) => prev + 1);
+          setToastNotification({
+            id: `toast-${Date.now()}`,
+            type: 'warning',
+            title: 'Akses Ditolak',
+            message: 'Ruangan ini sudah tidak tersedia atau Anda telah dilarang (BAN).',
+          });
           return;
         }
 
-        // 2. Check if member
+        // 3. Check if member
         const { data } = await supabase
           .from('server_members')
           .select('id')
@@ -260,8 +292,25 @@ export default function Page() {
           setActiveChatUser(null);
           setRefreshServersKey((prev) => prev + 1);
         }
-      } catch (err) {
-        console.error('Membership check error:', err);
+      }
+
+      if (activeChannelId) {
+        // Check if channel exists
+        const { data: chanExists } = await supabase
+          .from('channels')
+          .select('id')
+          .eq('id', activeChannelId)
+          .maybeSingle();
+
+        if (!chanExists) {
+          setActiveChannel(null);
+          setToastNotification({
+            id: `toast-${Date.now()}`,
+            type: 'warning',
+            title: 'Akses Ditolak',
+            message: 'Ruangan ini sudah tidak tersedia atau telah dihapus.',
+          });
+        }
       }
     };
 
@@ -879,6 +928,12 @@ export default function Page() {
       {/* MAIN CONTENT STREAM AREA */}
       <main className="flex-1 h-full flex flex-col relative overflow-hidden bg-[#121215] w-full">
         
+        {/* Floating Toast Notification Overlay (Tickets 13 & 14) */}
+        <ToastNotification
+          toast={toastNotification}
+          onClose={() => setToastNotification(null)}
+        />
+
         {/* Top Right Knock Knock Notification Badge */}
         {knockNotification && (
           <KnockNotification
@@ -911,6 +966,7 @@ export default function Page() {
               }}
               onOpenUserProfile={(u) => setSelectedUserProfileCard(u)}
               onOpenImageLightbox={(url, fileName) => setSelectedLightboxImage({ url, fileName: fileName || 'image.png' })}
+              onShowToast={(t) => setToastNotification(t)}
             />
 
             {/* Discord-style Right Members Sidebar (Image 5) */}

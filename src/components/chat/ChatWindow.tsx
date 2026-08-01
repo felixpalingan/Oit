@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { User, Message } from '@/types';
 import { createClient } from '@/utils/supabase/client';
 import { useAppStore } from '@/store/useAppStore';
+import { ToastItem } from '@/components/ui/ToastNotification';
 import {
   Phone,
   Video,
@@ -25,6 +26,8 @@ import {
   X,
   AtSign,
   VolumeX,
+  RotateCcw,
+  WifiOff,
 } from 'lucide-react';
 
 interface ChatWindowProps {
@@ -36,6 +39,7 @@ interface ChatWindowProps {
   onStartCall: (isVideo: boolean) => void;
   onOpenUserProfile?: (user: User) => void;
   onOpenImageLightbox?: (url: string, fileName?: string) => void;
+  onShowToast?: (toast: ToastItem) => void;
 }
 
 export default function ChatWindow({
@@ -47,6 +51,7 @@ export default function ChatWindow({
   onStartCall,
   onOpenUserProfile,
   onOpenImageLightbox,
+  onShowToast,
 }: ChatWindowProps) {
   // 1. State Management (Zustand)
   const { activeServerId, activeChannelId, activeChannelName, setIsMobileDrawerOpen } = useAppStore();
@@ -68,10 +73,12 @@ export default function ChatWindow({
   const [mentionSearch, setMentionSearch] = useState<string | null>(null);
   const [showMentionOverlay, setShowMentionOverlay] = useState(false);
 
-  // File Upload State & Progress
+  // Ticket 13: File Upload & Interrupted Connection State
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadFileName, setUploadFileName] = useState('');
+  const [uploadFailed, setUploadFailed] = useState(false);
+  const [lastFailedFile, setLastFailedFile] = useState<File | null>(null);
 
   // Drag and Drop State
   const [isDragging, setIsDragging] = useState(false);
@@ -358,6 +365,7 @@ export default function ChatWindow({
 
   // Mentions Regex Trigger Check
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isCurrentlyMuted) return;
     const val = e.target.value;
     setMessageText(val);
 
@@ -470,11 +478,18 @@ export default function ChatWindow({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (isCurrentlyMuted) {
+      e.preventDefault();
+      return;
+    }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
   };
+
+  // Ticket 13: File Process with 25MB Limiter & Interrupted Connection State
+  const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
 
   const processSingleFile = async (selectedFile: File) => {
     if (isCurrentlyMuted) {
@@ -482,16 +497,37 @@ export default function ChatWindow({
       return;
     }
 
+    // Ticket 13: File Size Limiter (25MB Limit)
+    if (selectedFile.size > MAX_FILE_SIZE) {
+      if (onShowToast) {
+        onShowToast({
+          id: `toast-${Date.now()}`,
+          type: 'warning',
+          title: 'FILE TOO LARGE',
+          message: `The file "${selectedFile.name}" exceeds the 25MB limit. Please compress or choose a smaller file.`,
+        });
+      } else {
+        alert(`FILE TOO LARGE: The file "${selectedFile.name}" exceeds the 25MB limit.`);
+      }
+      return;
+    }
+
     setIsUploading(true);
+    setUploadFailed(false);
     setUploadFileName(selectedFile.name);
     setUploadProgress(20);
+    setLastFailedFile(selectedFile);
 
     try {
+      if (typeof window !== 'undefined' && !navigator.onLine) {
+        throw new Error('Koneksi terputus');
+      }
+
       const fileExt = selectedFile.name.split('.').pop() || 'file';
       const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
       const filePath = `${currentUser.id}/${fileName}`;
 
-      setUploadProgress(40);
+      setUploadProgress(50);
       let publicUrl = '';
 
       const { error: uploadError } = await supabase.storage
@@ -501,24 +537,18 @@ export default function ChatWindow({
           upsert: true,
         });
 
-      if (!uploadError) {
-        setUploadProgress(70);
-        const { data: publicUrlData } = supabase.storage
-          .from('chat-attachments')
-          .getPublicUrl(filePath);
-
-        publicUrl = publicUrlData?.publicUrl || '';
+      if (uploadError) {
+        throw uploadError;
       }
 
-      if (!publicUrl || uploadError) {
-        try {
-          publicUrl = await fileToBase64(selectedFile);
-        } catch (b64Err) {
-          console.error('Base64 conversion failed:', b64Err);
-        }
-      }
+      setUploadProgress(75);
+      const { data: publicUrlData } = supabase.storage
+        .from('chat-attachments')
+        .getPublicUrl(filePath);
 
-      setUploadProgress(85);
+      publicUrl = publicUrlData?.publicUrl || '';
+      setUploadProgress(90);
+
       const fileSizeFormatted = `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`;
 
       const payload = {
@@ -545,13 +575,20 @@ export default function ChatWindow({
           return [...prev, insertedMsg as Message];
         });
       }
+
+      setUploadFailed(false);
+      setLastFailedFile(null);
     } catch (err) {
-      console.error('File upload error:', err);
+      console.error('File upload failed:', err);
+      setUploadFailed(true);
+      setUploadProgress(100);
     } finally {
       setTimeout(() => {
-        setIsUploading(false);
-        setUploadProgress(0);
-        setUploadFileName('');
+        if (!uploadFailed) {
+          setIsUploading(false);
+          setUploadProgress(0);
+          setUploadFileName('');
+        }
         setReplyingToMessage(null);
         scrollToBottom();
       }, 300);
@@ -686,7 +723,7 @@ export default function ChatWindow({
           </div>
           <h3 className="text-lg font-extrabold text-white">Lepaskan File di Sini</h3>
           <p className="text-xs text-zinc-400 mt-1">
-            File akan otomatis diunggah ke <span className="text-[#FF5C00] font-bold">{currentTitle}</span>
+            File akan otomatis diunggah ke <span className="text-[#FF5C00] font-bold">{currentTitle}</span> (Maks 25MB)
           </p>
         </div>
       )}
@@ -809,7 +846,7 @@ export default function ChatWindow({
             (myDisplayNameTag && lowerContent.includes(`@${myDisplayNameTag}`))
           );
 
-          // RBAC Moderation Delete Message Logic: Allow deletion if isMe OR if myRoleWeight > senderRoleWeight
+          // RBAC Moderation Delete Message Logic
           const senderRoleWeight = roleWeights[memberRolesMap[msg.sender_id] || 'member'] || 1;
           const canDeleteMessage = isMe || (!chatUser && myRoleWeight > senderRoleWeight);
 
@@ -825,7 +862,7 @@ export default function ChatWindow({
                 isMentioningMe ? 'bg-[#FF5C00]/10 border-l-4 border-[#FF5C00] pl-3' : ''
               } ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
             >
-              {/* Actual Sender Avatar (Clickable to view User Profile) */}
+              {/* Actual Sender Avatar */}
               <div
                 onClick={() => senderProfile && onOpenUserProfile && onOpenUserProfile(senderProfile)}
                 title={`Lihat Profil @${senderProfile?.username || ''}`}
@@ -874,7 +911,7 @@ export default function ChatWindow({
                       : 'bg-[#1c1c21] text-zinc-100 border border-zinc-800/80 rounded-tl-none'
                   }`}
                 >
-                  {/* HOVER ACTION BAR (Reply, Edit, Delete for Me OR Admins/Mods) */}
+                  {/* HOVER ACTION BAR */}
                   {!msg.is_deleted && (
                     <div
                       className={`absolute -top-3.5 ${
@@ -1010,8 +1047,8 @@ export default function ChatWindow({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Uploading Progress Bar */}
-      {isUploading && (
+      {/* Ticket 13: Uploading Progress Bar */}
+      {isUploading && !uploadFailed && (
         <div className="px-4 py-1.5 bg-[#121215] border-t border-zinc-800/80">
           <div className="flex items-center justify-between text-[10px] text-zinc-400 mb-1">
             <span className="truncate max-w-[200px]">Uploading {uploadFileName}...</span>
@@ -1026,7 +1063,45 @@ export default function ChatWindow({
         </div>
       )}
 
-      {/* MUTED WARNING BAR (Active when isCurrentlyMuted === true) */}
+      {/* Ticket 13: Interrupted Connection / Failed Upload UI matching Image 2 */}
+      {uploadFailed && lastFailedFile && (
+        <div className="px-4 py-3 bg-[#1e1416] border-t border-red-500/50 flex items-center justify-between z-20 animate-in slide-in-from-bottom-2 duration-150">
+          <div className="flex items-center gap-3 overflow-hidden flex-1">
+            <div className="w-10 h-10 rounded-xl bg-red-950/80 border border-red-800 flex items-center justify-center shrink-0">
+              <FileText className="w-5 h-5 text-red-400" />
+            </div>
+            <div className="overflow-hidden flex-1">
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className="font-bold text-white truncate max-w-[180px] sm:max-w-[240px]">
+                  {lastFailedFile.name}
+                </span>
+                <span className="text-[10px] text-zinc-400">
+                  {(lastFailedFile.size / (1024 * 1024)).toFixed(1)} MB
+                </span>
+              </div>
+              {/* Solid High-Signal Red Progress Bar matching Image 2 */}
+              <div className="w-full h-1 bg-red-950 rounded-full overflow-hidden mb-1">
+                <div className="h-full bg-red-500 rounded-full w-full" />
+              </div>
+              <span className="text-[9px] font-black text-red-400 uppercase tracking-wider flex items-center gap-1">
+                <WifiOff className="w-3 h-3" /> GAGAL MENGUNGGAH
+              </span>
+            </div>
+          </div>
+
+          {/* Retry Icon Button matching Image 2 */}
+          <button
+            type="button"
+            onClick={() => processSingleFile(lastFailedFile)}
+            title="Coba Unggah Lagi"
+            className="ml-3 p-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl transition-colors cursor-pointer shrink-0 border border-zinc-700"
+          >
+            <RotateCcw className="w-4 h-4 text-white" />
+          </button>
+        </div>
+      )}
+
+      {/* MUTED WARNING BAR */}
       {isCurrentlyMuted && (
         <div className="px-4 py-2.5 bg-red-950/90 border-t border-red-800 text-red-200 text-xs font-bold flex items-center justify-center gap-2 animate-pulse shrink-0">
           <VolumeX className="w-4 h-4 text-red-400 shrink-0" />
@@ -1120,6 +1195,7 @@ export default function ChatWindow({
             value={messageText}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
+            readOnly={isCurrentlyMuted}
             disabled={isUploading || isCurrentlyMuted}
             placeholder={
               isCurrentlyMuted
