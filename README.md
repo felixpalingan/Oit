@@ -14,29 +14,54 @@ Designed with **Oit Signature High-Voltage Dark Aesthetic** (`#000000` base, `#1
 
 ---
 
-## 🚀 Key Engineering Highlights
+## 🚀 Comprehensive Feature Architecture & Capabilities
 
-### ⚡ 1. Sub-100ms Real-Time Data Pipeline
-- **Change Data Capture (CDC)**: Built on Supabase Realtime Engine (PostgreSQL WAL replication) over persistent WebSockets for zero-polling state updates.
-- **Global Presence Tracking**: Tracks user online/offline status, room voice membership, and read receipts (`✔` to `✔✔`) in real time using non-blocking in-memory `Set<string>` lookups.
-- **Instant Peer Signaling**: Low-latency event dispatching for incoming calls, dual-toneWeb Audio synthesizer chimes, and door-knocking room access requests.
+### 💬 1. Advanced Real-Time Messaging Engine
+- **Sub-100ms Delivery**: Powered by Supabase Realtime Change Data Capture (CDC) over WebSocket pipelines.
+- **Inline Message Editing**: Allows users to update past messages in real time with an `(edited)` metadata tag (`is_edited: true`).
+- **Soft-Deletion System**: Messages are soft-deleted (`is_deleted: true`), rendering "Pesan ini telah dihapus" to maintain chat flow while enforcing role-weighted deletion rights.
+- **Threaded Quote Replies**: Self-referencing FK (`reply_to_id`) rendering a context snippet of the original message above the reply bubble.
+- **Interactive `@username` Mentions**: Autocompletes usernames during typing and renders clickable mention badges that trigger user profile popovers.
+- **Dynamic Mention Highlighting**: High-contrast orange glow borders for received mentions and White Glassmorphism badges (`bg-white/25 border-white/40`) for sent mentions.
+- **Real-Time Read Receipts**: Double checkmark transitions (`✔` to `✔✔`) updated via real-time WebSocket events as recipients view channels.
+- **Rich Media & File Attachments**: Supports image previewing, document downloads, and inline code formatting.
+- **Drag-and-Drop Dropzone**: Full-screen visual dropzone overlay for smooth file uploads across text channels.
 
-### 🛡️ 2. Enterprise Role-Based Access Control (RBAC) & Audit Logs
-- **Hierarchical Governance**: Strict role weight hierarchy (`Owner > Admin > Moderator > Member`) governing administrative permissions across channels and servers.
-- **Real-Time Moderation Actions**: Time-bound user mutes (`muted_until`) with client-side input locks, room ejection (Kick), and permanent server bans (`server_bans`).
-- **Instant Eviction & Sidebar Sync**: Utilizes PostgreSQL `REPLICA IDENTITY FULL` to propagate `DELETE` and `INSERT` events, immediately revoking access and removing server navigation icons without browser reloads.
-- **Real-Time Audit Trail**: Every administrative action (Mute, Kick, Ban, Role Mutation) is recorded in an immutable `audit_logs` table and streamed live to the audit dashboard.
+### 🛡️ 2. Role-Based Access Control (RBAC) & Moderation System
+- **4-Tier Role Hierarchy**: Enforces role weights (`Owner (4) > Admin (3) > Moderator (2) > Member (1)`) across all moderation privileges.
+- **Time-Bound User Muting**: Restricts users for 10 minutes (`muted_until`), disabling text inputs, emoji pickers, and file attachment buttons on the client.
+- **Room Ejection (Kick) & Permanent Bans**: Ejects members or registers permanent bans in `server_bans`, strictly rejecting rejoin attempts.
+- **Instant Eviction & Navigation Rail Sync**: Leverages PostgreSQL `REPLICA IDENTITY FULL` to propagate `DELETE` and `INSERT` events, immediately removing server icons from sidebar rails without browser reloads.
+- **Real-Time Audit Trail Dashboard**: Records every moderation event (KICK, BAN, MUTE, ROLE_UPDATE) into an `audit_logs` table, streamed live to server settings.
 
-### 🎙️ 3. Low-Latency SFU WebRTC Infrastructure
-- **Selective Forwarding Unit (SFU)**: Powered by LiveKit Cloud, replacing traditional mesh P2P topology ($N \times (N-1)$ streams) with a single upstream encode stream distributed via adaptive bitrate algorithms.
-- **Active Speaker Recognition**: DSP-driven audio level measurement with visual glow indicators on active speakers.
-- **Background Media Continuity**: Floating live pod (`● Live`) maintains active WebRTC tracks in the background while users navigate text channels.
-- **Web Audio API Hardware Cleanups**: Real-time microphone spectrum analyzer (`AnalyserNode`) with strict media track cleanup (`track.stop()`) to release camera/mic hardware instantly upon modal dismissal.
+### 🎙️ 3. WebRTC Audio/Video SFU Infrastructure
+- **Selective Forwarding Unit (SFU)**: Integrated with LiveKit Cloud to distribute single-upstream media encodes to multi-party calls efficiently.
+- **Active Speaker Recognition**: Digital Signal Processing (DSP) audio analysis highlighting active speakers with real-time visual glows.
+- **Floating Call Pod (`● Live`)**: Allows users to minimize ongoing video/voice calls into a floating pod while browsing text channels.
+- **In-Call Hardware Controls**: Toggle microphone, camera, and screen sharing dynamically within active WebRTC sessions.
+- **Hardware Device Selection & Storage Persistence**: Saves user-selected microphones and cameras to `localStorage` via Zustand store middleware.
+- **Web Audio API Spectrum Analyzer**: Measures input microphone volume levels in settings (`AnalyserNode`) and enforces strict stream cleanup (`track.stop()`) upon modal close.
+- **Synthesized Dual-Tone Ringtone**: Generates Web Audio API dual-tone chimes for incoming calls without external audio file dependencies.
 
-### 🧱 4. Resilient Client-Side Validation & Graceful Fault Handling
-- **Client-Side File Limiter (25MB)**: Strict pre-upload validation preventing large payload network congestion, coupled with floating toast notifications (`FILE TOO LARGE`).
-- **Interrupted Connection Recovery**: Detects network disconnects during file uploads, transitioning the progress UI into a high-visibility error state (`📡 GAGAL MENGUNGGAH`) with an instant retry action.
-- **Smart 404 Route Interception**: Intercepts attempts to access deleted servers or invalid routes, gracefully redirecting users to the primary workspace with context-aware floating alerts (`Akses Ditolak`).
+### 👥 4. Community Workspaces & Member Experience
+- **Custom Server Creation**: Supports custom server names and icon uploads stored in Supabase Storage with Base64 fallbacks.
+- **Public Community Directory & Private Invitations**: Browse public servers or join private servers using unique invitation codes.
+- **Channel Hierarchy**: Create and organize text and voice channels within servers.
+- **Password-Protected Private Channels**: Password verification modals securing sensitive channels.
+- **Door-Knocking Request Protocol**: Sends real-time `knock` signals for private channel entry authorization from room owners.
+- **Right-Hand Members Panel (`ServerMembersSidebar`)**: Displays server members sorted by role rank, featuring online status dots, mute tags, and quick-action moderation context menus.
+- **Single-DOM Mobile Drawer**: 60fps GPU-accelerated off-canvas navigation drawer for mobile viewports.
+
+### 🧱 5. Fault Tolerance & System Edge-Case Resilience
+- **Pre-Upload File Size Limiter**: Enforces a strict 25MB file size limit on the client, triggering floating `FILE TOO LARGE` warning notifications.
+- **Interrupted Upload Recovery State**: Detects connection drops during uploads, displaying a red error state (`📡 GAGAL MENGUNGGAH`) with an instant retry action button.
+- **Smart 404 Route Interception**: Intercepts requests to deleted servers or invalid routes (`src/app/not-found.tsx`), redirecting users to the home dashboard with floating warning alerts (`Akses Ditolak`).
+- **Discord-Style Unread Badges**: Pulsing orange/red notification dot on the brand logo when unread direct messages exist.
+
+### 🎨 6. Signature Design System & UI Ergonomics
+- **Oit High-Voltage Theme**: Dark palette (`#000000` base, `#161619` surfaces, `#FF5C00` Vibrant Orange accent).
+- **Glassmorphic Modals**: Custom blurred backdrop overlays for profiles, server settings, and security checks.
+- **On-Screen Lightbox**: Click-to-expand image lightbox with Blob URL download capabilities.
 
 ---
 
