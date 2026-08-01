@@ -91,7 +91,7 @@ export default function ChatWindow({
   };
 
   const isCurrentlyMuted = Boolean(
-    !chatUser && activeServerId && mutedUntil && new Date(mutedUntil).getTime() > Date.now()
+    !chatUser && mutedUntil && new Date(mutedUntil).getTime() > Date.now()
   );
 
   const scrollToBottom = () => {
@@ -132,7 +132,7 @@ export default function ChatWindow({
 
   // Fetch current user server membership & mute status
   useEffect(() => {
-    if (!activeServerId || chatUser) {
+    if (chatUser) {
       setMutedUntil(null);
       setMyServerRole('member');
       return;
@@ -140,10 +140,26 @@ export default function ChatWindow({
 
     async function fetchMyServerMembership() {
       try {
+        let srvId = activeServerId;
+
+        if (!srvId && currentChannelId) {
+          const { data: chan } = await supabase
+            .from('channels')
+            .select('server_id')
+            .eq('id', currentChannelId)
+            .maybeSingle();
+
+          if (chan?.server_id) {
+            srvId = chan.server_id;
+          }
+        }
+
+        if (!srvId) return;
+
         const { data } = await supabase
           .from('server_members')
           .select('role, muted_until')
-          .eq('server_id', activeServerId)
+          .eq('server_id', srvId)
           .eq('user_id', currentUser.id)
           .maybeSingle();
 
@@ -161,7 +177,7 @@ export default function ChatWindow({
     fetchMyServerMembership();
 
     const membershipSub = supabase
-      .channel(`my_member_sub:${activeServerId}:${currentUser.id}`)
+      .channel(`my_member_sub_${currentUser.id}_${Date.now()}`)
       .on(
         'postgres_changes',
         {
@@ -182,7 +198,7 @@ export default function ChatWindow({
     return () => {
       supabase.removeChannel(membershipSub);
     };
-  }, [activeServerId, chatUser, currentUser.id, supabase]);
+  }, [activeServerId, currentChannelId, chatUser, currentUser.id, supabase]);
 
   // Mark messages as read
   const markMessagesAsRead = async () => {

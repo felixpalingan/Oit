@@ -72,6 +72,13 @@ export default function LeftNavRail({
           fetchServers();
         }
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'server_bans' },
+        () => {
+          fetchServers();
+        }
+      )
       .subscribe();
 
     return () => {

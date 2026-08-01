@@ -50,6 +50,12 @@ CREATE POLICY "Public select audit_logs" ON public.audit_logs FOR ALL USING (tru
 DO $$ 
 BEGIN
   BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.server_members;
+  EXCEPTION
+    WHEN duplicate_object THEN NULL;
+  END;
+
+  BEGIN
     ALTER PUBLICATION supabase_realtime ADD TABLE public.server_bans;
   EXCEPTION
     WHEN duplicate_object THEN NULL;
