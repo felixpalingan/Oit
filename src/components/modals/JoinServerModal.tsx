@@ -73,15 +73,35 @@ export default function JoinServerModal({
     setJoinedMsg('');
 
     try {
-      // Check if server is private when joining via custom ID
+      // 1. Check if user is in server_bans table for this server!
+      const { data: banRecord } = await supabase
+        .from('server_bans')
+        .select('*')
+        .eq('server_id', serverIdToJoin)
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
+
+      if (banRecord) {
+        setErrorMsg(`❌ Anda telah dilarang (BAN) secara permanen dari server "${serverName}". Anda tidak dapat bergabung kembali.`);
+        setLoading(false);
+        return;
+      }
+
+      // 2. Check if server exists
       const { data: targetSrv } = await supabase
         .from('servers')
         .select('*')
         .eq('id', serverIdToJoin)
-        .single();
+        .maybeSingle();
 
-      // Insert member into database
-      await supabase.from('server_members').insert([
+      if (!targetSrv) {
+        setErrorMsg('❌ Server tidak ditemukan. Periksa kembali ID atau Kode Undangan.');
+        setLoading(false);
+        return;
+      }
+
+      // 3. Insert member into database
+      const { error: insertErr } = await supabase.from('server_members').insert([
         {
           server_id: serverIdToJoin,
           user_id: currentUser.id,
@@ -89,7 +109,11 @@ export default function JoinServerModal({
         },
       ]);
 
-      // Fetch first channel
+      if (insertErr && insertErr.code !== '23505') {
+        throw insertErr;
+      }
+
+      // 4. Fetch first channel
       const { data: chans } = await supabase
         .from('channels')
         .select('*')
@@ -102,15 +126,12 @@ export default function JoinServerModal({
       setActiveServer(serverIdToJoin);
       setActiveChannel(firstChanId, firstChanName);
 
-      setJoinedMsg(`Berhasil bergabung dengan server "${targetSrv?.name || serverName}"!`);
+      setJoinedMsg(`Berhasil bergabung dengan server "${targetSrv.name}"!`);
       if (onJoined) onJoined();
       setTimeout(onClose, 600);
     } catch (err: any) {
-      console.warn('Join server notice:', err);
-      setActiveServer(serverIdToJoin);
-      setActiveChannel(`${serverIdToJoin}-general`, 'general');
-      if (onJoined) onJoined();
-      setTimeout(onClose, 500);
+      console.error('Join server error:', err);
+      setErrorMsg(err.message || 'Gagal bergabung dengan server.');
     } finally {
       setLoading(false);
     }

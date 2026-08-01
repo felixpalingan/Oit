@@ -231,6 +231,23 @@ export default function Page() {
     const checkMembership = async () => {
       if (!activeServerId || !currentUser) return;
       try {
+        // 1. Check if banned
+        const { data: ban } = await supabase
+          .from('server_bans')
+          .select('id')
+          .eq('server_id', activeServerId)
+          .eq('user_id', currentUser.id)
+          .maybeSingle();
+
+        if (ban) {
+          setActiveServer(null);
+          setActiveChannel(null);
+          setActiveChatUser(null);
+          setRefreshServersKey((prev) => prev + 1);
+          return;
+        }
+
+        // 2. Check if member
         const { data } = await supabase
           .from('server_members')
           .select('id')
@@ -241,6 +258,7 @@ export default function Page() {
           setActiveServer(null);
           setActiveChannel(null);
           setActiveChatUser(null);
+          setRefreshServersKey((prev) => prev + 1);
         }
       } catch (err) {
         console.error('Membership check error:', err);

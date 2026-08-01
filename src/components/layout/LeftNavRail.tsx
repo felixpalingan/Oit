@@ -31,11 +31,21 @@ export default function LeftNavRail({
 
   const fetchServers = async () => {
     try {
+      // 1. Fetch user banned server IDs
+      const { data: banRows } = await supabase
+        .from('server_bans')
+        .select('server_id')
+        .eq('user_id', currentUser.id);
+
+      const bannedServerIds = new Set((banRows || []).map((b: any) => b.server_id));
+
+      // 2. Fetch owned servers
       const { data: owned } = await supabase
         .from('servers')
         .select('*')
         .eq('owner_id', currentUser.id);
 
+      // 3. Fetch joined member servers
       const { data: memberRows } = await supabase
         .from('server_members')
         .select('server_id, servers(*)')
@@ -44,8 +54,12 @@ export default function LeftNavRail({
       const memberServers = (memberRows || []).map((m: any) => m.servers).filter(Boolean);
 
       const allMap = new Map<string, Server>();
-      (owned || []).forEach((s: Server) => allMap.set(s.id, s));
-      memberServers.forEach((s: Server) => allMap.set(s.id, s));
+      (owned || []).forEach((s: Server) => {
+        if (!bannedServerIds.has(s.id)) allMap.set(s.id, s);
+      });
+      memberServers.forEach((s: Server) => {
+        if (!bannedServerIds.has(s.id)) allMap.set(s.id, s);
+      });
 
       setServers(Array.from(allMap.values()));
     } catch (err) {
