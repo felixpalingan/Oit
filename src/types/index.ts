@@ -24,6 +24,7 @@ export interface ServerMember {
   user_id: string;
   role: 'owner' | 'admin' | 'member';
   joined_at?: string;
+  profile?: User;
 }
 
 export interface Channel {
@@ -80,6 +81,7 @@ export interface Message {
   file_name?: string | null;
   file_size?: string | null;
   reply_to_id?: string | null;
+  is_edited?: boolean;
   is_deleted?: boolean;
   is_read?: boolean;
   created_at: string;

@@ -838,6 +838,7 @@ export default function Page() {
           <ChatWindow
             currentUser={currentUser}
             chatUser={activeChatUser}
+            usersList={usersList}
             isChatUserOnline={activeChatUser ? onlineUserIds.has(activeChatUser.id) : false}
             onBackMobile={() => setIsMobileDrawerOpen(true)}
             onStartCall={(isVideo) => {

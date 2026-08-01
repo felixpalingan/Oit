@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Settings, Mic, Video, VideoOff, Save, LogOut } from 'lucide-react';
+import { X, Settings, Mic, Video, VideoOff, Save, LogOut, Bell, BellOff } from 'lucide-react';
 import { UserProfile } from '@/types';
 import { createClient } from '@/utils/supabase/client';
 import { useAppStore } from '@/store/useAppStore';
@@ -32,6 +32,9 @@ export default function ProfileModal({
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Web Push Notification State
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default');
+
   // Hardware Devices State
   const [mics, setMics] = useState<MediaDeviceInfo[]>([]);
   const [cams, setCams] = useState<MediaDeviceInfo[]>([]);
@@ -52,6 +55,26 @@ export default function ProfileModal({
   const animFrameIdRef = useRef<number | null>(null);
 
   const supabase = createClient();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setNotifPermission(Notification.permission);
+    }
+  }, []);
+
+  const handleRequestNotificationPermission = async () => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      try {
+        const res = await Notification.requestPermission();
+        setNotifPermission(res);
+        if (res === 'granted' && 'serviceWorker' in navigator) {
+          await navigator.serviceWorker.register('/sw.js');
+        }
+      } catch (err) {
+        console.warn('Push Notification permission error:', err);
+      }
+    }
+  };
 
   // Helper Function: Safely Stop All Tracks & Close AudioContext
   const stopAllMediaStreams = () => {
@@ -254,7 +277,6 @@ export default function ProfileModal({
     };
 
     try {
-      // 1. Try full upsert with bio column
       const { error: fullErr } = await supabase
         .from('users')
         .upsert({
@@ -265,9 +287,7 @@ export default function ProfileModal({
           avatar_url: avatarUrl || null,
         });
 
-      // 2. If bio column missing in Supabase, fallback to basic fields
       if (fullErr && fullErr.message.includes('bio')) {
-        console.warn('Bio column not found in Supabase users table yet. Falling back to basic profile update.');
         await supabase
           .from('users')
           .upsert({
@@ -399,7 +419,38 @@ export default function ProfileModal({
           </div>
         </div>
 
-        {/* SECTION 2: WEBRTC DEVICE ENUMERATION & REALTIME MIC METER */}
+        {/* SECTION 2: WEB PUSH NOTIFICATIONS (TICKET 9) */}
+        <div className="space-y-3 border-t border-zinc-800/80 pt-4">
+          <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-[#FF5C00] flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#FF5C00]" />
+            WEB PUSH NOTIFICATIONS (TICKET 9)
+          </h4>
+
+          <div className="flex items-center justify-between p-4 bg-[#1c1c21] border border-zinc-800 rounded-2xl">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-[#121215] border border-zinc-800 flex items-center justify-center text-[#FF5C00]">
+                {notifPermission === 'granted' ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4 text-zinc-500" />}
+              </div>
+              <div>
+                <h5 className="text-xs font-bold text-white">Notifikasi Browser Web</h5>
+                <p className="text-[10px] text-zinc-400 mt-0.5">
+                  Status: <span className={notifPermission === 'granted' ? 'text-emerald-400 font-bold' : 'text-zinc-400'}>{notifPermission.toUpperCase()}</span>
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleRequestNotificationPermission}
+              disabled={notifPermission === 'granted'}
+              className="px-4 py-2 bg-[#FF5C00] hover:bg-[#ff701a] disabled:bg-zinc-800 disabled:text-zinc-500 text-white font-extrabold rounded-xl text-xs transition-colors cursor-pointer disabled:cursor-default"
+            >
+              {notifPermission === 'granted' ? 'Aktif' : 'Aktifkan Notifikasi'}
+            </button>
+          </div>
+        </div>
+
+        {/* SECTION 3: WEBRTC DEVICE ENUMERATION & REALTIME MIC METER */}
         <div className="space-y-4 border-t border-zinc-800/80 pt-4">
           <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-[#FF5C00] flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-[#FF5C00]" />
