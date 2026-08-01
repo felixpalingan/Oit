@@ -18,6 +18,7 @@ import SecurityCheckModal from '@/components/modals/SecurityCheckModal';
 import CreateServerModal from '@/components/modals/CreateServerModal';
 import JoinServerModal from '@/components/modals/JoinServerModal';
 import ServerMembersModal from '@/components/modals/ServerMembersModal';
+import ServerMembersSidebar from '@/components/layout/ServerMembersSidebar';
 import EditServerModal from '@/components/modals/EditServerModal';
 import CreateChannelModal from '@/components/modals/CreateChannelModal';
 import EditChannelModal from '@/components/modals/EditChannelModal';
@@ -878,20 +879,33 @@ export default function Page() {
             onOpenAddFriend={() => setShowAddFriendModal(true)}
           />
         ) : (
-          /* Chat Window Stream */
-          <ChatWindow
-            currentUser={currentUser}
-            chatUser={activeChatUser}
-            usersList={usersList}
-            isChatUserOnline={activeChatUser ? onlineUserIds.has(activeChatUser.id) : false}
-            onBackMobile={() => setIsMobileDrawerOpen(true)}
-            onStartCall={(isVideo) => {
-              if (activeChatUser) initiateCall(activeChatUser, isVideo);
-              else initiateCall({ id: 'room-1', username: activeChannelName, display_name: activeChannelName, avatar_url: null }, isVideo);
-            }}
-            onOpenUserProfile={(u) => setSelectedUserProfileCard(u)}
-            onOpenImageLightbox={(url, fileName) => setSelectedLightboxImage({ url, fileName: fileName || 'image.png' })}
-          />
+          /* Chat Window Stream with Discord-Style Right Members Panel */
+          <div className="flex-1 h-full flex flex-row overflow-hidden w-full">
+            <ChatWindow
+              currentUser={currentUser}
+              chatUser={activeChatUser}
+              usersList={usersList}
+              isChatUserOnline={activeChatUser ? onlineUserIds.has(activeChatUser.id) : false}
+              onBackMobile={() => setIsMobileDrawerOpen(true)}
+              onStartCall={(isVideo) => {
+                if (activeChatUser) initiateCall(activeChatUser, isVideo);
+                else initiateCall({ id: 'room-1', username: activeChannelName, display_name: activeChannelName, avatar_url: null }, isVideo);
+              }}
+              onOpenUserProfile={(u) => setSelectedUserProfileCard(u)}
+              onOpenImageLightbox={(url, fileName) => setSelectedLightboxImage({ url, fileName: fileName || 'image.png' })}
+            />
+
+            {/* Discord-style Right Members Sidebar (Image 5) */}
+            {activeServerId && !activeChatUser && (
+              <ServerMembersSidebar
+                serverId={activeServerId}
+                currentUser={currentUser}
+                onlineUserIds={onlineUserIds}
+                onOpenUserProfile={(u) => setSelectedUserProfileCard(u)}
+                refreshTrigger={refreshServersKey}
+              />
+            )}
+          </div>
         )}
       </main>
 
