@@ -1,4 +1,4 @@
-# ⚡ Oit — High-Voltage Instant Messaging, RBAC Moderation & Live WebRTC Group Calls
+# ⚡ Oit — High-Performance Real-Time Communication & Community Platform
 
 [![Production Live App](https://img.shields.io/badge/Production-Live%20App-ff5c00?style=for-the-badge&logo=vercel&logoColor=white)](https://oit-seven.vercel.app)
 [![Next.js 16](https://img.shields.io/badge/Next.js-16.2.12-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
@@ -6,47 +6,41 @@
 [![LiveKit WebRTC](https://img.shields.io/badge/LiveKit-Cloud%20WebRTC-FF4F00?style=for-the-badge&logo=livekit&logoColor=white)](https://livekit.io)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
-**Oit** adalah platform komunikasi *real-time full-stack* kelas enterprise yang menggabungkan obrolan pesan instan, komunikasi suara/video WebRTC latensi ultra-rendah, sistem moderasi berbasis peran (RBAC), audit log komprehensif, serta penanganan error berkualifikasi industri. Dirancang dengan estetika **Oit Signature High-Voltage Dark** (`#000000` base, `#161619` surfaces, dan `#FF5C00` Vibrant Orange accent) serta arsitektur navigasi *single-DOM responsive mobile-first*.
+**Oit** is a full-stack, enterprise-grade real-time communication platform engineered for high-concurrency instant messaging, low-latency audio/video WebRTC group calling, granular role-based access control (RBAC), and robust system-wide fault tolerance.
 
-🌐 **Live Demo Application**: [https://oit-seven.vercel.app](https://oit-seven.vercel.app)
+Designed with **Oit Signature High-Voltage Dark Aesthetic** (`#000000` base, `#161619` surfaces, and `#FF5C00` Vibrant Orange accent), the application features a single-DOM mobile-first layout engine capable of rendering dynamic community workspaces, rich media streams, and real-time audio visualizers with zero performance degradation.
 
----
-
-## 🌟 Fitur Utama (A - Z Feature Spectrum)
-
-### 💬 1. Obrolan Fundamental & Fitur Pesan Lanjutan
-- **Edit & Hapus Pesan (Ticket 7)**: Fitur edit inline (`is_edited`) dan *soft delete* (`is_deleted`). Pemilik pesan serta Admin/Moderator dapat menghapus pesan anggota dengan posisi hirarki di bawahnya.
-- **Quote Reply & Mentions (Ticket 8)**: Balas pesan dengan *quote preview* ber-FK `reply_to_id` self-referencing. Fitur mention `@username` yang interaktif, dapat diklik untuk membuka Kartu Profil Pengguna.
-- **Mention Highlighting & White Glassmorphic Badge**: Pesan dari orang lain yang meng-tag pengguna disorot dengan batas oranye *high-voltage*, sedangkan tag dalam gelembung pesan sendiri menggunakan badge *white glassmorphism* (`bg-white/25 border-white/40`) untuk kontras optimal.
-- **Web Push Notifications & Dual-Tone Ringtone**: Notifikasi push browser otomatis (`Notification` API) untuk pesan & panggilan masuk, serta synthesizer dering audio Web Audio API pada `IncomingCallModal`.
-- **Indikator Unread ala Discord**: Lencana titik notifikasi oranye/merah menyala pada logo Oit saat ada pesan baru belum dibaca.
-
-### 🛡️ 2. Sistem Moderasi Komunitas & Keamanan RBAC (Tickets 10, 11, 12)
-- **Skema Peran & Hirarki Bobot**: Mendukung 4 tingkatan peran: 👑 **Owner** (4), 🛡️ **Admin** (3), ⚔️ **Moderator** (2), dan 👤 **Member** (1).
-- **Mute Berdurasi & Lock Input**: Membungkam anggota selama 10 menit (`muted_until`). Pengguna yang dibungkam terkunci 100% dari pengetikan teks, tombol smiley, tombol lampiran, dan pengiriman pesan.
-- **Kick & Ban Permanen**: Mengeluarkan atau melarang anggota secara permanen (`server_bans`). Pengguna yang di-ban ditolak secara mutlak saat mencoba bergabung kembali via ID Server/Kode Undangan.
-- **Pembersihan Ikon Real-Time**: Ikon server di sidebar navigasi kiri (*LeftNavRail*) **langsung hilang seketika** tanpa perlu refresh browser saat pengguna di-kick atau di-ban.
-- **Dasbor Audit Log Real-Time**: Mencatat setiap tindakan moderasi (KICK, BAN, MUTE, UPDATE_ROLE) ke tabel `audit_logs` dengan format waktu relatif (*time-ago*), ikon aksi melingkar, dan pembaruan *real-time* via CDC listener.
-
-### 🧱 3. Stabilitas & Penanganan Edge Cases (Tickets 13, 14)
-- **Validasi File Size & Format (25MB Limit)**: Membatasi berkas maksimal 25MB di sisi *client*. Jika melebihi batas, memicu **Overlaid Toast Notification** `FILE TOO LARGE`.
-- **UI Upload Terinterupsi (Red Failed Upload State)**: Jika koneksi internet terputus saat mengunggah berkas, progress bar berubah menjadi **merah solid** dengan label `📡 GAGAL MENGUNGGAH` dan tombol ikon **Retry** (`RotateCcw`).
-- **404 Route Interceptor & Deleted Entity Fallback**: Mencegat rute tak valid atau ruangan terhapus, mengalihkan pengguna secara mulus ke layar utama (DM Welcome Screen) tanpa *White Screen of Death*, disertai **Floating Toast Notification** `Akses Ditolak: Ruangan ini sudah tidak tersedia atau telah dihapus.`.
-
-### 👥 4. Panel Anggota Kanan Ala Discord (`ServerMembersSidebar`)
-- **Tampilan Anggota Kanan (Image 5)**: Memunculkan panel kanan `MEMBERS — [Count]` yang mengurutkan anggota berdasarkan hirarki role (Owner > Admin > Moderator > Member).
-- **Lencana Role & Status Mute**: Menampilkan ikon mahkota 👑, perisai admin 🛡️, perisai mod ⚔️, indikator titik status online 🟢, serta label merah `(BUNGKAM)`.
-- **Menu Aksi Moderasi Cepat**: Mengklik ikon titik tiga pada anggota memunculkan menu konteks cepat untuk Mute 10 Menit, Kick, Ban Permanen, atau Mengubah Peran.
-
-### 🎙️ 5. WebRTC Suara & Video Latensi Ultra-Rendah (LiveKit Cloud SFU)
-- **Multi-Participant Rooms**: Panggilan grup tanpa batas waktu dengan transmisi audio/video HD.
-- **Pendeteksi Pembicara Aktif (*Active Speaker Glow*)**: Indikator visual menyala terang pada ubin peserta yang sedang berbicara.
-- **Floating Live Pod (`● Live`)**: Mengecilkan tampilan panggilan tanpa memutus koneksi WebRTC, memungkinkan pengguna tetap mengobrol pesan teks.
-- **Web Audio API Hardware Cleanups**: Pengukur spektrum audio mikrofon asli dan protokol pemutusan `MediaStreamTrack` (`track.stop()`) instan saat modal ditutup.
+🌐 **Production Application**: [https://oit-seven.vercel.app](https://oit-seven.vercel.app)
 
 ---
 
-## 🏛️ Arsitektur Sistem & Spesifikasi Rekayasa Perangkat Lunak
+## 🚀 Key Engineering Highlights
+
+### ⚡ 1. Sub-100ms Real-Time Data Pipeline
+- **Change Data Capture (CDC)**: Built on Supabase Realtime Engine (PostgreSQL WAL replication) over persistent WebSockets for zero-polling state updates.
+- **Global Presence Tracking**: Tracks user online/offline status, room voice membership, and read receipts (`✔` to `✔✔`) in real time using non-blocking in-memory `Set<string>` lookups.
+- **Instant Peer Signaling**: Low-latency event dispatching for incoming calls, dual-toneWeb Audio synthesizer chimes, and door-knocking room access requests.
+
+### 🛡️ 2. Enterprise Role-Based Access Control (RBAC) & Audit Logs
+- **Hierarchical Governance**: Strict role weight hierarchy (`Owner > Admin > Moderator > Member`) governing administrative permissions across channels and servers.
+- **Real-Time Moderation Actions**: Time-bound user mutes (`muted_until`) with client-side input locks, room ejection (Kick), and permanent server bans (`server_bans`).
+- **Instant Eviction & Sidebar Sync**: Utilizes PostgreSQL `REPLICA IDENTITY FULL` to propagate `DELETE` and `INSERT` events, immediately revoking access and removing server navigation icons without browser reloads.
+- **Real-Time Audit Trail**: Every administrative action (Mute, Kick, Ban, Role Mutation) is recorded in an immutable `audit_logs` table and streamed live to the audit dashboard.
+
+### 🎙️ 3. Low-Latency SFU WebRTC Infrastructure
+- **Selective Forwarding Unit (SFU)**: Powered by LiveKit Cloud, replacing traditional mesh P2P topology ($N \times (N-1)$ streams) with a single upstream encode stream distributed via adaptive bitrate algorithms.
+- **Active Speaker Recognition**: DSP-driven audio level measurement with visual glow indicators on active speakers.
+- **Background Media Continuity**: Floating live pod (`● Live`) maintains active WebRTC tracks in the background while users navigate text channels.
+- **Web Audio API Hardware Cleanups**: Real-time microphone spectrum analyzer (`AnalyserNode`) with strict media track cleanup (`track.stop()`) to release camera/mic hardware instantly upon modal dismissal.
+
+### 🧱 4. Resilient Client-Side Validation & Graceful Fault Handling
+- **Client-Side File Limiter (25MB)**: Strict pre-upload validation preventing large payload network congestion, coupled with floating toast notifications (`FILE TOO LARGE`).
+- **Interrupted Connection Recovery**: Detects network disconnects during file uploads, transitioning the progress UI into a high-visibility error state (`📡 GAGAL MENGUNGGAH`) with an instant retry action.
+- **Smart 404 Route Interception**: Intercepts attempts to access deleted servers or invalid routes, gracefully redirecting users to the primary workspace with context-aware floating alerts (`Akses Ditolak`).
+
+---
+
+## 🏛️ System Architecture
 
 ```
                                   +---------------------------------------+
@@ -62,27 +56,32 @@
 |      (PostgreSQL + RLS Policies)     |   |    (WebSocket / CDC / Presence)  |   |   (WebRTC Low-Latency SFU)      |
 +------------------+-------------------+   +----------+--------------------+   +-------------+---------------------+
 | - Auth Session JWT & Public Users    |   | - Postgres WAL Replication (CDC)  |   | - Selective Forwarding Unit (SFU)   |
-| - Relasi Servers, Channels, Members  |   | - App-wide User Presence Tracking|   | - Adaptive Stream Bitrate Encoding  |
-| - Audit Logs & Server Bans Tables    |   | - Realtime Kick/Ban & Mute CDC   |   | - Active Speaker Audio Analyzer     |
-| - Storage Engine (chat-attachments)  |   | - Door Knock & Call Signaling    |   | - Web Audio API Synthesizer         |
+| - Relational Schema & Constraints    |   | - App-Wide Presence Tracking      |   | - Adaptive Bitrate Media Streams    |
+| - Row-Level Security (RLS) Policies  |   | - Realtime Moderation State Sync  |   | - Active Speaker Audio Analyzer     |
+| - Supabase Storage (chat-attachments)|   | - Signaling & Notification Push   |   | - Web Audio API DSP Metering        |
 +--------------------------------------+   +-----------------------------------+   +-----------------------------------+
 ```
 
-### 1. Root Client Orchestrator & State Hydration (`src/app/page.tsx`)
-- **Root State & Modal Container**: Berfungsi sebagai *root orchestrator* untuk otentikasi sesi JWT Supabase, presensi global, pembaruan keanggotaan *real-time*, serta penanganan *toast notification* melayang (`ToastNotification.tsx`).
-- **Single DOM Mobile Off-Canvas Drawer**: Navigasi seluler menggunakan transisi CSS Transform 60fps (`translate-x-0` vs `-translate-x-full`) tanpa duplikasi komponen DOM, mencegah insialisasi ulang WebSocket SDK.
+---
 
-### 2. Change Data Capture / CDC Engine (Supabase Realtime)
-- **`public:server_members` & `public:server_bans`**: Mendengarkan event `DELETE` dan `INSERT` dengan `REPLICA IDENTITY FULL` untuk mencabut akses pengguna dan menghapus ikon server secara *real-time* tanpa refresh peramban (F5).
-- **`public:audit_logs`**: Menyiarkan transaksi log moderasi baru secara langsung ke Dasbor Audit Log di `EditServerModal.tsx`.
-- **`global_online_presence`**: Mengumpulkan ID pengguna aktif ke dalam `Set<string>` (`onlineUserIds`) secara zero-polling.
+## 💻 Tech Stack & Architectural Decisions
+
+| Layer | Technology | Engineering Rationale |
+| :--- | :--- | :--- |
+| **Framework** | **Next.js 16.2.12** (Turbopack) | App Router SSR, optimized route handlers, and sub-second cold starts. |
+| **UI Library** | **React 19**, **TailwindCSS**, **Lucide** | Modular, glassmorphic dark theme components with GPU-accelerated CSS transforms. |
+| **State Engine**| **Zustand** + `persist` | Lightweight global store for active servers/channels, hardware IDs, and call states. |
+| **Database/Auth**| **Supabase PostgreSQL** | Relational schema integrity, JWT session handling, and strict RLS policies. |
+| **Realtime** | **Supabase CDC & Presence** | Real-time WAL replication over WebSockets for zero-polling UX. |
+| **Media Engine** | **LiveKit Cloud SFU** | Scalable multi-party audio/video WebRTC streaming with low CPU overhead. |
+| **Analytics** | **Vercel Analytics** | Production traffic monitoring and web performance metrics. |
 
 ---
 
-## 🗄️ Skema Basis Data PostgreSQL & Migrasi SQL (`supabase/moderation_rbac_audit.sql`)
+## 🗄️ Database Schema (DDL)
 
 ```sql
--- 1. Tabel Profil Pengguna (public.users)
+-- 1. User Profiles Table
 CREATE TABLE IF NOT EXISTS public.users (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   username TEXT UNIQUE NOT NULL,
@@ -92,7 +91,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 2. Tabel Server Komunitas (public.servers)
+-- 2. Servers Table
 CREATE TABLE IF NOT EXISTS public.servers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
@@ -102,7 +101,7 @@ CREATE TABLE IF NOT EXISTS public.servers (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 3. Tabel Keanggotaan Server (public.server_members)
+-- 3. Server Members Table (with RBAC & Mute state)
 ALTER TABLE public.server_members REPLICA IDENTITY FULL;
 CREATE TABLE IF NOT EXISTS public.server_members (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -114,7 +113,7 @@ CREATE TABLE IF NOT EXISTS public.server_members (
   UNIQUE(server_id, user_id)
 );
 
--- 4. Tabel Ban Permanen Server (public.server_bans)
+-- 4. Server Bans Table
 CREATE TABLE IF NOT EXISTS public.server_bans (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   server_id UUID NOT NULL REFERENCES public.servers(id) ON DELETE CASCADE,
@@ -125,18 +124,18 @@ CREATE TABLE IF NOT EXISTS public.server_bans (
   UNIQUE(server_id, user_id)
 );
 
--- 5. Tabel Audit Log Server (public.audit_logs)
+-- 5. Audit Logs Table
 CREATE TABLE IF NOT EXISTS public.audit_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   server_id UUID NOT NULL REFERENCES public.servers(id) ON DELETE CASCADE,
   actor_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  action_type TEXT NOT NULL, -- e.g. 'KICK_MEMBER', 'BAN_MEMBER', 'MUTE_MEMBER', 'UPDATE_ROLE'
+  action_type TEXT NOT NULL, -- 'KICK_MEMBER', 'BAN_MEMBER', 'MUTE_MEMBER', 'UPDATE_ROLE'
   target_id UUID,
   details TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 6. Tabel Pesan Obrolan (public.messages)
+-- 6. Messages Table (with Quote Reply & Soft Delete)
 CREATE TABLE IF NOT EXISTS public.messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   content TEXT,
@@ -153,7 +152,7 @@ CREATE TABLE IF NOT EXISTS public.messages (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 7. Publikasi Idempoten Supabase Realtime CDC
+-- 7. Realtime CDC Publication
 DO $$ 
 BEGIN
   BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE public.server_members; EXCEPTION WHEN duplicate_object THEN NULL; END;
@@ -165,67 +164,21 @@ END $$;
 
 ---
 
-## 📊 Diagram Alur Transaksi Data (Data Flow Lifecycle)
+## ⚡ Local Development Setup
 
-```
-[ Aksi Moderasi / Pengiriman Pesan / File Upload ]
-                       │
-                       ▼
-┌──────────────────────────────────────────────────────────┐
-│ Client-side Validation (25MB Limit / Mute Check / RBAC)  │
-└─────────────────────┬────────────────────────────────────┘
-                       │
-                       ▼
-┌──────────────────────────────────────────────────────────┐
-│ Supabase Client: INSERT/UPDATE into PostgreSQL           │
-└─────────────────────┬────────────────────────────────────┘
-                       │
-                       ▼
-┌──────────────────────────────────────────────────────────┐
-│ PostgreSQL WAL (Write-Ahead Log) Transaction Committed    │
-│ + Audit Logs Row Recorded                                │
-└─────────────────────┬────────────────────────────────────┘
-                       │
-                       ▼
-┌──────────────────────────────────────────────────────────┐
-│ Supabase Realtime CDC Broadcasts Event (DELETE/INSERT)   │
-└─────────────────────┬────────────────────────────────────┘
-                       │
-                       ▼
-┌──────────────────────────────────────────────────────────┐
-│ Target Clients Receive Event -> Instant Icon Removal /   │
-│ Toast Notification Triggered / Input Locked              │
-└─────────────────────────────────────────────────────────┘
-```
+### 1. Prerequisites
+- **Node.js**: `v20.x` or higher
+- **Package Manager**: `npm` or `yarn`
 
----
-
-## 🛠️ Stack Teknologi (Tech Architecture Summary)
-
-| Layer | Teknologi & Library | Deskripsi |
-| :--- | :--- | :--- |
-| **Frontend Framework** | **Next.js 16.2.12** (App Router & Turbopack) | Server-Side Rendering (SSR), API Routes, dan kompilasi instan. |
-| **UI Library & Styling** | **React 19**, **TailwindCSS**, **Lucide React** | Antarmuka komponen modular dengan estetika *High-Voltage Dark*. |
-| **State Management** | **Zustand** + `persist` middleware | Manajemen status global ringan yang tersimpan di `localStorage`. |
-| **Database & Auth** | **Supabase Postgres Database & Auth** | Otentikasi sesi JWT, aturan keamanan RLS (*Row Level Security*). |
-| **Realtime Engine** | **Supabase CDC & Presence Channels** | Pelacakan presensi pengguna, siaran ketuk pintu, dan centang baca pesan. |
-| **Storage Engine** | **Supabase Storage** | Penyimpanan berkas media obrolan, avatar PFP, dan ikon server. |
-| **WebRTC Infrastructure**| **LiveKit Cloud SFU Engine** | Server Media SFU WebRTC untuk panggilan suara, video, & *screen sharing*. |
-| **Visitor Analytics** | **Vercel Analytics (`@vercel/analytics`)** | Pelacakan statistik tayangan halaman & pengunjung situs *real-time*. |
-
----
-
-## ⚡ Panduan Instalasi Lokal (Local Setup Guide)
-
-### 1. Kloning & Instalasi Dependensi
+### 2. Clone Repository & Install Dependencies
 ```bash
 git clone https://github.com/felixpalingan/Oit.git
 cd Oit
 npm install
 ```
 
-### 2. Konfigurasi Environment Variables (`.env.local`)
-Buat berkas `.env.local` di direktori akar proyek:
+### 3. Environment Variables (`.env.local`)
+Create a `.env.local` file in the root directory:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-supabase-id.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
@@ -235,14 +188,16 @@ LIVEKIT_API_KEY=your-livekit-api-key
 LIVEKIT_API_SECRET=your-livekit-api-secret
 ```
 
-### 3. Jalankan Server Dev Local
+### 4. Run Local Development Server
 ```bash
 npm run dev
 ```
-Buka `http://localhost:3000` di peramban Anda.
+Navigate to `http://localhost:3000` in your browser.
 
 ---
 
-## 👨‍💻 Lisensi & Hak Cipta
-Dirancang dan dikembangkan oleh **Felix Palingan** sebagai platform komunikasi instan *real-time full-stack enterprise*.
-Lisensi di bawah **MIT License**.
+## 👤 Author & Credits
+
+Designed and engineered by **Felix** as a flagship full-stack real-time system portfolio project.
+
+Released under the **MIT License**.
