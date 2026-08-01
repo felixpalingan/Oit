@@ -205,6 +205,22 @@ export default function Page() {
           }
         }
       )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'server_members', filter: `user_id=eq.${currentUser.id}` },
+        () => {
+          setActiveServer(null);
+          setActiveChannel(null);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'server_bans', filter: `user_id=eq.${currentUser.id}` },
+        () => {
+          setActiveServer(null);
+          setActiveChannel(null);
+        }
+      )
       .subscribe();
 
     const callSignalingChannel = supabase
@@ -950,10 +966,11 @@ export default function Page() {
       )}
 
       {/* Server Members List Modal (Root Overlay) */}
-      {showMembersModal && activeServerId && (
+      {showMembersModal && activeServerId && currentUser && (
         <ServerMembersModal
           serverId={activeServerId}
           serverName={activeChannelName || 'Server'}
+          currentUser={currentUser}
           onlineUserIds={onlineUserIds}
           onClose={() => setShowMembersModal(false)}
           onOpenUserProfile={(u) => setSelectedUserProfileCard(u)}

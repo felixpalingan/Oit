@@ -22,9 +22,32 @@ export interface ServerMember {
   id: string;
   server_id: string;
   user_id: string;
-  role: 'owner' | 'admin' | 'member';
+  role: 'owner' | 'admin' | 'moderator' | 'member';
+  muted_until?: string | null;
   joined_at?: string;
   profile?: User;
+}
+
+export interface ServerBan {
+  id: string;
+  server_id: string;
+  user_id: string;
+  banned_by: string;
+  reason?: string | null;
+  created_at: string;
+  user_profile?: User;
+}
+
+export interface AuditLog {
+  id: string;
+  server_id: string;
+  actor_id: string;
+  action_type: string;
+  target_id?: string | null;
+  details?: string | null;
+  created_at: string;
+  actor_profile?: User;
+  target_profile?: User;
 }
 
 export interface Channel {
