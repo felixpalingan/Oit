@@ -207,10 +207,13 @@ export default function Page() {
       )
       .on(
         'postgres_changes',
-        { event: 'DELETE', schema: 'public', table: 'server_members', filter: `user_id=eq.${currentUser.id}` },
-        () => {
-          setActiveServer(null);
-          setActiveChannel(null);
+        { event: 'DELETE', schema: 'public', table: 'server_members' },
+        (payload: any) => {
+          const oldRow = payload.old;
+          if (oldRow && oldRow.user_id === currentUser.id) {
+            setActiveServer(null);
+            setActiveChannel(null);
+          }
         }
       )
       .on(

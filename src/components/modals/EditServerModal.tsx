@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Settings, Upload, Trash2, Save, Lock, ShieldCheck, History, User } from 'lucide-react';
+import { X, Settings, Upload, Trash2, Save, Lock, ShieldAlert, Edit, Clock, Filter } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { useAppStore } from '@/store/useAppStore';
 import { AuditLog, User as UserType } from '@/types';
@@ -19,7 +19,7 @@ export default function EditServerModal({
   onUpdated,
   onDeleted,
 }: EditServerModalProps) {
-  const [activeTab, setActiveTab] = useState<'settings' | 'audit_logs'>('settings');
+  const [activeTab, setActiveTab] = useState<'general' | 'audit_log'>('general');
   const [serverName, setServerName] = useState('');
   const [iconUrl, setIconUrl] = useState<string | null>(null);
   const [isPrivate, setIsPrivate] = useState(false);
@@ -34,6 +34,20 @@ export default function EditServerModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
   const { setActiveServer, setActiveChannel } = useAppStore();
+
+  const timeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (seconds < 60) return 'Just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} mins ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    const days = Math.floor(hours / 24);
+    return `${days} day${days > 1 ? 's' : ''} ago`;
+  };
 
   useEffect(() => {
     async function fetchServerDetails() {
@@ -58,9 +72,9 @@ export default function EditServerModal({
     fetchServerDetails();
   }, [serverId, supabase]);
 
-  // Ticket 12: Fetch Audit Logs
+  // Ticket 12: Fetch & Realtime Listen Audit Logs
   useEffect(() => {
-    if (activeTab !== 'audit_logs') return;
+    if (activeTab !== 'audit_log') return;
 
     async function fetchAuditLogs() {
       setLoadingLogs(true);
@@ -101,6 +115,35 @@ export default function EditServerModal({
     }
 
     fetchAuditLogs();
+
+    // REALTIME LISTEN TO NEW AUDIT LOGS
+    const channel = supabase
+      .channel(`realtime_audit:${serverId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'audit_logs', filter: `server_id=eq.${serverId}` },
+        async (payload) => {
+          const newLog = payload.new as AuditLog;
+          const { data: actor } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', newLog.actor_id)
+            .single();
+
+          setAuditLogs((prev) => [
+            {
+              ...newLog,
+              actor_profile: actor || undefined,
+            },
+            ...prev,
+          ]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [activeTab, serverId, supabase]);
 
   const handleIconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -190,49 +233,50 @@ export default function EditServerModal({
         className="w-full max-w-xl bg-[#161619] border border-zinc-800 rounded-3xl p-6 sm:p-7 shadow-2xl flex flex-col space-y-5 text-white relative z-10"
       >
         
-        {/* Top Header */}
-        <div className="flex items-center justify-between border-b border-zinc-800/80 pb-4">
-          <div className="flex items-center gap-2">
-            <Settings className="w-5 h-5 text-[#FF5C00]" />
-            <h3 className="text-lg font-black text-white tracking-tight">
-              Pengaturan Server — {serverName}
-            </h3>
-          </div>
+        {/* Top Header matching Image 4 */}
+        <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3">
+          <h3 className="text-base font-extrabold text-white tracking-tight">
+            Server Settings
+          </h3>
           <button
             type="button"
             onClick={onClose}
-            className="p-2 text-zinc-400 hover:text-white rounded-xl hover:bg-zinc-800 transition-colors cursor-pointer"
+            className="p-1.5 text-zinc-400 hover:text-white rounded-xl hover:bg-zinc-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Modal Navigation Tabs (Settings vs Audit Logs) */}
-        <div className="flex p-1 bg-[#121215] rounded-2xl border border-zinc-800/80">
+        {/* Modal Navigation Underlined Tabs matching Image 4 */}
+        <div className="flex items-center gap-6 border-b border-zinc-800/80 pb-2">
           <button
             type="button"
-            onClick={() => setActiveTab('settings')}
-            className={`flex-1 py-2 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-2 ${
-              activeTab === 'settings'
-                ? 'bg-[#FF5C00] text-white shadow-md shadow-[#FF5C00]/20'
-                : 'text-zinc-400 hover:text-white'
+            onClick={() => setActiveTab('general')}
+            className={`text-xs font-black uppercase tracking-wider transition-all relative pb-2 ${
+              activeTab === 'general'
+                ? 'text-[#FF5C00]'
+                : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
-            <Settings className="w-4 h-4" />
-            <span>Detail Server</span>
+            <span>GENERAL</span>
+            {activeTab === 'general' && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FF5C00] rounded-full" />
+            )}
           </button>
 
           <button
             type="button"
-            onClick={() => setActiveTab('audit_logs')}
-            className={`flex-1 py-2 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-2 ${
-              activeTab === 'audit_logs'
-                ? 'bg-[#FF5C00] text-white shadow-md shadow-[#FF5C00]/20'
-                : 'text-zinc-400 hover:text-white'
+            onClick={() => setActiveTab('audit_log')}
+            className={`text-xs font-black uppercase tracking-wider transition-all relative pb-2 ${
+              activeTab === 'audit_log'
+                ? 'text-[#FF5C00]'
+                : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
-            <History className="w-4 h-4" />
-            <span>Audit Log Moderasi</span>
+            <span>AUDIT LOG</span>
+            {activeTab === 'audit_log' && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FF5C00] rounded-full" />
+            )}
           </button>
         </div>
 
@@ -240,8 +284,8 @@ export default function EditServerModal({
           <p className="text-xs text-red-400 font-semibold text-center">{errorMsg}</p>
         )}
 
-        {/* TAB 1: SERVER SETTINGS */}
-        {activeTab === 'settings' ? (
+        {/* TAB 1: GENERAL SERVER SETTINGS */}
+        {activeTab === 'general' ? (
           <form onSubmit={handleSave} className="space-y-5">
             
             {/* Upload Server Icon Area */}
@@ -342,67 +386,92 @@ export default function EditServerModal({
 
           </form>
         ) : (
-          /* TAB 2: TICKET 12 AUDIT LOG DASHBOARD */
-          <div className="space-y-3">
-            <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-[#FF5C00] flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#FF5C00]" />
-              RIWAYAT AUDIT MODERASI & AKTIVITAS SERVER
-            </h4>
+          /* TAB 2: AUDIT LOG DASHBOARD matching Image 4 EXACTLY */
+          <div className="space-y-4">
+            
+            {/* Title & Filter Bar matching Image 4 */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-sm font-extrabold text-white">
+                  Audit Log
+                </h4>
+                <p className="text-[11px] text-zinc-400">
+                  A chronological record of all administrative actions.
+                </p>
+              </div>
 
-            <div className="space-y-2 max-h-80 overflow-y-auto no-scrollbar pr-1">
+              <button
+                type="button"
+                className="px-3 py-1.5 bg-[#1c1c21] hover:bg-[#25252b] border border-zinc-800 rounded-xl text-xs font-bold text-zinc-300 flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Filter className="w-3.5 h-3.5 text-zinc-400" />
+                <span>Filter</span>
+              </button>
+            </div>
+
+            {/* Audit Log Card List matching Image 4 */}
+            <div className="space-y-2.5 max-h-80 overflow-y-auto no-scrollbar pr-1">
               {loadingLogs ? (
-                <p className="text-xs text-zinc-500 text-center py-8">Memuat riwayat audit log...</p>
+                <p className="text-xs text-zinc-500 text-center py-8">Loading audit logs...</p>
               ) : auditLogs.length === 0 ? (
-                <p className="text-xs text-zinc-500 text-center py-8">Belum ada riwayat aktivitas moderasi tercatat.</p>
+                <p className="text-xs text-zinc-500 text-center py-8">No administrative audit records found.</p>
               ) : (
                 auditLogs.map((log) => {
-                  const actor = log.actor_profile;
-                  const actorName = actor ? (actor.display_name || actor.username) : 'System';
+                  const isBan = log.action_type === 'BAN_MEMBER' || log.action_type === 'KICK_MEMBER';
+                  const isMute = log.action_type === 'MUTE_MEMBER';
 
                   return (
                     <div
                       key={log.id}
-                      className="p-3 bg-[#1c1c21] border border-zinc-800/80 rounded-2xl flex items-start gap-3 text-xs"
+                      className="p-3.5 bg-[#1c1c21] border border-zinc-800/90 rounded-2xl flex items-center justify-between gap-3 text-xs"
                     >
-                      <div className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center text-[10px] font-bold text-[#FF5C00] shrink-0 mt-0.5">
-                        {actor?.avatar_url ? (
-                          <img src={actor.avatar_url} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          (actorName || 'S')[0].toUpperCase()
-                        )}
-                      </div>
-
-                      <div className="flex-1 overflow-hidden">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-bold text-white truncate">{actorName}</span>
-                          <span className="text-[10px] text-zinc-500 shrink-0 font-mono">
-                            {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                          </span>
+                      <div className="flex items-center gap-3.5 overflow-hidden">
+                        {/* Circular Icon Container matching Image 4 */}
+                        <div
+                          className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
+                            isBan
+                              ? 'bg-[#FF5C00]/20 text-[#FF5C00]'
+                              : isMute
+                              ? 'bg-amber-950/60 text-amber-400'
+                              : 'bg-zinc-800 text-zinc-300'
+                          }`}
+                        >
+                          {isBan ? (
+                            <ShieldAlert className="w-4 h-4" />
+                          ) : isMute ? (
+                            <Clock className="w-4 h-4" />
+                          ) : (
+                            <Edit className="w-4 h-4" />
+                          )}
                         </div>
 
-                        <p className="text-zinc-300 leading-relaxed font-normal">
-                          {log.details || log.action_type}
-                        </p>
-
-                        <span className="inline-block mt-1.5 px-2 py-0.5 rounded-md bg-[#121215] border border-zinc-800 text-[9px] font-extrabold text-[#FF5C00]">
-                          {log.action_type}
-                        </span>
+                        <div className="overflow-hidden">
+                          <p className="text-xs font-bold text-white leading-tight">
+                            {log.details || log.action_type}
+                          </p>
+                        </div>
                       </div>
+
+                      <span className="text-[10px] text-zinc-400 font-medium shrink-0">
+                        {timeAgo(log.created_at)}
+                      </span>
                     </div>
                   );
                 })
               )}
             </div>
 
+            {/* Bottom Done Button matching Image 4 */}
             <div className="pt-2 border-t border-zinc-800/80 flex justify-end">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-5 py-2.5 bg-[#FF5C00] hover:bg-[#ff701a] text-white font-extrabold rounded-2xl text-xs cursor-pointer"
+                className="px-6 py-2.5 bg-[#24242a] hover:bg-[#303038] text-white font-extrabold rounded-2xl text-xs transition-colors cursor-pointer"
               >
-                Tutup
+                Done
               </button>
             </div>
+
           </div>
         )}
 

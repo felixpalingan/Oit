@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Users, Crown, Shield, ShieldAlert, VolumeX, UserX, Ban, MoreVertical, Check } from 'lucide-react';
+import { X, Users, Crown, Shield, ShieldAlert, VolumeX, UserX, Ban, MoreVertical } from 'lucide-react';
 import { User as UserType } from '@/types';
 import { createClient } from '@/utils/supabase/client';
 
@@ -94,58 +94,79 @@ export default function ServerMembersModal({
     fetchMembers();
   }, [serverId, currentUser.id, supabase]);
 
-  // Helper: Log Action to Audit Logs Table
+  // Helper: Explicitly Write Action to audit_logs Table
   const logAuditAction = async (actionType: string, targetId: string, details: string) => {
     try {
-      await supabase.from('audit_logs').insert({
+      const { error } = await supabase.from('audit_logs').insert({
         server_id: serverId,
         actor_id: currentUser.id,
         action_type: actionType,
         target_id: targetId,
-        details,
+        details: details,
       });
+
+      if (error) {
+        console.error('Audit log insert error:', error);
+      }
     } catch (err) {
       console.warn('Audit log write error:', err);
     }
   };
 
-  // Ticket 10: Change Role Action
+  // Change Role Action
   const handleChangeRole = async (targetMember: MemberItem, newRole: 'admin' | 'moderator' | 'member') => {
     setActiveMenuMemberId(null);
+    const myRoleTitle = currentUserRole === 'owner' ? 'Owner' : currentUserRole === 'admin' ? 'Admin' : 'Moderator';
+    const targetName = targetMember.user.display_name || targetMember.user.username;
+
     try {
       await supabase
         .from('server_members')
         .update({ role: newRole })
         .eq('id', targetMember.id);
 
-      await logAuditAction('UPDATE_ROLE', targetMember.user_id, `Mengubah role @${targetMember.user.username} menjadi ${newRole.toUpperCase()}`);
+      await logAuditAction(
+        'UPDATE_ROLE',
+        targetMember.user_id,
+        `${currentUser.display_name || currentUser.username} (${myRoleTitle}) changed ${targetName}'s role to ${newRole.toUpperCase()}`
+      );
       fetchMembers();
     } catch (err) {
       console.error('Change role error:', err);
     }
   };
 
-  // Ticket 11: Mute 10 Mins Action
+  // Mute 10 Mins Action
   const handleMute10Mins = async (targetMember: MemberItem) => {
     setActiveMenuMemberId(null);
     const mutedUntil = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    const myRoleTitle = currentUserRole === 'owner' ? 'Owner' : currentUserRole === 'admin' ? 'Admin' : 'Moderator';
+    const targetName = targetMember.user.display_name || targetMember.user.username;
+
     try {
       await supabase
         .from('server_members')
         .update({ muted_until: mutedUntil })
         .eq('id', targetMember.id);
 
-      await logAuditAction('MUTE_MEMBER', targetMember.user_id, `Bungkam sementara @${targetMember.user.username} selama 10 menit.`);
+      await logAuditAction(
+        'MUTE_MEMBER',
+        targetMember.user_id,
+        `${currentUser.display_name || currentUser.username} (${myRoleTitle}) muted ${targetName} for 10 minutes`
+      );
       fetchMembers();
     } catch (err) {
       console.error('Mute member error:', err);
     }
   };
 
-  // Ticket 11: Kick Member Action
+  // Kick Member Action
   const handleKickMember = async (targetMember: MemberItem) => {
     setActiveMenuMemberId(null);
-    if (!confirm(`Apakah Anda yakin ingin mengeluarkn (KICK) @${targetMember.user.username} dari server?`)) return;
+    const targetName = targetMember.user.display_name || targetMember.user.username;
+    if (!confirm(`Apakah Anda yakin ingin mengeluarkan (KICK) @${targetMember.user.username} dari server?`)) return;
+
+    const myRoleTitle = currentUserRole === 'owner' ? 'Owner' : currentUserRole === 'admin' ? 'Admin' : 'Moderator';
 
     try {
       await supabase
@@ -153,17 +174,24 @@ export default function ServerMembersModal({
         .delete()
         .eq('id', targetMember.id);
 
-      await logAuditAction('KICK_MEMBER', targetMember.user_id, `Mengeluarkan (KICK) @${targetMember.user.username} dari server.`);
+      await logAuditAction(
+        'KICK_MEMBER',
+        targetMember.user_id,
+        `${currentUser.display_name || currentUser.username} (${myRoleTitle}) kicked ${targetName} from the server`
+      );
       fetchMembers();
     } catch (err) {
       console.error('Kick member error:', err);
     }
   };
 
-  // Ticket 11: Ban Member Action
+  // Ban Member Action
   const handleBanMember = async (targetMember: MemberItem) => {
     setActiveMenuMemberId(null);
+    const targetName = targetMember.user.display_name || targetMember.user.username;
     if (!confirm(`Apakah Anda yakin ingin melarang (BAN) @${targetMember.user.username} dari server secara permanen?`)) return;
+
+    const myRoleTitle = currentUserRole === 'owner' ? 'Owner' : currentUserRole === 'admin' ? 'Admin' : 'Moderator';
 
     try {
       await supabase.from('server_bans').insert({
@@ -178,7 +206,11 @@ export default function ServerMembersModal({
         .delete()
         .eq('id', targetMember.id);
 
-      await logAuditAction('BAN_MEMBER', targetMember.user_id, `Melarang (BAN) @${targetMember.user.username} dari server.`);
+      await logAuditAction(
+        'BAN_MEMBER',
+        targetMember.user_id,
+        `${currentUser.display_name || currentUser.username} (${myRoleTitle}) banned ${targetName}`
+      );
       fetchMembers();
     } catch (err) {
       console.error('Ban member error:', err);
@@ -202,7 +234,7 @@ export default function ServerMembersModal({
           <div className="flex items-center gap-2">
             <Users className="w-5 h-5 text-[#FF5C00]" />
             <h3 className="text-base font-black text-white truncate max-w-[240px]">
-              Daftar Anggota — {serverName}
+              MEMBERS — {members.length}
             </h3>
           </div>
           <button
@@ -217,7 +249,7 @@ export default function ServerMembersModal({
         {/* Members List */}
         <div className="space-y-2.5 max-h-80 overflow-y-auto no-scrollbar relative">
           {loading ? (
-            <p className="text-xs text-zinc-500 text-center py-6">Loading members...</p>
+            <p className="text-xs text-zinc-500 text-center py-6">Memuat anggota...</p>
           ) : members.length === 0 ? (
             <p className="text-xs text-zinc-500 text-center py-6">Tidak ada anggota terdaftar.</p>
           ) : (
@@ -258,10 +290,10 @@ export default function ServerMembersModal({
                         {m.role === 'owner' && <Crown className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
                         {m.role === 'admin' && <Shield className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
                         {m.role === 'moderator' && <ShieldAlert className="w-3.5 h-3.5 text-purple-400 shrink-0" />}
+                        {isMuted && <span className="text-[10px] font-black text-red-500 uppercase tracking-wide ml-1">(BUNGKAM)</span>}
                       </h4>
-                      <p className="text-[10px] text-zinc-500 flex items-center gap-1">
-                        <span>@{m.user.username}</span>
-                        {isMuted && <span className="text-red-400 font-bold ml-1">(Bungkam)</span>}
+                      <p className="text-[10px] text-zinc-500">
+                        @{m.user.username}
                       </p>
                     </div>
                   </div>
@@ -310,7 +342,7 @@ export default function ServerMembersModal({
                                 <button
                                   type="button"
                                   onClick={() => handleChangeRole(m, 'admin')}
-                                  className="w-full text-left px-2.5 py-1.5 text-[11px] font-bold text-emerald-400 hover:bg-emerald-950/40 rounded-xl flex items-center gap-2"
+                                  className="w-full text-left px-2.5 py-1.5 text-[11px] font-bold text-emerald-400 hover:bg-emerald-950/40 rounded-xl flex items-center gap-2 cursor-pointer"
                                 >
                                   <Shield className="w-3.5 h-3.5" />
                                   <span>Jadikan Admin</span>
@@ -318,7 +350,7 @@ export default function ServerMembersModal({
                                 <button
                                   type="button"
                                   onClick={() => handleChangeRole(m, 'moderator')}
-                                  className="w-full text-left px-2.5 py-1.5 text-[11px] font-bold text-purple-400 hover:bg-purple-950/40 rounded-xl flex items-center gap-2"
+                                  className="w-full text-left px-2.5 py-1.5 text-[11px] font-bold text-purple-400 hover:bg-purple-950/40 rounded-xl flex items-center gap-2 cursor-pointer"
                                 >
                                   <ShieldAlert className="w-3.5 h-3.5" />
                                   <span>Jadikan Moderator</span>
@@ -330,7 +362,7 @@ export default function ServerMembersModal({
                             <button
                               type="button"
                               onClick={() => handleMute10Mins(m)}
-                              className="w-full text-left px-2.5 py-1.5 text-[11px] font-bold text-amber-400 hover:bg-amber-950/40 rounded-xl flex items-center gap-2"
+                              className="w-full text-left px-2.5 py-1.5 text-[11px] font-bold text-amber-400 hover:bg-amber-950/40 rounded-xl flex items-center gap-2 cursor-pointer"
                             >
                               <VolumeX className="w-3.5 h-3.5" />
                               <span>Mute 10 Menit</span>
@@ -340,7 +372,7 @@ export default function ServerMembersModal({
                             <button
                               type="button"
                               onClick={() => handleKickMember(m)}
-                              className="w-full text-left px-2.5 py-1.5 text-[11px] font-bold text-orange-400 hover:bg-orange-950/40 rounded-xl flex items-center gap-2"
+                              className="w-full text-left px-2.5 py-1.5 text-[11px] font-bold text-orange-400 hover:bg-orange-950/40 rounded-xl flex items-center gap-2 cursor-pointer"
                             >
                               <UserX className="w-3.5 h-3.5" />
                               <span>Kick Member</span>
@@ -350,7 +382,7 @@ export default function ServerMembersModal({
                             <button
                               type="button"
                               onClick={() => handleBanMember(m)}
-                              className="w-full text-left px-2.5 py-1.5 text-[11px] font-bold text-red-400 hover:bg-red-950/40 rounded-xl flex items-center gap-2"
+                              className="w-full text-left px-2.5 py-1.5 text-[11px] font-bold text-red-400 hover:bg-red-950/40 rounded-xl flex items-center gap-2 cursor-pointer"
                             >
                               <Ban className="w-3.5 h-3.5" />
                               <span>Ban Permanen</span>
