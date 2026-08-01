@@ -494,8 +494,8 @@ export default function ChatWindow({
     }
   };
 
-  // Helper Function: Render Text Content with Interactive Clickable Mentions
-  const renderFormattedContent = (content: string) => {
+  // Helper Function: Render Text Content with Interactive Clickable Mentions (Custom Contrast for isMe)
+  const renderFormattedContent = (content: string, isMe: boolean) => {
     if (!content) return null;
 
     const mentionRegex = /@([a-zA-Z0-9_-]+)/g;
@@ -524,7 +524,11 @@ export default function ChatWindow({
               onOpenUserProfile(targetUser);
             }
           }}
-          className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-[#FF5C00]/30 hover:bg-[#FF5C00]/50 text-[#FF5C00] hover:text-white font-extrabold cursor-pointer border border-[#FF5C00]/50 transition-all mx-0.5 shadow-sm"
+          className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-extrabold cursor-pointer border transition-all mx-0.5 shadow-sm ${
+            isMe
+              ? 'bg-white/25 hover:bg-white/40 text-white border-white/40'
+              : 'bg-[#FF5C00]/30 hover:bg-[#FF5C00]/50 text-[#FF5C00] hover:text-white border-[#FF5C00]/50'
+          }`}
         >
           @{mentionUsername}
         </span>
@@ -866,7 +870,7 @@ export default function ChatWindow({
                   ) : (
                     /* Text Content with Interactive Clickable Mentions */
                     <p className="text-xs whitespace-pre-wrap leading-relaxed">
-                      {renderFormattedContent(msg.content || '')}
+                      {renderFormattedContent(msg.content || '', isMe)}
                     </p>
                   )}
 
