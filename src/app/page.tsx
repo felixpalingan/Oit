@@ -226,6 +226,29 @@ export default function Page() {
       )
       .subscribe();
 
+    // Instant Kick & Ban Membership Verification Loop
+    const checkMembership = async () => {
+      if (!activeServerId || !currentUser) return;
+      try {
+        const { data } = await supabase
+          .from('server_members')
+          .select('id')
+          .eq('server_id', activeServerId)
+          .eq('user_id', currentUser.id);
+
+        if (!data || data.length === 0) {
+          setActiveServer(null);
+          setActiveChannel(null);
+          setActiveChatUser(null);
+        }
+      } catch (err) {
+        console.error('Membership check error:', err);
+      }
+    };
+
+    checkMembership();
+    const kickCheckInterval = setInterval(checkMembership, 1500);
+
     const callSignalingChannel = supabase
       .channel('global:call_signaling')
       .on('broadcast', { event: 'incoming_call' }, ({ payload }) => {
@@ -265,6 +288,7 @@ export default function Page() {
       .subscribe();
 
     return () => {
+      clearInterval(kickCheckInterval);
       globalPresenceChannel.untrack();
       supabase.removeChannel(globalPresenceChannel);
       supabase.removeChannel(sidebarChannel);
