@@ -24,70 +24,117 @@
 - **Server Icon Customization**: Pemilik server dapat mengunggah logo/ikon server kustom saat membuat atau mengedit server.
 - **Supabase Storage Integration**: Terhubung ke bucket `chat-attachments` dengan *Base64 fallback* otomatis.
 
-### 🎙️ 3. WebRTC Suara & Video Latensi Ultra-Rendah (LiveKit Cloud)
+### 🎙️ 3. WebRTC Suara & Video Latensi Ultra-Rendah (LiveKit Cloud SFU)
 - **Multi-Participant Rooms**: Panggilan grup tanpa batas waktu dengan transmisi audio/video HD.
 - **Pendeteksi Pembicara Aktif (*Active Speaker Glow*)**: Indikator visual menyala terang pada ubin peserta yang sedang berbicara.
 - **Floating Live Pod (`● Live`)**: Mengecilkan tampilan panggilan tanpa memutus koneksi WebRTC, memungkinkan pengguna tetap mengobrol pesan teks.
-- **Non-Disruptive Disconnect**: Meninggalkan panggilan hanya memutuskan sesi pengguna lokal tanpa mematikan ruang panggilan untuk anggota lain.
+- **Hardware Device Selection & Persist**: Pemilihan kamera dan mikrofon spesifik yang tersimpan di `localStorage` melalui Zustand.
 
-### ⚡ 4. Pelacakan Presensi Suara Real-Time (Supabase CDC & Presence)
+### ⚡ 4. Pelacakan Presensi Suara & User Real-Time (Supabase CDC & Presence)
+- **Status Online / Offline Real-Time**: Indikator 🟢 **Online** dan ⚪ **Offline** app-wide secara presisi menggunakan Supabase Presence.
 - **Presensi Anggota Sebelum Bergabung**: Pengguna dapat melihat daftar anggota yang berada di dalam Voice Channel secara *real-time* dari sidebar **SEBELUM & SESUDAH** mengklik untuk bergabung.
 - **Status Read Centang Ganda (`✔` -> `✔✔`)**: Pesan obrolan memperbarui status pembacaan secara *real-time* saat penerima membuka obrolan.
 
-### 👥 5. Direktori Anggota & Manajemen Server Lengkap
-- **Modal Daftar Anggota Server (`Server Members`)**: Menampilkan seluruh anggota terdaftar lengkap dengan foto profil, tag username, dan lencana mahkota emas (`👑 Owner`).
+### 👥 5. Direktori Anggota & Kartu Profil Pengguna (User Popover)
+- **Kartu Profil Pengguna (`UserProfileCardModal`)**: Mengklik foto profil siapa saja di obrolan, header DM, atau daftar anggota server memunculkan popover berisi foto profil, lencana verifikasi, dan deskripsi **About Me (Bio)**.
+- **Modal Daftar Anggota Server (`Server Members`)**: Menampilkan seluruh anggota terdaftar lengkap dengan foto profil, tag username, status online, dan lencana mahkota emas (`👑 Owner`).
 - **Pengaturan Detail Server (`Edit Server Settings`)**: Modal untuk mengubah nama server, mengunggah ikon baru, mengubah status Private/Public, atau menghapus server.
-- **Salin Kode Undangan (`Share2`)**: Menyalin ID Server sekali klik untuk membagikan akses ke kawan.
 
-### 🚪 6. Keamanan Private Channel & Sistem Door Knocking
+### 🖼️ 6. Pratinjau Gambar Layar On-Screen Lightbox & Download
+- **On-Screen Pop-Up Lightbox (`ImageLightboxModal`)**: Mengklik gambar di dalam obrolan membuka tampilan penuh di tengah layar dengan latar belakang *dark backdrop blur* tanpa berpindah ke tab browser baru.
+- **Direct Download Button**: Mengunduh berkas gambar langsung ke perangkat pengguna menggunakan mekanisme Blob URL.
+
+### 🚪 7. Keamanan Private Channel & Sistem Door Knocking
 - **Keamanan Saluran Private (`🔒`)**: Channel private terlindungi oleh kata sandi.
 - **System Knock-Knock**: Calon pengunjung dapat melakukan "ketuk pintu" yang memicu notifikasi siaran *real-time* ke anggota ruangan untuk persetujuan masuk.
 
-### 🔊 7. Meteran Suara Mikrofon Asli (Web Audio API)
+### 🔊 8. Meteran Suara Mikrofon Asli & Hardware Cleanups (Web Audio API)
 - **Real-Time Input Metering**: Di modal **User Settings**, indikator volume mikrofon mengukur dan menampilkan level spektrum audio asli dari mikrofon fisik pengguna (`AudioContext` & `AnalyserNode`).
-
-### 💬 8. Urutan Obrolan DM Terbaru & Persistensi Halaman
-- **Sorting DM Berdasarkan Pesan Terakhir**: Daftar obrolan pribadi otomatis melompat ke atas setiap kali ada pesan baru yang terkirim/diterima.
-- **Zustand Persist Middleware**: Menyimpan status server & channel aktif di `localStorage`, sehingga tampilan tidak pernah reset saat menekan F5 / Reload browser.
+- **Strict Cleanup Protocol**: Mematikan seluruh *track MediaStream* dan menghentikan `AudioContext` saat modal ditutup, menjamin lampu mikrofon/kamera di laptop/HP pengguna mati seketika.
 
 ---
 
-## 🛠️ Stack Teknologi (Tech Architecture)
-
-| Layer | Teknologi & Library | Deskripsi |
-| :--- | :--- | :--- |
-| **Frontend Framework** | **Next.js 16.2.12** (App Router & Turbopack) | Server-Side Rendering (SSR), API Routes, dan kompilasi instan. |
-| **UI Library & Styling** | **React 19**, **TailwindCSS**, **Lucide React** | Antarmuka komponen modular dengan estetika *Glassmorphic Dark*. |
-| **State Management** | **Zustand** + `persist` middleware | Manajemen status global ringan yang tersimpan di `localStorage`. |
-| **Database & Auth** | **Supabase Postgres Database & Auth** | Otentikasi sesi JWT, aturan keamanan RLS (*Row Level Security*). |
-| **Realtime Engine** | **Supabase CDC & Presence Channels** | Pelacakan presensi pengguna, siaran ketuk pintu, dan centang baca pesan. |
-| **Storage** | **Supabase Storage Engine** | Penyimpanan berkas media obrolan, avatar PFP, dan ikon server. |
-| **WebRTC Infrastructure**| **LiveKit Cloud Engine** | Server Media SFU WebRTC untuk panggilan suara, video, & *screen sharing*. |
-| **Visitor Analytics** | **Vercel Analytics (`@vercel/analytics`)** | Pelacakan statistik tayangan halaman & pengunjung situs *real-time*. |
-
----
-
-## 📐 Arsitektur Sistem (System Architecture)
+## 🏛️ Arsitektur Sistem & Spesifikasi Rekayasa Perangkat Lunak (System Engineering Architecture)
 
 ```
-[ Client Browser / Mobile HP ]
-              │
-              ├───► Next.js 16 App Router (UI Rendering & Zustand State)
-              │
-              ├───► Supabase Auth & Postgres Database (User Profiles, Servers, Channels, Messages)
-              │
-              ├───► Supabase Realtime CDC Engine (Presence Sync, Message Read Receipts, Knock Signaling)
-              │
-              ├───► LiveKit Cloud WebRTC SFU Server (Low-Latency Audio/Video Peer Connections)
-              │
-              └───► Supabase Storage Engine (User Avatars & Server Icon Images)
+                                  +---------------------------------------+
+                                  |    Client Browser / Mobile PWA        |
+                                  | (Next.js 16 + React 19 + Zustand)     |
+                                  +-------------------+-------------------+
+                                                      |
+                   +----------------------------------+----------------------------------+
+                   |                                  |                                  |
+                   v                                  v                                  v
++------------------+-------------------+   +----------+--------------------+   +-------------+---------------------+
+|      Supabase Auth & Database        |   |    Supabase Realtime Engine   |   |   LiveKit Cloud SFU Engine          |
+|      (PostgreSQL + RLS Policies)     |   |    (WebSocket / CDC / Presence)  |   |   (WebRTC Low-Latency SFU)      |
++------------------+-------------------+   +----------+--------------------+   +-------------+---------------------+
+| - Auth Sessi JWT & Public Users      |   | - Postgres WAL Replication    |   | - Selective Forwarding Unit (SFU)   |
+| - Relasi Servers, Channels, Members  |   | - App-wide User Presence Tracking|   | - Adaptive Stream Bitrate Encoding  |
+| - Storage Engine (chat-attachments)  |   | - Door Knock & Call Signaling    |   | - Active Speaker Audio Analyzer     |
++--------------------------------------+   +-----------------------------------+   +-----------------------------------+
 ```
+
+### 1. Client Runtime & Hydration Engine (Next.js 16 + React 19 + Zustand)
+
+- **Single-Page Application (SPA) Root Orchestrator (`src/app/page.tsx`)**:
+  - Mengelola sesi JWT Supabase Auth (`getSession()` & `onAuthStateChange()`).
+  - Mengatur *hydration* profil pengguna (`public.users`), daftar kontak, dan status server.
+  - Berfungsi sebagai **Root-Level Modal Renderer** (`fixed inset-0 z-50/z-[60]`) untuk membebaskan modal dari pembatasan kontainer anak (*CSS Stacking Context Trap*).
+
+- **Global State & Persist Middleware (`src/store/useAppStore.ts`)**:
+  - **Transient State**: `isMobileDrawerOpen`, `activeCallRoomId`, `knockNotification`.
+  - **Persisted State**: `activeServerId`, `activeChannelId`, `activeChannelName`, `selectedAudioDeviceId`, `selectedVideoDeviceId`.
+  - Menggunakan `localStorage` (`oit-app-storage`) sehingga preferensi server, channel, dan perangkat keras mikrofon/kamera tetap tersimpan saat pengguna melakukan reload browser (F5).
+
+- **Mobile Off-Canvas Drawer (60fps GPU Transform)**:
+  - Menggunakan **Single DOM Container** dengan transisi CSS Transform (`translate-x-0` vs `-translate-x-full`).
+  - Mencegah insialisasi ulang WebSocket Supabase JS SDK ganda yang sering menjadi penyebab utama crash *hydration error* di perangkat seluler.
 
 ---
 
-## 🗄️ Skema Database SQL (Database Schemas)
+### 2. Engine Real-Time & Change Data Capture / CDC (Supabase Realtime)
 
-Aplikasi Oit berjalan di atas struktur tabel Supabase Postgres yang efisien:
+Aplikasi memanfaatkan saluran WebSocket biderional Supabase Realtime dengan 4 fungsionalitas utama:
+
+1. **Global Online Presence (`global_online_presence`)**:
+   - Client mendaftarkan `user_id` ke saluran presensi.
+   - Event `presence.on('sync')` mengumpulkan seluruh ID aktif ke dalam struktur data **`Set<string>` (`onlineUserIds`)**.
+   - Indikator 🟢 **Online** / ⚪ **Offline** di seluruh UI ter-update otomatis secara *zero polling*.
+
+2. **Server Voice Presence (`server_voice_presence:${activeServerId}`)**:
+   - Memacak daftar anggota di dalam Voice Channel secara *live* **sebelum pengguna bergabung**.
+
+3. **Realtime Call & Door Knock Signaling (`global:call_signaling` & `room_requests`)**:
+   - Panggilan langsung memancarkan event `incoming_call` ke target user untuk memicu dering panggilan (`IncomingCallModal`).
+   - Sistem pintu saluran private memancarkan event `knock` untuk meminta izin masuk ke pemilik ruangan.
+
+4. **Messages Replication (`public:messages`)**:
+   - Mengamati transaksi `INSERT` dan `UPDATE` pada tabel `messages`.
+   - Mengubah status centang pesan (`✔` -> `✔✔`) secara otomatis ketika penerima membaca obrolan.
+
+---
+
+### 3. Media Pipeline WebRTC & SFU Architecture (LiveKit Cloud)
+
+- **Selective Forwarding Unit (SFU) vs Mesh P2P**:
+  - Berbeda dari P2P Mesh ($N \times (N-1)$ stream) yang memboroskan bandwidth, Oit menggunakan SFU LiveKit Cloud. Client hanya mengunggah **1 upstream media stream**, lalu server SFU mendistribusikan stream yang telah di-encode (*adaptive bitrate*) ke peserta lain.
+
+- **Protokol Token JWT (`/api/livekit`)**:
+  - Client meminta token via `GET /api/livekit?room=call_1&username=alex`.
+  - Server Next.js memverifikasi `LIVEKIT_API_KEY` & `LIVEKIT_API_SECRET`, memproduksi token JWT berizin *Room Join*, lalu menyerahkannya ke client untuk *ICE/DTLS Handshake*.
+
+- **Web Audio API Metering & Cleanup Protocol**:
+  - Membuka stream audio `getUserMedia({ audio: { deviceId: { exact: selectedMic } } })`.
+  - Menghubungkan ke `AudioContext` & `AnalyserNode` (`fftSize = 256`) untuk menghitung persentase volume RMS (0% - 100%).
+  - **Cleanup Protocol**: Saat modal ditutup, `stopAllMediaStreams()` mematikan seluruh `MediaStreamTrack` (`track.stop()`) dan menutup `AudioContext` agar lampu fisik mikrofon/kamera di laptop/HP pengguna mati total.
+
+- **Floating Live Pod (Background WebRTC Continuity)**:
+  - Saat tampilan panggilan diperkecil (*Minimize*), sesi WebRTC LiveKit tetap **100% aktif** di latar belakang melalui `<RoomAudioRenderer />` dan pod melayang `● Live`.
+
+---
+
+### 4. Lapisan Database & Storage Layer (PostgreSQL + RLS + Supabase Storage)
 
 ```sql
 -- 1. Tabel Profil Pengguna (public.users)
@@ -146,7 +193,56 @@ CREATE TABLE IF NOT EXISTS public.messages (
 );
 ```
 
-> **Catatan Pembersihan Database**: Untuk mereset ulang seluruh data ke 0, gunakan skrip [supabase/wipe_clean_database.sql](file:///c:/Users/Felix/Documents/proyek/Oit/supabase/wipe_clean_database.sql).
+> **Catatan Pembersihan Database**: Untuk mereset ulang seluruh data ke 0, gunakan skrip [supabase/wipe_clean_database.sql](file:///c:/Users/Felix/Documents/proyek/Oit/supabase/wipe_clean_database.sql). Skrip penambahan kolom bio tersedia di [supabase/add_bio_column.sql](file:///c:/Users/Felix/Documents/proyek/Oit/supabase/add_bio_column.sql).
+
+---
+
+## 📊 Diagram Alur Transaksi Data (Data Flow Lifecycle)
+
+```
+[ Pengguna Mengetik Pesan / Mengirim Gambar ]
+                      │
+                      ▼
+┌──────────────────────────────────────────────────────────┐
+│ Client-side Optimistic State / Base64 Fallback Check      │
+└─────────────────────┬────────────────────────────────────┘
+                      │
+                      ▼
+┌──────────────────────────────────────────────────────────┐
+│ Supabase Client: INSERT into public.messages             │
+└─────────────────────┬────────────────────────────────────┘
+                      │
+                      ▼
+┌──────────────────────────────────────────────────────────┐
+│ PostgreSQL WAL (Write-Ahead Log) Transaction Committed    │
+└─────────────────────┬────────────────────────────────────┘
+                      │
+                      ▼
+┌──────────────────────────────────────────────────────────┐
+│ Supabase Realtime CDC: WebSocket Broadcast to Channel     │
+└─────────────────────┬────────────────────────────────────┘
+                      │
+                      ▼
+┌──────────────────────────────────────────────────────────┐
+│ Target Client Receives Message -> Re-sorts DM List ->    │
+│ Updates Read Receipt (is_read = true)                     │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🛠️ Stack Teknologi (Tech Architecture Summary)
+
+| Layer | Teknologi & Library | Deskripsi |
+| :--- | :--- | :--- |
+| **Frontend Framework** | **Next.js 16.2.12** (App Router & Turbopack) | Server-Side Rendering (SSR), API Routes, dan kompilasi instan. |
+| **UI Library & Styling** | **React 19**, **TailwindCSS**, **Lucide React** | Antarmuka komponen modular dengan estetika *Glassmorphic Dark*. |
+| **State Management** | **Zustand** + `persist` middleware | Manajemen status global ringan yang tersimpan di `localStorage`. |
+| **Database & Auth** | **Supabase Postgres Database & Auth** | Otentikasi sesi JWT, aturan keamanan RLS (*Row Level Security*). |
+| **Realtime Engine** | **Supabase CDC & Presence Channels** | Pelacakan presensi pengguna, siaran ketuk pintu, dan centang baca pesan. |
+| **Storage** | **Supabase Storage Engine** | Penyimpanan berkas media obrolan, avatar PFP, dan ikon server. |
+| **WebRTC Infrastructure**| **LiveKit Cloud SFU Engine** | Server Media SFU WebRTC untuk panggilan suara, video, & *screen sharing*. |
+| **Visitor Analytics** | **Vercel Analytics (`@vercel/analytics`)** | Pelacakan statistik tayangan halaman & pengunjung situs *real-time*. |
 
 ---
 
