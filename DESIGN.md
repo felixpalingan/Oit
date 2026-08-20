@@ -17,6 +17,8 @@ colors:
   state-online: "#10b981"
   state-danger: "#ef4444"
   state-warning: "#f59e0b"
+  pure-white: "#ffffff"
+  orange-deep: "#ea580c"
 typography:
   display:
     fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
@@ -48,6 +50,18 @@ typography:
     fontWeight: 700
     lineHeight: 1.2
     letterSpacing: "0.05em"
+  micro:
+    fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    fontSize: "0.625rem"
+    fontWeight: 600
+    lineHeight: 1.2
+    letterSpacing: "0.02em"
+  nano:
+    fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    fontSize: "0.5625rem"
+    fontWeight: 700
+    lineHeight: 1.1
+    letterSpacing: "0.04em"
 rounded:
   sm: "8px"
   md: "12px"
