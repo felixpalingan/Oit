@@ -260,14 +260,28 @@ export default function ServerMembersSidebar({
                 className="p-2.5 hover:bg-[#1c1c21] rounded-2xl flex items-center justify-between relative group transition-all"
               >
                 <div
+                  role="button"
+                  tabIndex={0}
                   onClick={() => onOpenUserProfile && onOpenUserProfile(m.user)}
-                  className="flex items-center gap-2.5 cursor-pointer flex-1 overflow-hidden"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onOpenUserProfile && onOpenUserProfile(m.user);
+                    }
+                  }}
+                  className="flex items-center gap-2.5 cursor-pointer flex-1 overflow-hidden focus:outline-none focus:ring-1 focus:ring-[#FF5C00] rounded-xl p-1"
                 >
                   {/* User Avatar Circle */}
                   <div className="relative shrink-0">
                     <div className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center font-bold text-xs text-[#FF5C00] group-hover:border-[#FF5C00] transition-colors">
                       {m.user.avatar_url ? (
-                        <img src={m.user.avatar_url} alt="" className="w-full h-full object-cover" />
+                        <img
+                          src={m.user.avatar_url}
+                          alt={m.user.display_name || m.user.username}
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full h-full object-cover"
+                        />
                       ) : (
                         (m.user.username || 'U')[0]?.toUpperCase()
                       )}
@@ -308,7 +322,8 @@ export default function ServerMembersSidebar({
                         e.stopPropagation();
                         setActiveMenuMemberId(activeMenuMemberId === m.id ? null : m.id);
                       }}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-all cursor-pointer"
+                      aria-label={`Aksi Moderasi untuk @${m.user.username}`}
+                      className="opacity-0 group-hover:opacity-100 p-1.5 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-all cursor-pointer min-h-[32px] min-w-[32px] flex items-center justify-center"
                     >
                       <MoreVertical className="w-3.5 h-3.5" />
                     </button>

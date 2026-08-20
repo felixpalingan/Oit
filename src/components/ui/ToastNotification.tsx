@@ -47,10 +47,12 @@ export default function ToastNotification({
         {/* Icon Circle */}
         <div
           className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
-            isWarning ? 'bg-red-950/80 text-red-400 border border-red-800/80' : 'bg-zinc-800 text-zinc-300 border border-zinc-700'
+            isWarning
+              ? 'bg-red-950/80 text-red-400 border border-red-800/80'
+              : 'bg-zinc-800 text-zinc-200 border border-zinc-700'
           }`}
         >
-          {isWarning ? <AlertTriangle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5 text-zinc-300" />}
+          {isWarning ? <AlertTriangle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5 text-zinc-200" />}
         </div>
 
         {/* Content Details matching Images 1 & 2 */}
@@ -62,7 +64,11 @@ export default function ToastNotification({
           >
             {toast.title}
           </h4>
-          <p className="text-[11px] text-zinc-300 leading-relaxed">
+          <p
+            className={`text-[11px] leading-relaxed ${
+              isWarning ? 'text-red-200/90' : 'text-zinc-300'
+            }`}
+          >
             {toast.message}
           </p>
         </div>
@@ -71,7 +77,8 @@ export default function ToastNotification({
         <button
           type="button"
           onClick={onClose}
-          className="p-1 text-zinc-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors shrink-0 cursor-pointer"
+          aria-label="Tutup Notifikasi"
+          className="p-1 text-zinc-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors shrink-0 cursor-pointer min-h-[32px] min-w-[32px] flex items-center justify-center"
         >
           <X className="w-4 h-4" />
         </button>

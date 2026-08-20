@@ -113,18 +113,32 @@ export default function ChatSidebar({
           return (
             <div
               key={user.id}
+              role="button"
+              tabIndex={0}
               onClick={() => onSelectUser(user)}
-              className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all ${
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onSelectUser(user);
+                }
+              }}
+              className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all focus:outline-none focus:ring-1 focus:ring-[#FF5C00] ${
                 isActive
-                  ? 'bg-[#222228] border-l-4 border-[#FF5C00] shadow-md'
-                  : 'hover:bg-[#1c1c21] text-zinc-300'
+                  ? 'bg-[#222228] border border-[#FF5C00]/50 shadow-md shadow-[#FF5C00]/5 text-white'
+                  : 'hover:bg-[#1c1c21] text-zinc-300 border border-transparent'
               }`}
             >
               {/* Avatar + Online Indicator */}
               <div className="relative shrink-0">
                 <div className="w-11 h-11 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center font-bold text-[#FF5C00]">
                   {user.avatar_url ? (
-                    <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+                    <img
+                      src={user.avatar_url}
+                      alt={user.display_name || user.username}
+                      loading="lazy"
+                      decoding="async"
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
                     user.username[0]?.toUpperCase()
                   )}
@@ -172,8 +186,10 @@ export default function ChatSidebar({
       {/* Bottom Sticky Action Button: New Chat */}
       <div className="p-3 bg-[#121215] border-t border-zinc-800/80">
         <button
+          type="button"
           onClick={onOpenNewChatModal}
-          className="w-full bg-[#ff8a65] hover:bg-[#ff7a52] text-white font-bold py-3 px-4 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-[#ff8a65]/20 transition-all active:scale-[0.99]"
+          aria-label="Start New Chat"
+          className="w-full bg-[#FF5C00] hover:bg-[#ff701a] text-white font-bold py-3 px-4 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-[#FF5C00]/20 transition-all active:scale-[0.99] min-h-[44px]"
         >
           <Plus className="w-4 h-4 stroke-[3]" />
           <span>New Chat</span>

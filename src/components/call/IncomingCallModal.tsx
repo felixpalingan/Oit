@@ -97,7 +97,13 @@ export default function IncomingCallModal({
           <div className="absolute -inset-3 rounded-full bg-[#FF5C00]/40 animate-ping opacity-75" />
           <div className="w-24 h-24 rounded-full bg-zinc-800 border-4 border-[#FF5C00] overflow-hidden flex items-center justify-center font-extrabold text-2xl text-[#FF5C00] relative z-10 shadow-xl">
             {caller.avatar_url ? (
-              <img src={caller.avatar_url} alt="" className="w-full h-full object-cover" />
+              <img
+                src={caller.avatar_url}
+                alt={callerName}
+                loading="lazy"
+                decoding="async"
+                className="w-full h-full object-cover"
+              />
             ) : (
               (caller.username || 'U')[0]?.toUpperCase()
             )}
@@ -121,7 +127,8 @@ export default function IncomingCallModal({
           <button
             type="button"
             onClick={onDecline}
-            className="flex-1 py-3 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/40 font-bold rounded-2xl text-xs flex items-center justify-center gap-2 transition-all active:scale-[0.97] cursor-pointer"
+            aria-label="Tolak Panggilan"
+            className="flex-1 py-3 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/40 font-bold rounded-2xl text-xs flex items-center justify-center gap-2 transition-all active:scale-[0.97] min-h-[44px] cursor-pointer"
           >
             <PhoneOff className="w-4 h-4" />
             <span>Tolak</span>
@@ -131,7 +138,8 @@ export default function IncomingCallModal({
           <button
             type="button"
             onClick={onAccept}
-            className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/30 transition-all active:scale-[0.97] animate-bounce cursor-pointer"
+            aria-label="Terima Panggilan"
+            className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/30 transition-all active:scale-[0.97] hover:scale-[1.02] min-h-[44px] cursor-pointer"
           >
             <Phone className="w-4 h-4" />
             <span>Terima</span>

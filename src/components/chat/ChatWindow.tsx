@@ -666,16 +666,25 @@ export default function ChatWindow({
       parts.push(
         <span
           key={`mention-${match.index}`}
+          role="button"
+          tabIndex={0}
           onClick={(e) => {
             e.stopPropagation();
             if (targetUser && onOpenUserProfile) {
               onOpenUserProfile(targetUser);
             }
           }}
-          className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-extrabold cursor-pointer border transition-all mx-0.5 shadow-sm ${
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              e.stopPropagation();
+              if (targetUser && onOpenUserProfile) onOpenUserProfile(targetUser);
+            }
+          }}
+          className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-extrabold cursor-pointer border transition-all mx-0.5 shadow-sm focus:outline-none focus:ring-1 ${
             isMe
-              ? 'bg-white/25 hover:bg-white/40 text-white border-white/40'
-              : 'bg-[#FF5C00]/30 hover:bg-[#FF5C00]/50 text-[#FF5C00] hover:text-white border-[#FF5C00]/50'
+              ? 'bg-white/25 hover:bg-white/40 text-white border-white/40 focus:ring-white'
+              : 'bg-[#FF5C00]/30 hover:bg-[#FF5C00]/50 text-[#FF5C00] hover:text-white border-[#FF5C00]/50 focus:ring-[#FF5C00]'
           }`}
         >
           @{mentionUsername}
@@ -733,22 +742,38 @@ export default function ChatWindow({
         <div className="flex items-center gap-2.5">
           {/* Mobile Hamburger Drawer Toggle Button */}
           <button
+            type="button"
             onClick={() => setIsMobileDrawerOpen(true)}
+            aria-label="Open Channels Menu"
             title="Open Channels Menu"
-            className="md:hidden p-2 text-zinc-300 hover:text-white rounded-xl bg-[#1c1c21] border border-zinc-800 active:scale-95 transition-all"
+            className="md:hidden p-2 text-zinc-300 hover:text-white rounded-xl bg-[#1c1c21] border border-zinc-800 active:scale-95 transition-all min-h-[40px] min-w-[40px] flex items-center justify-center cursor-pointer"
           >
             <Menu className="w-5 h-5 text-[#FF5C00]" />
           </button>
 
           {chatUser ? (
             <div
+              role="button"
+              tabIndex={0}
               onClick={() => onOpenUserProfile && onOpenUserProfile(chatUser)}
-              className="relative shrink-0 cursor-pointer group"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onOpenUserProfile && onOpenUserProfile(chatUser);
+                }
+              }}
+              className="relative shrink-0 cursor-pointer group focus:outline-none focus:ring-1 focus:ring-[#FF5C00] rounded-full"
               title="Lihat Profil Pengguna"
             >
               <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center font-bold text-xs text-[#FF5C00] group-hover:border-[#FF5C00] transition-colors">
                 {chatUser.avatar_url ? (
-                  <img src={chatUser.avatar_url} alt="" className="w-full h-full object-cover" />
+                  <img
+                    src={chatUser.avatar_url}
+                    alt={chatUser.display_name || chatUser.username}
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
                   chatUser.username[0]?.toUpperCase()
                 )}
@@ -792,24 +817,30 @@ export default function ChatWindow({
         {/* Action Call Buttons */}
         <div className="flex items-center gap-1 md:gap-2">
           <button
+            type="button"
             onClick={() => onStartCall(false)}
+            aria-label="Start Voice Call"
             title="Voice Call"
-            className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-colors active:scale-95 cursor-pointer"
+            className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-colors active:scale-95 min-h-[40px] min-w-[40px] flex items-center justify-center cursor-pointer"
           >
             <Phone className="w-4 h-4" />
           </button>
 
           <button
+            type="button"
             onClick={() => onStartCall(true)}
+            aria-label="Start Video Call"
             title="Video Call"
-            className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-colors active:scale-95 cursor-pointer"
+            className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-colors active:scale-95 min-h-[40px] min-w-[40px] flex items-center justify-center cursor-pointer"
           >
             <Video className="w-4 h-4" />
           </button>
 
           <button
+            type="button"
+            aria-label="More Channel Options"
             title="More Options"
-            className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-colors active:scale-95 cursor-pointer"
+            className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-colors active:scale-95 min-h-[40px] min-w-[40px] flex items-center justify-center cursor-pointer"
           >
             <MoreVertical className="w-4 h-4" />
           </button>
@@ -850,7 +881,7 @@ export default function ChatWindow({
           const senderRoleWeight = roleWeights[memberRolesMap[msg.sender_id] || 'member'] || 1;
           const canDeleteMessage = isMe || (!chatUser && myRoleWeight > senderRoleWeight);
 
-          // Find quoted parent message for Ticket 8
+          // Find quoted parent message
           const parentMsg = msg.reply_to_id ? messages.find((m) => m.id === msg.reply_to_id) : null;
           const parentSender = parentMsg ? sendersMap[parentMsg.sender_id] : null;
           const parentSenderName = parentMsg?.sender_id === currentUser.id ? 'You' : (parentSender?.display_name || parentSender?.username || 'User');
@@ -859,17 +890,31 @@ export default function ChatWindow({
             <div
               key={msg.id}
               className={`flex items-start gap-2.5 group relative p-1.5 rounded-2xl transition-all ${
-                isMentioningMe ? 'bg-[#FF5C00]/10 border-l-4 border-[#FF5C00] pl-3' : ''
+                isMentioningMe ? 'bg-[#FF5C00]/10 border border-[#FF5C00]/40 pl-3' : ''
               } ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
             >
               {/* Actual Sender Avatar */}
               <div
+                role="button"
+                tabIndex={0}
                 onClick={() => senderProfile && onOpenUserProfile && onOpenUserProfile(senderProfile)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    senderProfile && onOpenUserProfile && onOpenUserProfile(senderProfile);
+                  }
+                }}
                 title={`Lihat Profil @${senderProfile?.username || ''}`}
-                className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center text-xs font-bold text-[#FF5C00] shrink-0 mt-0.5 cursor-pointer hover:border-[#FF5C00] transition-colors"
+                className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center text-xs font-bold text-[#FF5C00] shrink-0 mt-0.5 cursor-pointer hover:border-[#FF5C00] transition-colors focus:outline-none focus:ring-1 focus:ring-[#FF5C00]"
               >
                 {senderAvatar ? (
-                  <img src={senderAvatar} alt="" className="w-full h-full object-cover" />
+                  <img
+                    src={senderAvatar}
+                    alt={senderName}
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
                   <span>{senderInitial}</span>
                 )}
@@ -879,8 +924,16 @@ export default function ChatWindow({
                 
                 <div className="flex items-center gap-1.5 mb-1">
                   <span
+                    role="button"
+                    tabIndex={0}
                     onClick={() => senderProfile && onOpenUserProfile && onOpenUserProfile(senderProfile)}
-                    className="text-[11px] md:text-xs font-bold text-white cursor-pointer hover:underline"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        senderProfile && onOpenUserProfile && onOpenUserProfile(senderProfile);
+                      }
+                    }}
+                    className="text-[11px] md:text-xs font-bold text-white cursor-pointer hover:underline focus:outline-none"
                   >
                     {senderName}
                   </span>
@@ -895,7 +948,7 @@ export default function ChatWindow({
 
                 {/* QUOTED PARENT MESSAGE SNIPPET */}
                 {parentMsg && (
-                  <div className="mb-1.5 p-2 bg-[#18181c] border-l-2 border-[#FF5C00] rounded-r-xl text-[10px] text-zinc-400 max-w-full overflow-hidden">
+                  <div className="mb-1.5 p-2 bg-[#18181c] border border-zinc-700/60 rounded-xl text-[10px] text-zinc-400 max-w-full overflow-hidden">
                     <span className="font-bold text-[#FF5C00] mr-1">Replying to @{parentSenderName}:</span>
                     <span className="truncate block italic">{parentMsg.is_deleted ? 'Pesan telah dihapus' : (parentMsg.content || 'Attachment')}</span>
                   </div>
@@ -905,7 +958,7 @@ export default function ChatWindow({
                 <div
                   className={`p-3 rounded-2xl relative shadow-md group/bubble ${
                     isMentioningMe
-                      ? 'bg-[#1e1c18] border-2 border-[#FF5C00] text-zinc-100'
+                      ? 'bg-[#1e1c18] border border-[#FF5C00]/60 text-zinc-100'
                       : isMe
                       ? 'bg-[#FF5C00] text-white rounded-tr-none'
                       : 'bg-[#1c1c21] text-zinc-100 border border-zinc-800/80 rounded-tl-none'
@@ -921,8 +974,9 @@ export default function ChatWindow({
                       <button
                         type="button"
                         onClick={() => setReplyingToMessage(msg)}
+                        aria-label="Quote Reply"
                         title="Quote Reply"
-                        className="p-1 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer"
+                        className="p-1.5 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer min-h-[32px] min-w-[32px] flex items-center justify-center"
                       >
                         <Reply className="w-3.5 h-3.5" />
                       </button>
@@ -931,8 +985,9 @@ export default function ChatWindow({
                         <button
                           type="button"
                           onClick={() => handleStartEdit(msg)}
+                          aria-label="Edit Pesan"
                           title="Edit Pesan"
-                          className="p-1 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer"
+                          className="p-1.5 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer min-h-[32px] min-w-[32px] flex items-center justify-center"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
@@ -942,8 +997,9 @@ export default function ChatWindow({
                         <button
                           type="button"
                           onClick={() => handleDeleteMessage(msg.id)}
+                          aria-label={isMe ? 'Hapus Pesan' : 'Hapus Pesan (Moderator)'}
                           title={isMe ? 'Hapus Pesan' : 'Hapus Pesan (Moderator)'}
-                          className="p-1 text-zinc-400 hover:text-red-400 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer"
+                          className="p-1.5 text-zinc-400 hover:text-red-400 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer min-h-[32px] min-w-[32px] flex items-center justify-center"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -970,14 +1026,14 @@ export default function ChatWindow({
                         <button
                           type="button"
                           onClick={() => setEditingMessageId(null)}
-                          className="px-2 py-1 text-zinc-300 hover:text-white font-bold"
+                          className="px-2 py-1 text-zinc-300 hover:text-white font-bold min-h-[32px]"
                         >
                           Batal
                         </button>
                         <button
                           type="button"
                           onClick={() => handleSaveEdit(msg.id)}
-                          className="px-2.5 py-1 bg-white text-black rounded-lg font-bold hover:bg-zinc-200"
+                          className="px-2.5 py-1 bg-white text-black rounded-lg font-bold hover:bg-zinc-200 min-h-[32px]"
                         >
                           Simpan
                         </button>
@@ -986,13 +1042,23 @@ export default function ChatWindow({
                   ) : attachUrl && isImg ? (
                     /* Image Attachment */
                     <div
+                      role="button"
+                      tabIndex={0}
                       onClick={() => onOpenImageLightbox && onOpenImageLightbox(attachUrl, msg.file_name || msg.content || 'image.png')}
-                      className="block cursor-pointer hover:opacity-90 transition-opacity mb-1"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onOpenImageLightbox && onOpenImageLightbox(attachUrl, msg.file_name || msg.content || 'image.png');
+                        }
+                      }}
+                      className="block cursor-pointer hover:opacity-90 transition-opacity mb-1 focus:outline-none focus:ring-1 focus:ring-white rounded-xl"
                     >
                       <div className="rounded-xl overflow-hidden max-w-xs sm:max-w-sm border border-white/20 relative group bg-black/40">
                         <img
                           src={attachUrl}
                           alt={msg.file_name || 'Uploaded Image'}
+                          loading="lazy"
+                          decoding="async"
                           className="w-full h-auto object-cover max-h-64 md:max-h-72 rounded-lg"
                         />
                         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-xs font-bold gap-1.5">
@@ -1093,8 +1159,9 @@ export default function ChatWindow({
           <button
             type="button"
             onClick={() => processSingleFile(lastFailedFile)}
+            aria-label="Coba Unggah Lagi"
             title="Coba Unggah Lagi"
-            className="ml-3 p-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl transition-colors cursor-pointer shrink-0 border border-zinc-700"
+            className="ml-3 p-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl transition-colors cursor-pointer shrink-0 border border-zinc-700 min-h-[36px] min-w-[36px] flex items-center justify-center"
           >
             <RotateCcw className="w-4 h-4 text-white" />
           </button>
@@ -1128,7 +1195,8 @@ export default function ChatWindow({
           <button
             type="button"
             onClick={() => setReplyingToMessage(null)}
-            className="p-1 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
+            aria-label="Batal Balas Pesan"
+            className="p-1 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer shrink-0 min-h-[32px] min-w-[32px] flex items-center justify-center"
           >
             <X className="w-4 h-4" />
           </button>
@@ -1144,12 +1212,26 @@ export default function ChatWindow({
           {filteredMentionUsers.map((u) => (
             <div
               key={u.id}
+              role="button"
+              tabIndex={0}
               onClick={() => selectMentionUser(u)}
-              className="flex items-center gap-2 p-2 hover:bg-[#242429] rounded-xl cursor-pointer transition-colors"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  selectMentionUser(u);
+                }
+              }}
+              className="flex items-center gap-2 p-2 hover:bg-[#242429] rounded-xl cursor-pointer transition-colors focus:outline-none focus:ring-1 focus:ring-[#FF5C00]"
             >
               <div className="w-6 h-6 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center text-[10px] font-bold text-[#FF5C00] shrink-0">
                 {u.avatar_url ? (
-                  <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />
+                  <img
+                    src={u.avatar_url}
+                    alt={u.display_name || u.username}
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
                   (u.username || 'U')[0].toUpperCase()
                 )}
@@ -1184,7 +1266,8 @@ export default function ChatWindow({
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading || isCurrentlyMuted}
-          className="w-9 h-9 md:w-10 md:h-10 bg-[#1c1c21] hover:bg-[#25252b] text-zinc-400 hover:text-white border border-zinc-800 rounded-full flex items-center justify-center shrink-0 transition-colors active:scale-95 disabled:opacity-40 cursor-pointer"
+          aria-label="Unggah berkas lampiran"
+          className="w-9 h-9 md:w-10 md:h-10 bg-[#1c1c21] hover:bg-[#25252b] text-zinc-400 hover:text-white border border-zinc-800 rounded-full flex items-center justify-center shrink-0 transition-colors active:scale-95 disabled:opacity-40 cursor-pointer min-h-[36px] min-w-[36px]"
         >
           <Plus className="w-4 h-4 md:w-5 md:h-5 stroke-[2.5]" />
         </button>
@@ -1209,7 +1292,8 @@ export default function ChatWindow({
             type="button"
             onClick={() => setMessageText((prev) => prev + ' 😊')}
             disabled={isUploading || isCurrentlyMuted}
-            className="text-zinc-400 hover:text-white transition-colors shrink-0 disabled:opacity-40 cursor-pointer"
+            aria-label="Pilih Emoji"
+            className="text-zinc-400 hover:text-white transition-colors shrink-0 disabled:opacity-40 cursor-pointer p-1 min-h-[32px] min-w-[32px] flex items-center justify-center"
           >
             <Smile className="w-4 h-4 md:w-5 md:h-5" />
           </button>
@@ -1219,7 +1303,8 @@ export default function ChatWindow({
           type="button"
           onClick={handleSendMessage}
           disabled={!messageText.trim() || isUploading || isCurrentlyMuted}
-          className="w-9 h-9 md:w-10 md:h-10 bg-[#FF5C00] hover:bg-[#ff701a] text-white rounded-2xl flex items-center justify-center shrink-0 shadow-lg shadow-[#FF5C00]/25 transition-all disabled:opacity-40 active:scale-95 cursor-pointer"
+          aria-label="Kirim Pesan"
+          className="w-9 h-9 md:w-10 md:h-10 bg-[#FF5C00] hover:bg-[#ff701a] text-white rounded-2xl flex items-center justify-center shrink-0 shadow-lg shadow-[#FF5C00]/25 transition-all disabled:opacity-40 active:scale-95 cursor-pointer min-h-[36px] min-w-[36px]"
         >
           <Send className="w-4 h-4 fill-current stroke-[2.5]" />
         </button>
