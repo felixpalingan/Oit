@@ -26,7 +26,10 @@ build/
 
 # Agent skills & local assistant files
 .agents/
+.impeccable/
 .codex/
+skills-lock.json
 *.tsbuildinfo
+
 
 
