@@ -23,3 +23,10 @@ build/
 *.pem
 .vscode/
 .idea/
+
+# Agent skills & local assistant files
+.agents/
+.codex/
+*.tsbuildinfo
+
+
