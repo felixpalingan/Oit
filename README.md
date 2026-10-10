@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  Platform komunikasi real-time modern berkemampuan tinggi yang dirancang untuk pengembang dan komunitas teknologi — menghadirkan instant messaging sub-100ms, panggilan audio/video WebRTC latensi rendah (SFU), role-based access control (RBAC) 4 tingkat, serta tema <em>High-Voltage Dark</em> yang responsif dan elegan.
+  A modern, full-stack real-time communication platform engineered for high-velocity teams and tech communities — featuring sub-100ms instant messaging, low-latency LiveKit SFU audio/video calling, 4-tier RBAC moderation, and an iconic High-Voltage dark aesthetic.
 </p>
 
 <p align="center">
@@ -22,67 +22,11 @@
 
 ---
 
-### 📖 Tentang Proyek (About Oit)
+## 📖 Overview
 
-**Oit** adalah platform komunikasi real-time *full-stack* tingkat enterprise yang dibangun untuk kolaborasi tim, komunitas developer, dan sinkronisasi proyek harian:
-- **⚡ Super Cepat**: Menggunakan Supabase Realtime CDC via WebSocket dengan latensi sub-100ms dan zero-polling.
-- **🎙️ WebRTC Group Call & Floating Pod**: Panggilan suara & video multi-partisipan berbasis LiveKit SFU, DSP active speaker detection, dan floating call overlay (`● Live`) yang tetap aktif saat berpindah channel.
-- **🛡️ Tata Kelola Komunitas & RBAC Dinamis**: Hierarki peran 4-tingkat (`Owner > Admin > Moderator > Member`), mute sementara (10 menit), kick/ban permanen, dan audit log live.
-- **🔒 Saluran Terproteksi & Door-Knocking**: Akses channel privat dengan proteksi password serta protokol permintaan masuk *door-knocking* real-time.
-- **🎨 High-Voltage Dark Aesthetic**: Didesain dengan palet khas `#000000` base, `#161619` surface, dan aksen oranye menyala `#FF5C00` bergaya glassmorphism modern.
+**Oit** combines the speed and organization of modern community servers with low-latency WebRTC group calling (LiveKit SFU), persistent floating background calls (`● Live`), zero-polling PostgreSQL CDC real-time updates via Supabase, and a responsive dark glassmorphic interface designed for developer workflows.
 
-🌐 **Aplikasi Live (Produksi)**: [https://oit-seven.vercel.app](https://oit-seven.vercel.app)
-
----
-
-## 🚀 Comprehensive Feature Architecture & Capabilities
-
-### 💬 1. Advanced Real-Time Messaging Engine
-- **Sub-100ms Delivery**: Powered by Supabase Realtime Change Data Capture (CDC) over WebSocket pipelines.
-- **Inline Message Editing**: Allows users to update past messages in real time with an `(edited)` metadata tag (`is_edited: true`).
-- **Soft-Deletion System**: Messages are soft-deleted (`is_deleted: true`), rendering "Pesan ini telah dihapus" to maintain chat flow while enforcing role-weighted deletion rights.
-- **Threaded Quote Replies**: Self-referencing FK (`reply_to_id`) rendering a context snippet of the original message above the reply bubble.
-- **Interactive `@username` Mentions**: Autocompletes usernames during typing and renders clickable mention badges that trigger user profile popovers.
-- **Dynamic Mention Highlighting**: High-contrast orange glow borders for received mentions and White Glassmorphism badges (`bg-white/25 border-white/40`) for sent mentions.
-- **Real-Time Read Receipts**: Double checkmark transitions (`✔` to `✔✔`) updated via real-time WebSocket events as recipients view channels.
-- **Rich Media & File Attachments**: Supports image previewing, document downloads, and inline code formatting.
-- **Drag-and-Drop Dropzone**: Full-screen visual dropzone overlay for smooth file uploads across text channels.
-
-### 🛡️ 2. Role-Based Access Control (RBAC) & Moderation System
-- **4-Tier Role Hierarchy**: Enforces role weights (`Owner (4) > Admin (3) > Moderator (2) > Member (1)`) across all moderation privileges.
-- **Time-Bound User Muting**: Restricts users for 10 minutes (`muted_until`), disabling text inputs, emoji pickers, and file attachment buttons on the client.
-- **Room Ejection (Kick) & Permanent Bans**: Ejects members or registers permanent bans in `server_bans`, strictly rejecting rejoin attempts.
-- **Instant Eviction & Navigation Rail Sync**: Leverages PostgreSQL `REPLICA IDENTITY FULL` to propagate `DELETE` and `INSERT` events, immediately removing server icons from sidebar rails without browser reloads.
-- **Real-Time Audit Trail Dashboard**: Records every moderation event (KICK, BAN, MUTE, ROLE_UPDATE) into an `audit_logs` table, streamed live to server settings.
-
-### 🎙️ 3. WebRTC Audio/Video SFU Infrastructure
-- **Selective Forwarding Unit (SFU)**: Integrated with LiveKit Cloud to distribute single-upstream media encodes to multi-party calls efficiently.
-- **Active Speaker Recognition**: Digital Signal Processing (DSP) audio analysis highlighting active speakers with real-time visual glows.
-- **Floating Call Pod (`● Live`)**: Allows users to minimize ongoing video/voice calls into a floating pod while browsing text channels.
-- **In-Call Hardware Controls**: Toggle microphone, camera, and screen sharing dynamically within active WebRTC sessions.
-- **Hardware Device Selection & Storage Persistence**: Saves user-selected microphones and cameras to `localStorage` via Zustand store middleware.
-- **Web Audio API Spectrum Analyzer**: Measures input microphone volume levels in settings (`AnalyserNode`) and enforces strict stream cleanup (`track.stop()`) upon modal close.
-- **Synthesized Dual-Tone Ringtone**: Generates Web Audio API dual-tone chimes for incoming calls without external audio file dependencies.
-
-### 👥 4. Community Workspaces & Member Experience
-- **Custom Server Creation**: Supports custom server names and icon uploads stored in Supabase Storage with Base64 fallbacks.
-- **Public Community Directory & Private Invitations**: Browse public servers or join private servers using unique invitation codes.
-- **Channel Hierarchy**: Create and organize text and voice channels within servers.
-- **Password-Protected Private Channels**: Password verification modals securing sensitive channels.
-- **Door-Knocking Request Protocol**: Sends real-time `knock` signals for private channel entry authorization from room owners.
-- **Right-Hand Members Panel (`ServerMembersSidebar`)**: Displays server members sorted by role rank, featuring online status dots, mute tags, and quick-action moderation context menus.
-- **Single-DOM Mobile Drawer**: 60fps GPU-accelerated off-canvas navigation drawer for mobile viewports.
-
-### 🧱 5. Fault Tolerance & System Edge-Case Resilience
-- **Pre-Upload File Size Limiter**: Enforces a strict 25MB file size limit on the client, triggering floating `FILE TOO LARGE` warning notifications.
-- **Interrupted Upload Recovery State**: Detects connection drops during uploads, displaying a red error state (`📡 GAGAL MENGUNGGAH`) with an instant retry action button.
-- **Smart 404 Route Interception**: Intercepts requests to deleted servers or invalid routes (`src/app/not-found.tsx`), redirecting users to the home dashboard with floating warning alerts (`Akses Ditolak`).
-- **Discord-Style Unread Badges**: Pulsing orange/red notification dot on the brand logo when unread direct messages exist.
-
-### 🎨 6. Signature Design System & UI Ergonomics
-- **Oit High-Voltage Theme**: Dark palette (`#000000` base, `#161619` surfaces, `#FF5C00` Vibrant Orange accent).
-- **Glassmorphic Modals**: Custom blurred backdrop overlays for profiles, server settings, and security checks.
-- **On-Screen Lightbox**: Click-to-expand image lightbox with Blob URL download capabilities.
+- 🌐 **Live Demo**: [https://oit-seven.vercel.app](https://oit-seven.vercel.app)
 
 ---
 
@@ -121,6 +65,57 @@
 | **Realtime** | **Supabase CDC & Presence** | Real-time WAL replication over WebSockets for zero-polling UX. |
 | **Media Engine** | **LiveKit Cloud SFU** | Scalable multi-party audio/video WebRTC streaming with low CPU overhead. |
 | **Analytics** | **Vercel Analytics** | Production traffic monitoring and web performance metrics. |
+
+---
+
+## 🚀 System Features & Capabilities
+
+### 💬 1. Advanced Real-Time Messaging Engine
+- **Sub-100ms Delivery**: Powered by Supabase Realtime Change Data Capture (CDC) over WebSocket pipelines.
+- **Inline Message Editing**: Allows users to update past messages in real time with an `(edited)` metadata tag (`is_edited: true`).
+- **Soft-Deletion System**: Messages are soft-deleted (`is_deleted: true`), rendering "This message has been deleted" to maintain chat flow while enforcing role-weighted deletion rights.
+- **Threaded Quote Replies**: Self-referencing foreign key (`reply_to_id`) rendering a context snippet of the original message above the reply bubble.
+- **Interactive `@username` Mentions**: Autocompletes usernames during typing and renders clickable mention badges that trigger user profile popovers.
+- **Dynamic Mention Highlighting**: High-contrast orange glow borders for received mentions and White Glassmorphism badges (`bg-white/25 border-white/40`) for sent mentions.
+- **Real-Time Read Receipts**: Double checkmark transitions (`✔` to `✔✔`) updated via real-time WebSocket events as recipients view channels.
+- **Rich Media & File Attachments**: Supports image previewing, document downloads, and inline code formatting.
+- **Drag-and-Drop Dropzone**: Full-screen visual dropzone overlay for smooth file uploads across text channels.
+
+### 🛡️ 2. Role-Based Access Control (RBAC) & Moderation System
+- **4-Tier Role Hierarchy**: Enforces role weights (`Owner (4) > Admin (3) > Moderator (2) > Member (1)`) across all moderation privileges.
+- **Time-Bound User Muting**: Restricts users for 10 minutes (`muted_until`), disabling text inputs, emoji pickers, and file attachment buttons on the client.
+- **Room Ejection (Kick) & Permanent Bans**: Ejects members or registers permanent bans in `server_bans`, strictly rejecting rejoin attempts.
+- **Instant Eviction & Navigation Rail Sync**: Leverages PostgreSQL `REPLICA IDENTITY FULL` to propagate `DELETE` and `INSERT` events, immediately removing server icons from sidebar rails without browser reloads.
+- **Real-Time Audit Trail Dashboard**: Records every moderation event (KICK, BAN, MUTE, ROLE_UPDATE) into an `audit_logs` table, streamed live to server settings.
+
+### 🎙️ 3. WebRTC Audio/Video SFU Infrastructure
+- **Selective Forwarding Unit (SFU)**: Integrated with LiveKit Cloud to distribute single-upstream media encodes to multi-party calls efficiently.
+- **Active Speaker Recognition**: Digital Signal Processing (DSP) audio analysis highlighting active speakers with real-time visual glows.
+- **Floating Call Pod (`● Live`)**: Allows users to minimize ongoing video/voice calls into a floating pod while browsing text channels.
+- **In-Call Hardware Controls**: Toggle microphone, camera, and screen sharing dynamically within active WebRTC sessions.
+- **Hardware Device Selection & Storage Persistence**: Saves user-selected microphones and cameras to `localStorage` via Zustand store middleware.
+- **Web Audio API Spectrum Analyzer**: Measures input microphone volume levels in settings (`AnalyserNode`) and enforces strict stream cleanup (`track.stop()`) upon modal close.
+- **Synthesized Dual-Tone Ringtone**: Generates Web Audio API dual-tone chimes for incoming calls without external audio file dependencies.
+
+### 👥 4. Community Workspaces & Member Experience
+- **Custom Server Creation**: Supports custom server names and icon uploads stored in Supabase Storage with Base64 fallbacks.
+- **Public Community Directory & Private Invitations**: Browse public servers or join private servers using unique invitation codes.
+- **Channel Hierarchy**: Create and organize text and voice channels within servers.
+- **Password-Protected Private Channels**: Password verification modals securing sensitive channels.
+- **Door-Knocking Request Protocol**: Sends real-time `knock` signals for private channel entry authorization from room owners.
+- **Right-Hand Members Panel (`ServerMembersSidebar`)**: Displays server members sorted by role rank, featuring online status dots, mute tags, and quick-action moderation context menus.
+- **Single-DOM Mobile Drawer**: 60fps GPU-accelerated off-canvas navigation drawer for mobile viewports.
+
+### 🧱 5. Fault Tolerance & System Edge-Case Resilience
+- **Pre-Upload File Size Limiter**: Enforces a strict 25MB file size limit on the client, triggering floating `FILE TOO LARGE` warning notifications.
+- **Interrupted Upload Recovery State**: Detects connection drops during uploads, displaying a warning recovery state with an instant retry action button.
+- **Smart 404 Route Interception**: Intercepts requests to deleted servers or invalid routes (`src/app/not-found.tsx`), redirecting users to the home dashboard with floating warning alerts (`Access Denied`).
+- **Discord-Style Unread Badges**: Pulsing orange/red notification dot on the brand logo when unread direct messages exist.
+
+### 🎨 6. Signature Design System & UI Ergonomics
+- **Oit High-Voltage Theme**: Dark palette (`#000000` base, `#161619` surfaces, `#FF5C00` Vibrant Orange accent).
+- **Glassmorphic Modals**: Custom blurred backdrop overlays for profiles, server settings, and security checks.
+- **On-Screen Lightbox**: Click-to-expand image lightbox with Blob URL download capabilities.
 
 ---
 
@@ -165,7 +160,7 @@ CREATE TABLE IF NOT EXISTS public.server_bans (
   server_id UUID NOT NULL REFERENCES public.servers(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   banned_by UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  reason TEXT DEFAULT 'Pelanggaran aturan server',
+  reason TEXT DEFAULT 'Server rules violation',
   created_at TIMESTAMPTZ DEFAULT now(),
   UNIQUE(server_id, user_id)
 );
