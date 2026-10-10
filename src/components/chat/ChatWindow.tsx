@@ -207,6 +207,29 @@ export default function ChatWindow({
     };
   }, [activeServerId, currentChannelId, chatUser, currentUser.id, supabase]);
 
+  // Auto-unmute timer: secara otomatis membersihkan status mute saat masa berlaku habis
+  useEffect(() => {
+    if (!mutedUntil) return;
+    const diff = new Date(mutedUntil).getTime() - Date.now();
+    if (diff <= 0) {
+      setMutedUntil(null);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setMutedUntil(null);
+      if (onShowToast) {
+        onShowToast({
+          id: `unmute-${Date.now()}`,
+          type: 'info',
+          title: 'Mute Berakhir',
+          message: 'Masa bungkam (mute) Anda di server ini telah selesai. Anda dapat kembali mengirim pesan.',
+        });
+      }
+    }, diff);
+
+    return () => clearTimeout(timer);
+  }, [mutedUntil, onShowToast]);
+
   // Mark messages as read
   const markMessagesAsRead = async () => {
     if (!chatUser) return;
@@ -390,7 +413,17 @@ export default function ChatWindow({
     if (!messageText.trim()) return;
 
     if (isCurrentlyMuted) {
-      alert(`Anda sedang dibungkam (Muted) di server ini hingga ${new Date(mutedUntil!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`);
+      const mutedAlert = `Anda sedang dibungkam (Muted) di server ini hingga ${new Date(mutedUntil!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`;
+      if (onShowToast) {
+        onShowToast({
+          id: `muted-toast-${Date.now()}`,
+          type: 'warning',
+          title: 'Akses Dibatasi',
+          message: mutedAlert,
+        });
+      } else {
+        alert(mutedAlert);
+      }
       return;
     }
 
@@ -419,6 +452,24 @@ export default function ChatWindow({
 
       if (error) {
         console.error('Failed to insert message:', error);
+        setMessageText(contentToSend);
+        const isPermissionDenied =
+          error.code === '42501' ||
+          error.message?.toLowerCase().includes('violates row-level security');
+        const alertMsg = isPermissionDenied
+          ? 'Akses ditolak: Anda tidak memiliki izin untuk mengirim pesan di channel ini (Muted / Banned / Non-member).'
+          : `Gagal mengirim pesan: ${error.message}`;
+
+        if (onShowToast) {
+          onShowToast({
+            id: `send-err-${Date.now()}`,
+            type: 'warning',
+            title: 'Gagal Mengirim Pesan',
+            message: alertMsg,
+          });
+        } else {
+          alert(alertMsg);
+        }
       } else if (data) {
         setMessages((prev) => {
           if (prev.some((m) => m.id === data.id)) return prev;
@@ -426,8 +477,9 @@ export default function ChatWindow({
         });
         setTimeout(scrollToBottom, 100);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Unexpected error sending message:', err);
+      setMessageText(contentToSend);
     }
   };
 
@@ -441,6 +493,7 @@ export default function ChatWindow({
     if (!editText.trim()) return;
 
     const newContent = editText.trim();
+    const prevMsg = messages.find((m) => m.id === msgId);
     setEditingMessageId(null);
 
     setMessages((prev) =>
@@ -448,12 +501,39 @@ export default function ChatWindow({
     );
 
     try {
-      await supabase
+      const { error } = await supabase
         .from('messages')
         .update({ content: newContent, is_edited: true })
         .eq('id', msgId);
-    } catch (err) {
+
+      if (error) {
+        console.error('Edit message error:', error);
+        if (prevMsg) {
+          setMessages((prev) => prev.map((m) => (m.id === msgId ? prevMsg : m)));
+        }
+        const isPermissionDenied =
+          error.code === '42501' ||
+          error.message?.toLowerCase().includes('violates row-level security');
+        const alertMsg = isPermissionDenied
+          ? 'Akses ditolak: Anda tidak dapat mengedit pesan ini (Muted / Banned / Bukan pemilik pesan).'
+          : `Gagal mengedit pesan: ${error.message}`;
+
+        if (onShowToast) {
+          onShowToast({
+            id: `edit-err-${Date.now()}`,
+            type: 'warning',
+            title: 'Gagal Mengedit Pesan',
+            message: alertMsg,
+          });
+        } else {
+          alert(alertMsg);
+        }
+      }
+    } catch (err: any) {
       console.error('Edit message error:', err);
+      if (prevMsg) {
+        setMessages((prev) => prev.map((m) => (m.id === msgId ? prevMsg : m)));
+      }
     }
   };
 
@@ -461,6 +541,7 @@ export default function ChatWindow({
   const handleDeleteMessage = async (msgId: string) => {
     if (!confirm('Apakah Anda yakin ingin menghapus pesan ini?')) return;
 
+    const prevMsg = messages.find((m) => m.id === msgId);
     setMessages((prev) =>
       prev.map((m) =>
         m.id === msgId ? { ...m, is_deleted: true, content: 'Pesan ini telah dihapus' } : m
@@ -468,12 +549,39 @@ export default function ChatWindow({
     );
 
     try {
-      await supabase
+      const { error } = await supabase
         .from('messages')
         .update({ is_deleted: true, content: 'Pesan ini telah dihapus' })
         .eq('id', msgId);
-    } catch (err) {
+
+      if (error) {
+        console.error('Delete message error:', error);
+        if (prevMsg) {
+          setMessages((prev) => prev.map((m) => (m.id === msgId ? prevMsg : m)));
+        }
+        const isPermissionDenied =
+          error.code === '42501' ||
+          error.message?.toLowerCase().includes('violates row-level security');
+        const alertMsg = isPermissionDenied
+          ? 'Akses ditolak: Anda tidak memiliki wewenang untuk menghapus pesan ini.'
+          : `Gagal menghapus pesan: ${error.message}`;
+
+        if (onShowToast) {
+          onShowToast({
+            id: `delete-err-${Date.now()}`,
+            type: 'warning',
+            title: 'Gagal Menghapus Pesan',
+            message: alertMsg,
+          });
+        } else {
+          alert(alertMsg);
+        }
+      }
+    } catch (err: any) {
       console.error('Delete message error:', err);
+      if (prevMsg) {
+        setMessages((prev) => prev.map((m) => (m.id === msgId ? prevMsg : m)));
+      }
     }
   };
 
@@ -569,15 +677,35 @@ export default function ChatWindow({
         .select()
         .single();
 
-      if (!insertError && insertedMsg) {
+      if (insertError) {
+        console.error('File message insert failed:', insertError);
+        const isPermissionDenied =
+          insertError.code === '42501' ||
+          insertError.message?.toLowerCase().includes('violates row-level security');
+        const alertMsg = isPermissionDenied
+          ? 'Akses ditolak: Anda tidak memiliki izin untuk mengunggah berkas di channel ini (Muted / Banned).'
+          : `Gagal mengirim berkas: ${insertError.message}`;
+
+        if (onShowToast) {
+          onShowToast({
+            id: `file-err-${Date.now()}`,
+            type: 'warning',
+            title: 'Gagal Mengunggah Berkas',
+            message: alertMsg,
+          });
+        } else {
+          alert(alertMsg);
+        }
+        setUploadFailed(true);
+        setUploadProgress(100);
+      } else if (insertedMsg) {
         setMessages((prev) => {
           if (prev.some((m) => m.id === insertedMsg.id)) return prev;
           return [...prev, insertedMsg as Message];
         });
+        setUploadFailed(false);
+        setLastFailedFile(null);
       }
-
-      setUploadFailed(false);
-      setLastFailedFile(null);
     } catch (err) {
       console.error('File upload failed:', err);
       setUploadFailed(true);

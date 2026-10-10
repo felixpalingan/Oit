@@ -114,6 +114,68 @@ AS $$
   );
 $$;
 
+-- Konversi nama role ke bobot peringkat hierarki
+CREATE OR REPLACE FUNCTION public.get_member_role_rank(p_role TEXT)
+RETURNS INT
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT CASE p_role
+    WHEN 'owner' THEN 4
+    WHEN 'admin' THEN 3
+    WHEN 'moderator' THEN 2
+    ELSE 1 -- 'member'
+  END;
+$$;
+
+-- Ambil role member saat ini berdasarkan id member (SECURITY DEFINER untuk cegah RLS recursion)
+CREATE OR REPLACE FUNCTION public.get_member_role_by_id(p_member_id UUID)
+RETURNS TEXT
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT role FROM public.server_members WHERE id = p_member_id;
+$$;
+
+-- Cek apakah actor memiliki wewenang hierarki untuk memoderasi target (Mute, Kick, Ban)
+CREATE OR REPLACE FUNCTION public.can_moderate_member(p_server_id UUID, p_actor_id UUID, p_target_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT 
+    -- 1. Target tidak boleh merupakan owner server
+    p_target_id != (SELECT owner_id FROM public.servers WHERE id = p_server_id)
+    -- 2. Actor tidak boleh memoderasi dirinya sendiri
+    AND p_actor_id != p_target_id
+    -- 3. Jika actor adalah owner server, selalu diizinkan
+    AND (
+      p_actor_id = (SELECT owner_id FROM public.servers WHERE id = p_server_id)
+      OR (
+        -- 4. Jika bukan owner, actor minimal berstatus moderator (rank >= 2)
+        COALESCE((
+          SELECT public.get_member_role_rank(role) 
+          FROM public.server_members 
+          WHERE server_id = p_server_id AND user_id = p_actor_id
+        ), 0) >= 2
+        -- 5. Dan rank actor harus lebih tinggi daripada rank target
+        AND COALESCE((
+          SELECT public.get_member_role_rank(role) 
+          FROM public.server_members 
+          WHERE server_id = p_server_id AND user_id = p_actor_id
+        ), 0) > COALESCE((
+          SELECT public.get_member_role_rank(role) 
+          FROM public.server_members 
+          WHERE server_id = p_server_id AND user_id = p_target_id
+        ), 1)
+      )
+    );
+$$;
+
 -- Ambil server_id dari channel id (mendukung cast UUID, TEXT, dan fallback virtual <server_id>-general)
 CREATE OR REPLACE FUNCTION public.get_server_id_from_channel(p_channel_id TEXT)
 RETURNS UUID
@@ -375,29 +437,47 @@ CREATE POLICY "server_members_insert"
     )
   );
 
--- Update role atau mute: hanya owner atau admin server
+-- Update role atau mute: mematuhi hierarki peran ketat (RBAC)
 CREATE POLICY "server_members_update"
   ON public.server_members
   FOR UPDATE
   TO authenticated
   USING (
-    public.has_server_role(server_id, (select auth.uid()), ARRAY['owner', 'admin'])
+    -- Staff boleh mengupdate jika memenuhi wewenang terhadap target
+    public.has_server_role(server_id, (select auth.uid()), ARRAY['owner', 'admin', 'moderator'])
+    AND (
+      -- Owner server selalu boleh mengubah member di server miliknya
+      EXISTS (SELECT 1 FROM public.servers s WHERE s.id = server_members.server_id AND s.owner_id = (select auth.uid()))
+      -- Staff lain harus lolos hierarki can_moderate_member
+      OR public.can_moderate_member(server_id, (select auth.uid()), user_id)
+    )
   )
   WITH CHECK (
-    public.has_server_role(server_id, (select auth.uid()), ARRAY['owner', 'admin'])
+    -- Hanya Owner yang berhak mengangkat member menjadi 'owner'
+    (
+      role != 'owner' 
+      OR EXISTS (SELECT 1 FROM public.servers s WHERE s.id = server_members.server_id AND s.owner_id = (select auth.uid()))
+    )
+    -- Moderator hanya boleh update muted_until, tidak boleh mengubah role
+    AND (
+      public.has_server_role(server_id, (select auth.uid()), ARRAY['owner', 'admin'])
+      OR role = public.get_member_role_by_id(id)
+    )
   );
 
--- Leave server (diri sendiri) ATAU Kick member oleh Owner/Admin/Moderator (target bukan owner)
+-- Leave server (diri sendiri) ATAU Kick member oleh Staff yang berwenang (mematuhi hierarki)
 CREATE POLICY "server_members_delete"
   ON public.server_members
   FOR DELETE
   TO authenticated
   USING (
-    user_id = (select auth.uid())
-    OR (
-      public.has_server_role(server_id, (select auth.uid()), ARRAY['owner', 'admin', 'moderator'])
-      AND role != 'owner'
+    -- Diri sendiri boleh keluar (leave), asalkan bukan owner server
+    (
+      user_id = (select auth.uid()) 
+      AND NOT EXISTS (SELECT 1 FROM public.servers s WHERE s.id = server_members.server_id AND s.owner_id = (select auth.uid()))
     )
+    -- ATAU Staff meng-kick target sesuai hierarki peran
+    OR public.can_moderate_member(server_id, (select auth.uid()), user_id)
   );
 
 -- --------------------------------------------------------------------
@@ -478,21 +558,39 @@ CREATE POLICY "messages_insert"
   );
 
 -- Mengedit pesan:
--- Pengirim boleh edit konten pesan miliknya sendiri
--- ATAU Owner/Admin/Moderator server boleh melakukan soft-delete (is_deleted = true)
+-- Pengirim boleh edit konten pesan miliknya sendiri, ASALKAN TIDAK SEDANG DI-MUTE ATAU DI-BAN
+-- ATAU Staff server (Owner, Admin, Moderator) boleh melakukan moderasi (soft-delete is_deleted = true)
 CREATE POLICY "messages_update"
   ON public.messages
   FOR UPDATE
   TO authenticated
   USING (
-    sender_id = (select auth.uid())
+    (
+      sender_id = (select auth.uid())
+      AND (
+        channel_id IS NULL 
+        OR (
+          NOT public.is_user_muted_in_server(public.get_server_id_from_channel(channel_id::TEXT), (select auth.uid()))
+          AND NOT public.is_user_banned_from_server(public.get_server_id_from_channel(channel_id::TEXT), (select auth.uid()))
+        )
+      )
+    )
     OR (
       channel_id IS NOT NULL 
       AND public.has_server_role(public.get_server_id_from_channel(channel_id::TEXT), (select auth.uid()), ARRAY['owner', 'admin', 'moderator'])
     )
   )
   WITH CHECK (
-    sender_id = (select auth.uid())
+    (
+      sender_id = (select auth.uid())
+      AND (
+        channel_id IS NULL 
+        OR (
+          NOT public.is_user_muted_in_server(public.get_server_id_from_channel(channel_id::TEXT), (select auth.uid()))
+          AND NOT public.is_user_banned_from_server(public.get_server_id_from_channel(channel_id::TEXT), (select auth.uid()))
+        )
+      )
+    )
     OR (
       channel_id IS NOT NULL 
       AND public.has_server_role(public.get_server_id_from_channel(channel_id::TEXT), (select auth.uid()), ARRAY['owner', 'admin', 'moderator'])
@@ -500,7 +598,7 @@ CREATE POLICY "messages_update"
   );
 
 -- Menghapus pesan (hard delete):
--- Pengirim atau Owner/Admin server
+-- Pengirim atau Staff Server (Owner, Admin, Moderator)
 CREATE POLICY "messages_delete"
   ON public.messages
   FOR DELETE
@@ -509,7 +607,7 @@ CREATE POLICY "messages_delete"
     sender_id = (select auth.uid())
     OR (
       channel_id IS NOT NULL 
-      AND public.has_server_role(public.get_server_id_from_channel(channel_id::TEXT), (select auth.uid()), ARRAY['owner', 'admin'])
+      AND public.has_server_role(public.get_server_id_from_channel(channel_id::TEXT), (select auth.uid()), ARRAY['owner', 'admin', 'moderator'])
     )
   );
 
@@ -526,14 +624,14 @@ CREATE POLICY "server_bans_select"
     OR public.has_server_role(server_id, (select auth.uid()), ARRAY['owner', 'admin', 'moderator'])
   );
 
--- Memberi ban: hanya Owner, Admin, atau Moderator
+-- Memberi ban: hanya Staff server yang pangkatnya lebih tinggi dari target (Owner tidak bisa diban)
 CREATE POLICY "server_bans_insert"
   ON public.server_bans
   FOR INSERT
   TO authenticated
   WITH CHECK (
     banned_by = (select auth.uid())
-    AND public.has_server_role(server_id, (select auth.uid()), ARRAY['owner', 'admin', 'moderator'])
+    AND public.can_moderate_member(server_id, (select auth.uid()), user_id)
   );
 
 -- Unban: hanya Owner atau Admin

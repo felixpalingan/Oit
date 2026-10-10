@@ -120,10 +120,14 @@ export default function ServerMembersModal({
     const targetName = targetMember.user.display_name || targetMember.user.username;
 
     try {
-      await supabase
+      const { error } = await supabase
         .from('server_members')
         .update({ role: newRole })
         .eq('id', targetMember.id);
+
+      if (error) {
+        throw error;
+      }
 
       await logAuditAction(
         'UPDATE_ROLE',
@@ -131,32 +135,43 @@ export default function ServerMembersModal({
         `${currentUser.display_name || currentUser.username} (${myRoleTitle}) changed ${targetName}'s role to ${newRole.toUpperCase()}`
       );
       fetchMembers();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Change role error:', err);
+      const isDenied = err.code === '42501' || err.message?.toLowerCase().includes('violates row-level security');
+      alert(isDenied ? 'Akses ditolak: Anda tidak memiliki wewenang atau tindakan ini melanggar hierarki peran server.' : (err.message || 'Gagal mengubah peran.'));
     }
   };
 
-  // Mute 10 Mins Action
-  const handleMute10Mins = async (targetMember: MemberItem) => {
+  // Mute / Unmute Action
+  const handleToggleMute = async (targetMember: MemberItem) => {
     setActiveMenuMemberId(null);
-    const mutedUntil = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    const isMuted = targetMember.muted_until ? new Date(targetMember.muted_until).getTime() > Date.now() : false;
+    const newMutedUntil = isMuted ? null : new Date(Date.now() + 10 * 60 * 1000).toISOString();
     const myRoleTitle = currentUserRole === 'owner' ? 'Owner' : currentUserRole === 'admin' ? 'Admin' : 'Moderator';
     const targetName = targetMember.user.display_name || targetMember.user.username;
 
     try {
-      await supabase
+      const { error } = await supabase
         .from('server_members')
-        .update({ muted_until: mutedUntil })
+        .update({ muted_until: newMutedUntil })
         .eq('id', targetMember.id);
 
+      if (error) {
+        throw error;
+      }
+
       await logAuditAction(
-        'MUTE_MEMBER',
+        isMuted ? 'UNMUTE_MEMBER' : 'MUTE_MEMBER',
         targetMember.user_id,
-        `${currentUser.display_name || currentUser.username} (${myRoleTitle}) muted ${targetName} for 10 minutes`
+        isMuted
+          ? `${currentUser.display_name || currentUser.username} (${myRoleTitle}) unmuted ${targetName}`
+          : `${currentUser.display_name || currentUser.username} (${myRoleTitle}) muted ${targetName} for 10 minutes`
       );
       fetchMembers();
-    } catch (err) {
-      console.error('Mute member error:', err);
+    } catch (err: any) {
+      console.error('Toggle mute error:', err);
+      const isDenied = err.code === '42501' || err.message?.toLowerCase().includes('violates row-level security');
+      alert(isDenied ? 'Akses ditolak: Anda tidak memiliki wewenang atau target memiliki peran lebih tinggi.' : (err.message || 'Gagal mengubah status bungkam (mute).'));
     }
   };
 
@@ -169,10 +184,14 @@ export default function ServerMembersModal({
     const myRoleTitle = currentUserRole === 'owner' ? 'Owner' : currentUserRole === 'admin' ? 'Admin' : 'Moderator';
 
     try {
-      await supabase
+      const { error } = await supabase
         .from('server_members')
         .delete()
         .eq('id', targetMember.id);
+
+      if (error) {
+        throw error;
+      }
 
       await logAuditAction(
         'KICK_MEMBER',
@@ -180,8 +199,10 @@ export default function ServerMembersModal({
         `${currentUser.display_name || currentUser.username} (${myRoleTitle}) kicked ${targetName} from the server`
       );
       fetchMembers();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Kick member error:', err);
+      const isDenied = err.code === '42501' || err.message?.toLowerCase().includes('violates row-level security');
+      alert(isDenied ? 'Akses ditolak: Anda tidak memiliki wewenang untuk mengeluarkan pengguna ini.' : (err.message || 'Gagal mengeluarkan member.'));
     }
   };
 
@@ -194,17 +215,25 @@ export default function ServerMembersModal({
     const myRoleTitle = currentUserRole === 'owner' ? 'Owner' : currentUserRole === 'admin' ? 'Admin' : 'Moderator';
 
     try {
-      await supabase.from('server_bans').insert({
+      const { error: banError } = await supabase.from('server_bans').insert({
         server_id: serverId,
         user_id: targetMember.user_id,
         banned_by: currentUser.id,
         reason: 'Pelanggaran aturan moderasi server',
       });
 
-      await supabase
+      if (banError) {
+        throw banError;
+      }
+
+      const { error: delError } = await supabase
         .from('server_members')
         .delete()
         .eq('id', targetMember.id);
+
+      if (delError) {
+        console.warn('Delete member on ban error:', delError);
+      }
 
       await logAuditAction(
         'BAN_MEMBER',
@@ -212,8 +241,10 @@ export default function ServerMembersModal({
         `${currentUser.display_name || currentUser.username} (${myRoleTitle}) banned ${targetName}`
       );
       fetchMembers();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Ban member error:', err);
+      const isDenied = err.code === '42501' || err.message?.toLowerCase().includes('violates row-level security');
+      alert(isDenied ? 'Akses ditolak: Anda tidak memiliki wewenang untuk melarang (ban) pengguna ini.' : (err.message || 'Gagal memblokir member.'));
     }
   };
 
@@ -358,14 +389,18 @@ export default function ServerMembersModal({
                               </>
                             )}
 
-                            {/* Mute 10 Mins */}
+                            {/* Mute / Unmute */}
                             <button
                               type="button"
-                              onClick={() => handleMute10Mins(m)}
-                              className="w-full text-left px-2.5 py-1.5 text-[11px] font-bold text-amber-400 hover:bg-amber-950/40 rounded-xl flex items-center gap-2 cursor-pointer"
+                              onClick={() => handleToggleMute(m)}
+                              className={`w-full text-left px-2.5 py-1.5 text-[11px] font-bold rounded-xl flex items-center gap-2 cursor-pointer ${
+                                isMuted
+                                  ? 'text-emerald-400 hover:bg-emerald-950/40'
+                                  : 'text-amber-400 hover:bg-amber-950/40'
+                              }`}
                             >
                               <VolumeX className="w-3.5 h-3.5" />
-                              <span>Mute 10 Menit</span>
+                              <span>{isMuted ? 'Hapus Mute (Unmute)' : 'Mute 10 Menit'}</span>
                             </button>
 
                             {/* Kick Member */}
