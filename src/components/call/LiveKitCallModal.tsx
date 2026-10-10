@@ -62,7 +62,7 @@ export default function LiveKitCallModal({ roomName, username, onLeave }: LiveKi
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md">
         <div className="flex flex-col items-center space-y-4">
           <div className="w-12 h-12 border-4 border-[#ff6b00] border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-sm font-semibold text-zinc-300">Menghubungkan ke Panggilan LiveKit Cloud...</p>
+          <p className="text-sm font-semibold text-zinc-300">Connecting to LiveKit Cloud Call...</p>
         </div>
       </div>
     );
@@ -72,9 +72,9 @@ export default function LiveKitCallModal({ roomName, username, onLeave }: LiveKi
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md">
         <div className="bg-[#0f0f11] border border-zinc-800 rounded-2xl p-6 text-center max-w-sm">
-          <p className="text-sm text-red-400 mb-4">Gagal menghubungkan ke ruang panggilan.</p>
+          <p className="text-sm text-red-400 mb-4">Failed to connect to the call room.</p>
           <button onClick={onLeave} className="btn-orange px-4 py-2 text-xs font-semibold rounded-xl">
-            Tutup
+            Close
           </button>
         </div>
       </div>

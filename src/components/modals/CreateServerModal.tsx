@@ -34,12 +34,12 @@ export default function CreateServerModal({
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('Hanya format gambar (PNG, JPG, WEBP, GIF, SVG) yang diizinkan untuk ikon server.');
+      alert('Only image formats (PNG, JPG, WEBP, GIF, SVG) are allowed for server icon.');
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('Ukuran ikon server tidak boleh melebihi 5MB.');
+      alert('Server icon file size cannot exceed 5MB.');
       return;
     }
 
@@ -141,7 +141,7 @@ export default function CreateServerModal({
       onClose();
     } catch (err: any) {
       console.error('Supabase create server error:', err);
-      setErrorMsg(err.message || 'Gagal membuat server. Silakan coba lagi.');
+      setErrorMsg(err.message || 'Failed to create server. Please try again.');
     } finally {
       setLoading(false);
     }

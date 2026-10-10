@@ -40,13 +40,13 @@ export default function AddFriendModal({ currentUserId, onClose, onFriendAdded }
         .single();
 
       if (error || !data) {
-        setErrorMsg('Pengguna dengan username tersebut tidak ditemukan.');
+        setErrorMsg('No user found with that username.');
       } else {
         setFoundUser(data);
       }
     } catch (err) {
       console.error(err);
-      setErrorMsg('Gagal mencari pengguna.');
+      setErrorMsg('Failed to search for user.');
     } finally {
       setSearching(false);
     }
@@ -63,7 +63,7 @@ export default function AddFriendModal({ currentUserId, onClose, onFriendAdded }
 
       if (error) {
         if (error.code === '23505') {
-          setErrorMsg('Anda sudah berteman atau pernah menambahkan pengguna ini.');
+          setErrorMsg('You are already friends or have already sent a request to this user.');
         } else {
           throw error;
         }
@@ -73,7 +73,7 @@ export default function AddFriendModal({ currentUserId, onClose, onFriendAdded }
       }
     } catch (err) {
       console.error(err);
-      setErrorMsg('Gagal menambahkan teman.');
+      setErrorMsg('Failed to add friend.');
     }
   };
 
@@ -130,7 +130,7 @@ export default function AddFriendModal({ currentUserId, onClose, onFriendAdded }
           <X className="w-5 h-5" />
         </button>
 
-        <h2 className="text-lg font-bold text-white mb-4">Tambah Teman Baru</h2>
+        <h2 className="text-lg font-bold text-white mb-4">Add New Friend</h2>
 
         {/* Switch mode */}
         <div className="flex gap-2 p-1 bg-[#18181b] rounded-xl mb-6">
@@ -142,7 +142,7 @@ export default function AddFriendModal({ currentUserId, onClose, onFriendAdded }
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
-            <Search className="w-4 h-4" /> Cari Username
+            <Search className="w-4 h-4" /> Search Username
           </button>
           <button
             onClick={() => setActiveMode('scan')}
@@ -163,7 +163,7 @@ export default function AddFriendModal({ currentUserId, onClose, onFriendAdded }
                 type="text"
                 value={searchUsername}
                 onChange={(e) => setSearchUsername(e.target.value)}
-                placeholder="Masukkan username persis..."
+                placeholder="Enter exact username..."
                 className="flex-1 px-4 py-2.5 bg-[#18181b] border border-zinc-800 rounded-xl text-sm focus:outline-none focus:border-[#ff6b00]"
               />
               <button
@@ -171,7 +171,7 @@ export default function AddFriendModal({ currentUserId, onClose, onFriendAdded }
                 disabled={searching}
                 className="btn-orange px-4 py-2.5 rounded-xl text-xs font-semibold"
               >
-                {searching ? 'Cari...' : 'Cari'}
+                {searching ? 'Searching...' : 'Search'}
               </button>
             </form>
 
@@ -199,7 +199,7 @@ export default function AddFriendModal({ currentUserId, onClose, onFriendAdded }
 
                 {requestSent ? (
                   <span className="flex items-center gap-1 text-xs text-[#ff6b00] font-semibold">
-                    <CheckCircle2 className="w-4 h-4" /> Berteman!
+                    <CheckCircle2 className="w-4 h-4" /> Friends!
                   </span>
                 ) : (
                   <button
@@ -216,7 +216,7 @@ export default function AddFriendModal({ currentUserId, onClose, onFriendAdded }
           <div className="flex flex-col items-center">
             <div id="reader" className="w-full rounded-xl overflow-hidden border border-zinc-800 bg-black"></div>
             <p className="text-xs text-zinc-400 mt-3 text-center">
-              Arahkan kamera ke QR Code unik teman Anda untuk berteman otomatis.
+              Point your camera at your friend's unique QR Code to connect automatically.
             </p>
           </div>
         )}

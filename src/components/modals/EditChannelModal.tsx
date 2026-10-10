@@ -66,14 +66,14 @@ export default function EditChannelModal({
       onClose();
     } catch (err: any) {
       console.warn('Update channel error:', err);
-      setErrorMsg(err.message || 'Gagal memperbarui channel.');
+      setErrorMsg(err.message || 'Failed to update channel.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!confirm(`Apakah Anda yakin ingin menghapus channel #${channel.name}?`)) return;
+    if (!confirm(`Are you sure you want to delete channel #${channel.name}?`)) return;
 
     setLoading(true);
     try {

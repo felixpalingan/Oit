@@ -221,8 +221,8 @@ export default function ChatWindow({
         onShowToast({
           id: `unmute-${Date.now()}`,
           type: 'info',
-          title: 'Mute Berakhir',
-          message: 'Masa bungkam (mute) Anda di server ini telah selesai. Anda dapat kembali mengirim pesan.',
+          title: 'Mute Expired',
+          message: 'Your mute duration in this server has ended. You can now send messages.',
         });
       }
     }, diff);
@@ -413,12 +413,12 @@ export default function ChatWindow({
     if (!messageText.trim()) return;
 
     if (isCurrentlyMuted) {
-      const mutedAlert = `Anda sedang dibungkam (Muted) di server ini hingga ${new Date(mutedUntil!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`;
+      const mutedAlert = `You are currently muted in this server until ${new Date(mutedUntil!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`;
       if (onShowToast) {
         onShowToast({
           id: `muted-toast-${Date.now()}`,
           type: 'warning',
-          title: 'Akses Dibatasi',
+          title: 'Access Restricted',
           message: mutedAlert,
         });
       } else {
@@ -457,14 +457,14 @@ export default function ChatWindow({
           error.code === '42501' ||
           error.message?.toLowerCase().includes('violates row-level security');
         const alertMsg = isPermissionDenied
-          ? 'Akses ditolak: Anda tidak memiliki izin untuk mengirim pesan di channel ini (Muted / Banned / Non-member).'
-          : `Gagal mengirim pesan: ${error.message}`;
+          ? 'Access denied: You do not have permission to send messages in this channel (Muted / Banned / Non-member).'
+          : `Failed to send message: ${error.message}`;
 
         if (onShowToast) {
           onShowToast({
             id: `send-err-${Date.now()}`,
             type: 'warning',
-            title: 'Gagal Mengirim Pesan',
+            title: 'Failed to Send Message',
             message: alertMsg,
           });
         } else {
@@ -515,14 +515,14 @@ export default function ChatWindow({
           error.code === '42501' ||
           error.message?.toLowerCase().includes('violates row-level security');
         const alertMsg = isPermissionDenied
-          ? 'Akses ditolak: Anda tidak dapat mengedit pesan ini (Muted / Banned / Bukan pemilik pesan).'
-          : `Gagal mengedit pesan: ${error.message}`;
+          ? 'Access denied: You cannot edit this message (Muted / Banned / Not author).'
+          : `Failed to edit message: ${error.message}`;
 
         if (onShowToast) {
           onShowToast({
             id: `edit-err-${Date.now()}`,
             type: 'warning',
-            title: 'Gagal Mengedit Pesan',
+            title: 'Failed to Edit Message',
             message: alertMsg,
           });
         } else {
@@ -539,19 +539,19 @@ export default function ChatWindow({
 
   // Ticket 7 & RBAC Moderation Delete Message
   const handleDeleteMessage = async (msgId: string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus pesan ini?')) return;
+    if (!confirm('Are you sure you want to delete this message?')) return;
 
     const prevMsg = messages.find((m) => m.id === msgId);
     setMessages((prev) =>
       prev.map((m) =>
-        m.id === msgId ? { ...m, is_deleted: true, content: 'Pesan ini telah dihapus' } : m
+        m.id === msgId ? { ...m, is_deleted: true, content: 'This message has been deleted' } : m
       )
     );
 
     try {
       const { error } = await supabase
         .from('messages')
-        .update({ is_deleted: true, content: 'Pesan ini telah dihapus' })
+        .update({ is_deleted: true, content: 'This message has been deleted' })
         .eq('id', msgId);
 
       if (error) {
@@ -563,14 +563,14 @@ export default function ChatWindow({
           error.code === '42501' ||
           error.message?.toLowerCase().includes('violates row-level security');
         const alertMsg = isPermissionDenied
-          ? 'Akses ditolak: Anda tidak memiliki wewenang untuk menghapus pesan ini.'
-          : `Gagal menghapus pesan: ${error.message}`;
+          ? 'Access denied: You do not have permission to delete this message.'
+          : `Failed to delete message: ${error.message}`;
 
         if (onShowToast) {
           onShowToast({
             id: `delete-err-${Date.now()}`,
             type: 'warning',
-            title: 'Gagal Menghapus Pesan',
+            title: 'Failed to Delete Message',
             message: alertMsg,
           });
         } else {
@@ -601,7 +601,7 @@ export default function ChatWindow({
 
   const processSingleFile = async (selectedFile: File) => {
     if (isCurrentlyMuted) {
-      alert(`Anda sedang dibungkam (Muted) di server ini dan tidak dapat mengunggah berkas.`);
+      alert('You are currently muted in this server and cannot upload files.');
       return;
     }
 
@@ -683,14 +683,14 @@ export default function ChatWindow({
           insertError.code === '42501' ||
           insertError.message?.toLowerCase().includes('violates row-level security');
         const alertMsg = isPermissionDenied
-          ? 'Akses ditolak: Anda tidak memiliki izin untuk mengunggah berkas di channel ini (Muted / Banned).'
-          : `Gagal mengirim berkas: ${insertError.message}`;
+          ? 'Access denied: You do not have permission to upload files in this channel (Muted / Banned).'
+          : `Failed to upload file: ${insertError.message}`;
 
         if (onShowToast) {
           onShowToast({
             id: `file-err-${Date.now()}`,
             type: 'warning',
-            title: 'Gagal Mengunggah Berkas',
+            title: 'Upload Failed',
             message: alertMsg,
           });
         } else {
@@ -1139,7 +1139,7 @@ export default function ChatWindow({
                   {msg.is_deleted ? (
                     <p className="text-xs italic text-zinc-400 font-medium flex items-center gap-1.5">
                       <Trash2 className="w-3.5 h-3.5 text-zinc-500" />
-                      <span>Pesan ini telah dihapus</span>
+                      <span>This message has been deleted</span>
                     </p>
                   ) : editingMessageId === msg.id ? (
                     /* INLINE EDIT INPUT FIELD */
@@ -1278,7 +1278,7 @@ export default function ChatWindow({
                 <div className="h-full bg-red-500 rounded-full w-full" />
               </div>
               <span className="text-[9px] font-black text-red-400 uppercase tracking-wider flex items-center gap-1">
-                <WifiOff className="w-3 h-3" /> GAGAL MENGUNGGAH
+                <WifiOff className="w-3 h-3" /> UPLOAD FAILED
               </span>
             </div>
           </div>
@@ -1287,8 +1287,8 @@ export default function ChatWindow({
           <button
             type="button"
             onClick={() => processSingleFile(lastFailedFile)}
-            aria-label="Coba Unggah Lagi"
-            title="Coba Unggah Lagi"
+            aria-label="Retry Upload"
+            title="Retry Upload"
             className="ml-3 p-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl transition-colors cursor-pointer shrink-0 border border-zinc-700 min-h-[36px] min-w-[36px] flex items-center justify-center"
           >
             <RotateCcw className="w-4 h-4 text-white" />
@@ -1301,7 +1301,7 @@ export default function ChatWindow({
         <div className="px-4 py-2.5 bg-red-950/90 border-t border-red-800 text-red-200 text-xs font-bold flex items-center justify-center gap-2 animate-pulse shrink-0">
           <VolumeX className="w-4 h-4 text-red-400 shrink-0" />
           <span>
-            Anda sedang dibungkam (Muted) hingga {new Date(mutedUntil!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Anda tidak dapat mengirim pesan.
+            You are currently muted until {new Date(mutedUntil!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. You cannot send messages.
           </span>
         </div>
       )}
@@ -1410,7 +1410,7 @@ export default function ChatWindow({
             disabled={isUploading || isCurrentlyMuted}
             placeholder={
               isCurrentlyMuted
-                ? 'Anda sedang dibungkam (Muted) di server ini...'
+                ? 'You are currently muted in this server...'
                 : `Message ${currentTitle}...`
             }
             className="flex-1 bg-transparent text-xs text-white placeholder-zinc-500 focus:outline-none font-medium disabled:opacity-50"

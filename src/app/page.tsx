@@ -253,8 +253,8 @@ export default function Page() {
           setToastNotification({
             id: `toast-${Date.now()}`,
             type: 'warning',
-            title: 'Akses Ditolak',
-            message: 'Ruangan ini sudah tidak tersedia atau telah dihapus.',
+            title: 'Access Denied',
+            message: 'This room is no longer available or has been deleted.',
           });
           return;
         }
@@ -275,8 +275,8 @@ export default function Page() {
           setToastNotification({
             id: `toast-${Date.now()}`,
             type: 'warning',
-            title: 'Akses Ditolak',
-            message: 'Ruangan ini sudah tidak tersedia atau Anda telah dilarang (BAN).',
+            title: 'Access Denied',
+            message: 'This room is no longer available or you have been banned.',
           });
           return;
         }
@@ -309,8 +309,8 @@ export default function Page() {
           setToastNotification({
             id: `toast-${Date.now()}`,
             type: 'warning',
-            title: 'Akses Ditolak',
-            message: 'Ruangan ini sudah tidak tersedia atau telah dihapus.',
+            title: 'Access Denied',
+            message: 'This room is no longer available or has been deleted.',
           });
         }
       }
@@ -444,12 +444,12 @@ export default function Page() {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('Hanya format gambar (PNG, JPG, WEBP, GIF) yang diizinkan untuk avatar.');
+      alert('Only image formats (PNG, JPG, WEBP, GIF) are allowed for avatar.');
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('Ukuran berkas avatar tidak boleh melebihi 5MB.');
+      alert('Avatar file size cannot exceed 5MB.');
       return;
     }
 
@@ -509,8 +509,8 @@ export default function Page() {
     setToastNotification({
       id: `toast-${Date.now()}`,
       type: 'success',
-      title: 'Akses Diberikan',
-      message: `Berhasil membuka channel "${targetTitle}".`,
+      title: 'Access Granted',
+      message: `Successfully unlocked channel "${targetTitle}".`,
     });
 
     setSecurityCheckRoom(null);
@@ -619,18 +619,18 @@ export default function Page() {
     setSuccessMsg('');
 
     if (!username.trim() || !password.trim()) {
-      setErrorMsg('Username dan Password wajib diisi.');
+      setErrorMsg('Username and Password are required.');
       return;
     }
 
     if (password.length < 6) {
-      setErrorMsg('Password minimal 6 karakter.');
+      setErrorMsg('Password must be at least 6 characters.');
       return;
     }
 
     if (action === 'register') {
       if (password !== confirmPassword) {
-        setErrorMsg('Konfirmasi password tidak cocok.');
+        setErrorMsg('Passwords do not match.');
         return;
       }
     }
@@ -660,7 +660,7 @@ export default function Page() {
             avatar_url: registerAvatarUrl,
           });
 
-          setSuccessMsg('Akun Oit berhasil dibuat dengan PFP! Silakan klik LOGIN untuk masuk.');
+          setSuccessMsg('Oit account created successfully! Please click LOGIN to sign in.');
           setMode('login');
         }
       } else {
@@ -675,11 +675,11 @@ export default function Page() {
         }
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Terjadi kesalahan otentikasi.';
+      const msg = err instanceof Error ? err.message : 'An authentication error occurred.';
       if (msg.includes('Invalid login')) {
-        setErrorMsg('Username atau password salah. Silakan coba lagi.');
+        setErrorMsg('Incorrect username or password. Please try again.');
       } else if (msg.includes('already registered')) {
-        setErrorMsg('Username sudah terdaftar. Silakan tekan tombol LOGIN.');
+        setErrorMsg('Username is already registered. Please click LOGIN.');
       } else {
         setErrorMsg(msg);
       }

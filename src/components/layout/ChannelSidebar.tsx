@@ -518,7 +518,7 @@ export default function ChannelSidebar({
           /* DM Mode */
           <div className="space-y-1">
             {sortedUsers.length === 0 ? (
-              <p className="text-xs text-zinc-500 text-center py-6">Tidak ada kontak obrolan.</p>
+              <p className="text-xs text-zinc-500 text-center py-6">No direct message contacts yet.</p>
             ) : (
               sortedUsers.map((u) => {
                 const isSelected = activeChatUser?.id === u.id;

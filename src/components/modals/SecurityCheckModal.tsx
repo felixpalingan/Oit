@@ -43,19 +43,19 @@ export default function SecurityCheckModal({
 
         if (error) {
           console.error('Password verification error:', error);
-          setErrorMsg('Gagal memverifikasi password ke server. Pastikan database RLS telah diperbarui.');
+          setErrorMsg('Failed to verify password with server. Please ensure database RLS is updated.');
           setIsVerifying(false);
           return;
         }
 
         if (isValid === false) {
-          setErrorMsg('Password channel salah. Akses ditolak.');
+          setErrorMsg('Incorrect channel password. Access denied.');
           setIsVerifying(false);
           return;
         }
       } catch (err: any) {
         console.error('Verify channel password exception:', err);
-        setErrorMsg('Terjadi kesalahan verifikasi: ' + (err?.message || 'Server error'));
+        setErrorMsg('Verification error occurred: ' + (err?.message || 'Server error'));
         setIsVerifying(false);
         return;
       } finally {

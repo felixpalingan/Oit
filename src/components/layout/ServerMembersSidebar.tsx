@@ -150,7 +150,7 @@ export default function ServerMembersSidebar({
     } catch (err: any) {
       console.error('Change role error:', err);
       const isDenied = err.code === '42501' || err.message?.toLowerCase().includes('violates row-level security');
-      alert(isDenied ? 'Akses ditolak: Anda tidak memiliki wewenang atau tindakan ini melanggar hierarki peran server.' : (err.message || 'Gagal mengubah peran.'));
+      alert(isDenied ? 'Access denied: You do not have permission or this action violates the server role hierarchy.' : (err.message || 'Failed to update role.'));
     }
   };
 
@@ -183,7 +183,7 @@ export default function ServerMembersSidebar({
     } catch (err: any) {
       console.error('Toggle mute error:', err);
       const isDenied = err.code === '42501' || err.message?.toLowerCase().includes('violates row-level security');
-      alert(isDenied ? 'Akses ditolak: Anda tidak memiliki wewenang atau target memiliki peran lebih tinggi.' : (err.message || 'Gagal mengubah status bungkam (mute).'));
+      alert(isDenied ? 'Access denied: You do not have permission or the target has a higher role.' : (err.message || 'Failed to update mute status.'));
     }
   };
 
@@ -191,7 +191,7 @@ export default function ServerMembersSidebar({
   const handleKickMember = async (targetMember: MemberItem) => {
     setActiveMenuMemberId(null);
     const targetName = targetMember.user.display_name || targetMember.user.username;
-    if (!confirm(`Apakah Anda yakin ingin mengeluarkan (KICK) @${targetMember.user.username} dari server?`)) return;
+    if (!confirm(`Are you sure you want to kick @${targetMember.user.username} from the server?`)) return;
 
     const myRoleTitle = currentUserRole === 'owner' ? 'Owner' : currentUserRole === 'admin' ? 'Admin' : 'Moderator';
 
@@ -214,7 +214,7 @@ export default function ServerMembersSidebar({
     } catch (err: any) {
       console.error('Kick member error:', err);
       const isDenied = err.code === '42501' || err.message?.toLowerCase().includes('violates row-level security');
-      alert(isDenied ? 'Akses ditolak: Anda tidak memiliki wewenang untuk mengeluarkan pengguna ini.' : (err.message || 'Gagal mengeluarkan member.'));
+      alert(isDenied ? 'Access denied: You do not have permission to kick this member.' : (err.message || 'Failed to kick member.'));
     }
   };
 
@@ -222,7 +222,7 @@ export default function ServerMembersSidebar({
   const handleBanMember = async (targetMember: MemberItem) => {
     setActiveMenuMemberId(null);
     const targetName = targetMember.user.display_name || targetMember.user.username;
-    if (!confirm(`Apakah Anda yakin ingin melarang (BAN) @${targetMember.user.username} dari server secara permanen?`)) return;
+    if (!confirm(`Are you sure you want to permanently ban @${targetMember.user.username} from the server?`)) return;
 
     const myRoleTitle = currentUserRole === 'owner' ? 'Owner' : currentUserRole === 'admin' ? 'Admin' : 'Moderator';
 
@@ -231,7 +231,7 @@ export default function ServerMembersSidebar({
         server_id: serverId,
         user_id: targetMember.user_id,
         banned_by: currentUser.id,
-        reason: 'Pelanggaran aturan moderasi server',
+        reason: 'Server moderation policy violation',
       });
 
       if (banError) {
@@ -256,7 +256,7 @@ export default function ServerMembersSidebar({
     } catch (err: any) {
       console.error('Ban member error:', err);
       const isDenied = err.code === '42501' || err.message?.toLowerCase().includes('violates row-level security');
-      alert(isDenied ? 'Akses ditolak: Anda tidak memiliki wewenang untuk melarang (ban) pengguna ini.' : (err.message || 'Gagal memblokir member.'));
+      alert(isDenied ? 'Access denied: You do not have permission to ban this member.' : (err.message || 'Failed to ban member.'));
     }
   };
 
@@ -277,7 +277,7 @@ export default function ServerMembersSidebar({
         {loading ? (
           <p className="text-xs text-zinc-500 text-center py-6">Loading members...</p>
         ) : members.length === 0 ? (
-          <p className="text-xs text-zinc-500 text-center py-6">Tidak ada anggota.</p>
+          <p className="text-xs text-zinc-500 text-center py-6">No members found.</p>
         ) : (
           members.map((m) => {
             const isUserOnline = onlineUserIds.has(m.user_id);
@@ -338,7 +338,7 @@ export default function ServerMembersSidebar({
 
                     {isMuted && (
                       <span className="text-[9px] font-black text-red-500 uppercase tracking-wide block">
-                        (BUNGKAM)
+                        (MUTED)
                       </span>
                     )}
                   </div>
@@ -363,7 +363,7 @@ export default function ServerMembersSidebar({
                     {activeMenuMemberId === m.id && (
                       <div className="absolute right-0 top-7 w-44 bg-[#121215] border border-zinc-800 rounded-2xl shadow-2xl p-1.5 z-40 space-y-1 animate-in zoom-in-95 duration-100">
                         <div className="px-2 py-1 text-[9px] font-extrabold text-[#FF5C00] uppercase tracking-wider">
-                          Aksi Moderasi
+                          Moderation Actions
                         </div>
 
                         {currentUserRole === 'owner' && (
@@ -374,7 +374,7 @@ export default function ServerMembersSidebar({
                               className="w-full text-left px-2.5 py-1.5 text-[11px] font-bold text-emerald-400 hover:bg-emerald-950/40 rounded-xl flex items-center gap-2 cursor-pointer"
                             >
                               <Shield className="w-3.5 h-3.5" />
-                              <span>Jadikan Admin</span>
+                              <span>Make Admin</span>
                             </button>
                             <button
                               type="button"
@@ -382,7 +382,7 @@ export default function ServerMembersSidebar({
                               className="w-full text-left px-2.5 py-1.5 text-[11px] font-bold text-purple-400 hover:bg-purple-950/40 rounded-xl flex items-center gap-2 cursor-pointer"
                             >
                               <ShieldAlert className="w-3.5 h-3.5" />
-                              <span>Jadikan Moderator</span>
+                              <span>Make Moderator</span>
                             </button>
                           </>
                         )}
@@ -397,7 +397,7 @@ export default function ServerMembersSidebar({
                           }`}
                         >
                           <VolumeX className="w-3.5 h-3.5" />
-                          <span>{isMuted ? 'Hapus Mute (Unmute)' : 'Mute 10 Menit'}</span>
+                          <span>{isMuted ? 'Unmute Member' : 'Mute for 10 Mins'}</span>
                         </button>
 
                         <button
@@ -415,7 +415,7 @@ export default function ServerMembersSidebar({
                           className="w-full text-left px-2.5 py-1.5 text-[11px] font-bold text-red-400 hover:bg-red-950/40 rounded-xl flex items-center gap-2 cursor-pointer"
                         >
                           <Ban className="w-3.5 h-3.5" />
-                          <span>Ban Permanen</span>
+                          <span>Ban Member</span>
                         </button>
                       </div>
                     )}

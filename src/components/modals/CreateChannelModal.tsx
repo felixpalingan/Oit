@@ -77,7 +77,7 @@ export default function CreateChannelModal({
       onClose();
     } catch (err: any) {
       console.warn('Supabase create channel error:', err);
-      setErrorMsg(err.message || 'Gagal membuat channel.');
+      setErrorMsg(err.message || 'Failed to create channel.');
     } finally {
       setLoading(false);
     }

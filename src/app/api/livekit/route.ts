@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
 
     if (!user) {
       return NextResponse.json(
-        { error: 'Unauthorized: Sesi autentikasi tidak valid atau telah kedaluwarsa. Silakan login kembali.' },
+        { error: 'Unauthorized: Authentication session is invalid or expired. Please log in again.' },
         { status: 401 }
       );
     }
@@ -89,7 +89,7 @@ export async function GET(req: NextRequest) {
         const [userA, userB] = participants;
         if (user.id !== userA && user.id !== userB) {
           return NextResponse.json(
-            { error: 'Forbidden: Anda bukan partisipan dalam panggilan ini' },
+            { error: 'Forbidden: You are not a participant in this call' },
             { status: 403 }
           );
         }
@@ -106,7 +106,7 @@ export async function GET(req: NextRequest) {
 
       if (chanErr || !channel) {
         return NextResponse.json(
-          { error: 'Ruangan channel suara tidak ditemukan' },
+          { error: 'Voice channel room not found' },
           { status: 404 }
         );
       }
@@ -121,7 +121,7 @@ export async function GET(req: NextRequest) {
 
       if (ban) {
         return NextResponse.json(
-          { error: 'Akses ditolak: Anda dilarang (BAN) mengakses server ini' },
+          { error: 'Access denied: You are banned from this server' },
           { status: 403 }
         );
       }
@@ -147,7 +147,7 @@ export async function GET(req: NextRequest) {
         // If server is private, caller MUST be owner or member
         if (server.is_private && !isOwner && !isMember) {
           return NextResponse.json(
-            { error: 'Akses ditolak: Anda bukan anggota dari server privat ini' },
+            { error: 'Access denied: You are not a member of this private server' },
             { status: 403 }
           );
         }
@@ -177,7 +177,7 @@ export async function GET(req: NextRequest) {
   } catch (error: any) {
     console.error('Error generating LiveKit token:', error);
     return NextResponse.json(
-      { error: 'Gagal membuat token LiveKit: ' + (error?.message || 'Server error') },
+      { error: 'Failed to generate LiveKit token: ' + (error?.message || 'Server error') },
       { status: 500 }
     );
   }

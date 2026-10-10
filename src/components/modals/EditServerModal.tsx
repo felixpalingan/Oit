@@ -151,12 +151,12 @@ export default function EditServerModal({
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('Hanya format gambar (PNG, JPG, WEBP, GIF, SVG) yang diizinkan untuk ikon server.');
+      alert('Only image formats (PNG, JPG, WEBP, GIF, SVG) are allowed for server icon.');
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('Ukuran ikon server tidak boleh melebihi 5MB.');
+      alert('Server icon file size cannot exceed 5MB.');
       return;
     }
 
@@ -207,14 +207,14 @@ export default function EditServerModal({
       onClose();
     } catch (err: any) {
       console.error('Update server error:', err);
-      setErrorMsg(err.message || 'Gagal mengubah detail server.');
+      setErrorMsg(err.message || 'Failed to update server details.');
     } finally {
       setSaving(false);
     }
   };
 
   const handleDeleteServer = async () => {
-    if (!confirm(`Apakah Anda yakin ingin menghapus server "${serverName}"? Tindakan ini tidak dapat dibatalkan.`)) {
+    if (!confirm(`Are you sure you want to delete server "${serverName}"? This action cannot be undone.`)) {
       return;
     }
 
@@ -227,7 +227,7 @@ export default function EditServerModal({
       onClose();
     } catch (err) {
       console.error('Delete server error:', err);
-      setErrorMsg('Gagal menghapus server.');
+      setErrorMsg('Failed to delete server.');
     } finally {
       setSaving(false);
     }

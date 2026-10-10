@@ -82,7 +82,7 @@ export default function JoinServerModal({
         .maybeSingle();
 
       if (banRecord) {
-        setErrorMsg(`❌ Anda telah dilarang (BAN) secara permanen dari server "${serverName}". Anda tidak dapat bergabung kembali.`);
+        setErrorMsg(`❌ You have been permanently banned from server "${serverName}". You cannot rejoin.`);
         setLoading(false);
         return;
       }
@@ -95,7 +95,7 @@ export default function JoinServerModal({
         .maybeSingle();
 
       if (!targetSrv) {
-        setErrorMsg('❌ Server tidak ditemukan. Periksa kembali ID atau Kode Undangan.');
+        setErrorMsg('❌ Server not found. Please check the ID or Invite Code.');
         setLoading(false);
         return;
       }
@@ -126,12 +126,12 @@ export default function JoinServerModal({
       setActiveServer(serverIdToJoin);
       setActiveChannel(firstChanId, firstChanName);
 
-      setJoinedMsg(`Berhasil bergabung dengan server "${targetSrv.name}"!`);
+      setJoinedMsg(`Successfully joined server "${targetSrv.name}"!`);
       if (onJoined) onJoined();
       setTimeout(onClose, 600);
     } catch (err: any) {
       console.error('Join server error:', err);
-      setErrorMsg(err.message || 'Gagal bergabung dengan server.');
+      setErrorMsg(err.message || 'Failed to join server.');
     } finally {
       setLoading(false);
     }
