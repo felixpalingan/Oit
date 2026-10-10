@@ -203,6 +203,9 @@ BEGIN
 END $$;
 ```
 
+> [!IMPORTANT]
+> **Strict Security Hardening**: To enforce complete Row-Level Security, server-side channel password verification RPCs, and RBAC moderation policies at the database layer, execute [supabase/bulletproof_rls.sql](supabase/bulletproof_rls.sql) and [supabase/storage_setup.sql](supabase/storage_setup.sql) in your Supabase SQL Editor.
+
 ---
 
 ## ⚡ Local Development Setup
@@ -219,14 +222,21 @@ npm install
 ```
 
 ### 3. Environment Variables (`.env.local`)
-Create a `.env.local` file in the root directory:
+Copy the provided `.env.example` template:
+```bash
+cp .env.example .env.local
+```
+Fill in your credentials:
 ```env
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_SUPABASE_URL=https://your-supabase-id.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 
 LIVEKIT_URL=wss://your-livekit-domain.livekit.cloud
 LIVEKIT_API_KEY=your-livekit-api-key
 LIVEKIT_API_SECRET=your-livekit-api-secret
+
+CRON_SECRET=your-cron-secret
 ```
 
 ### 4. Run Local Development Server
@@ -237,8 +247,14 @@ Navigate to `http://localhost:3000` in your browser.
 
 ---
 
+## 🤝 Community & Governance
+
+- **Contributing**: Please review our [Contributing Guidelines](CONTRIBUTING.md) before opening pull requests.
+- **Security Policy**: For responsible vulnerability disclosure, read our [Security Policy](SECURITY.md).
+- **License**: Released under the [MIT License](LICENSE).
+
+---
+
 ## 👤 Author & Credits
 
-Designed and engineered by **Felix** as a flagship full-stack real-time system portfolio project.
-
-Released under the **MIT License**.
+Designed and engineered by **Almakius Felix Bariq Hekopung** ([@felixpalingan](https://github.com/felixpalingan)) as a flagship full-stack real-time communication platform.
