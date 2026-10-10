@@ -686,3 +686,134 @@ BEGIN
   BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE public.server_bans; EXCEPTION WHEN duplicate_object THEN NULL; END;
   BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE public.audit_logs; EXCEPTION WHEN duplicate_object THEN NULL; END;
 END $$;
+
+-- --------------------------------------------------------------------
+-- 12. STORAGE BUCKET & OBJECT SECURITY POLICIES (chat-attachments)
+-- --------------------------------------------------------------------
+-- Batasi ukuran 25MB (26214400 bytes) di level server storage & Whitelist MIME Types
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) 
+VALUES (
+  'chat-attachments', 
+  'chat-attachments', 
+  true,
+  26214400,
+  ARRAY[
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+    'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/webm', 'audio/aac', 'audio/flac',
+    'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo',
+    'application/pdf',
+    'text/plain', 'text/markdown', 'text/csv',
+    'application/json',
+    'application/zip', 'application/x-zip-compressed', 'application/x-tar', 'application/gzip',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'application/msword', 'application/vnd.ms-excel', 'application/vnd.ms-powerpoint'
+  ]
+)
+ON CONFLICT (id) DO UPDATE SET 
+  public = true,
+  file_size_limit = 26214400,
+  allowed_mime_types = ARRAY[
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+    'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/webm', 'audio/aac', 'audio/flac',
+    'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo',
+    'application/pdf',
+    'text/plain', 'text/markdown', 'text/csv',
+    'application/json',
+    'application/zip', 'application/x-zip-compressed', 'application/x-tar', 'application/gzip',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'application/msword', 'application/vnd.ms-excel', 'application/vnd.ms-powerpoint'
+  ];
+
+DROP POLICY IF EXISTS "Public Read Access" ON storage.objects;
+DROP POLICY IF EXISTS "Public Upload Access" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated Upload Access" ON storage.objects;
+DROP POLICY IF EXISTS "Register Avatar Upload Access" ON storage.objects;
+DROP POLICY IF EXISTS "Owner Delete Access" ON storage.objects;
+DROP POLICY IF EXISTS "Owner Update Access" ON storage.objects;
+DROP POLICY IF EXISTS "chat_attachments_public_read" ON storage.objects;
+DROP POLICY IF EXISTS "chat_attachments_auth_upload" ON storage.objects;
+DROP POLICY IF EXISTS "chat_attachments_register_avatar_upload" ON storage.objects;
+DROP POLICY IF EXISTS "chat_attachments_owner_delete" ON storage.objects;
+DROP POLICY IF EXISTS "chat_attachments_owner_update" ON storage.objects;
+
+-- Baca berkas publik (SELECT)
+CREATE POLICY "chat_attachments_public_read" ON storage.objects 
+FOR SELECT 
+USING (bucket_id = 'chat-attachments');
+
+-- Upload berkas pengguna terautentikasi (INSERT)
+CREATE POLICY "chat_attachments_auth_upload" ON storage.objects 
+FOR INSERT 
+TO authenticated 
+WITH CHECK (
+  bucket_id = 'chat-attachments'
+  AND lower(COALESCE(storage.extension(name), '')) NOT IN (
+    'exe', 'dll', 'bat', 'cmd', 'sh', 'php', 'html', 'htm', 'js', 'jar', 'vbs', 'com', 'scr', 'phtml', 'phar', 'py', 'ps1', 'cgi'
+  )
+  AND (
+    (storage.foldername(name))[1] = (select auth.uid())::text
+    OR (name LIKE 'avatars/' || (select auth.uid())::text || '_%' AND lower(COALESCE(storage.extension(name), '')) IN ('png', 'jpg', 'jpeg', 'webp', 'gif'))
+    OR (name LIKE 'server_icons/%' AND lower(COALESCE(storage.extension(name), '')) IN ('png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'))
+  )
+);
+
+-- Upload avatar registrasi (INSERT: Anon & Authenticated)
+CREATE POLICY "chat_attachments_register_avatar_upload" ON storage.objects 
+FOR INSERT 
+TO anon, authenticated 
+WITH CHECK (
+  bucket_id = 'chat-attachments' 
+  AND name LIKE 'avatars/register_%'
+  AND lower(COALESCE(storage.extension(name), '')) IN ('png', 'jpg', 'jpeg', 'webp', 'gif')
+  AND (metadata->>'size' IS NULL OR (metadata->>'size')::bigint <= 5242880)
+);
+
+-- Hapus berkas hanya milik sendiri (DELETE)
+CREATE POLICY "chat_attachments_owner_delete" ON storage.objects 
+FOR DELETE 
+TO authenticated 
+USING (
+  bucket_id = 'chat-attachments' 
+  AND (
+    owner = (select auth.uid())
+    OR (storage.foldername(name))[1] = (select auth.uid())::text
+    OR name LIKE 'avatars/' || (select auth.uid())::text || '_%'
+    OR (
+      name LIKE 'server_icons/%'
+      AND (
+        owner = (select auth.uid())
+        OR EXISTS (
+          SELECT 1 FROM public.servers s 
+          WHERE s.owner_id = (select auth.uid()) 
+          AND name LIKE 'server_icons/' || s.id::text || '_%'
+        )
+      )
+    )
+  )
+);
+
+-- Update berkas hanya milik sendiri (UPDATE)
+CREATE POLICY "chat_attachments_owner_update" ON storage.objects 
+FOR UPDATE 
+TO authenticated 
+USING (
+  bucket_id = 'chat-attachments' 
+  AND (
+    owner = (select auth.uid())
+    OR (storage.foldername(name))[1] = (select auth.uid())::text
+    OR name LIKE 'avatars/' || (select auth.uid())::text || '_%'
+  )
+)
+WITH CHECK (
+  bucket_id = 'chat-attachments' 
+  AND (
+    owner = (select auth.uid())
+    OR (storage.foldername(name))[1] = (select auth.uid())::text
+    OR name LIKE 'avatars/' || (select auth.uid())::text || '_%'
+  )
+);
+

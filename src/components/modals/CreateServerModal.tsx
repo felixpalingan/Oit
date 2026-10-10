@@ -33,6 +33,16 @@ export default function CreateServerModal({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (!file.type.startsWith('image/')) {
+      alert('Hanya format gambar (PNG, JPG, WEBP, GIF, SVG) yang diizinkan untuk ikon server.');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Ukuran ikon server tidak boleh melebihi 5MB.');
+      return;
+    }
+
     try {
       const fileExt = file.name.split('.').pop() || 'png';
       const filePath = `server_icons/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;

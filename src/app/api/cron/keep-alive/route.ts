@@ -6,23 +6,42 @@ export const revalidate = 0;
 
 export async function GET(request: Request) {
   try {
-    // 1. Verify Vercel Cron Secret if configured
+    // 1. Verify Vercel Cron Secret strictly
     const authHeader = request.headers.get('authorization');
-    if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized: Invalid Cron Secret' },
-        { status: 401 }
-      );
+    const cronSecret = process.env.CRON_SECRET;
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    if (isProduction || cronSecret) {
+      if (!cronSecret) {
+        console.error('CRON_SECRET is not configured on this server.');
+        return NextResponse.json(
+          { success: false, error: 'Unauthorized: CRON_SECRET is not configured on the server' },
+          { status: 500 }
+        );
+      }
+
+      if (authHeader !== `Bearer ${cronSecret}`) {
+        return NextResponse.json(
+          { success: false, error: 'Unauthorized: Invalid or missing Cron Secret' },
+          { status: 401 }
+        );
+      }
     }
 
-    // 2. Initialize Supabase client
-    const supabaseUrl =
-      process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://eczopjzpwgodailopons.supabase.co';
+    // 2. Initialize Supabase client strictly from environment variables (no hardcoded credentials)
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey =
       process.env.SUPABASE_SERVICE_ROLE_KEY ||
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-      'sb_publishable_yCQmYNRr5LosDmWs6M2h0Q_6X0j2SMZ';
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('Missing Supabase environment variables in keep-alive cron.');
+      return NextResponse.json(
+        { success: false, error: 'Server configuration error: Missing Supabase credentials' },
+        { status: 500 }
+      );
+    }
 
     const supabase = createClient(supabaseUrl, supabaseKey, {
       auth: {
@@ -33,7 +52,7 @@ export async function GET(request: Request) {
 
     const startTime = Date.now();
 
-    // 3. Perform a lightweight ping query across primary tables to keep PostgreSQL warm & active
+    // 3. Lightweight ping query across primary tables (servers & users) to keep PostgreSQL instance warm
     const [serversRes, usersRes] = await Promise.all([
       supabase.from('servers').select('id', { count: 'exact', head: true }),
       supabase.from('users').select('id', { count: 'exact', head: true }),
@@ -54,15 +73,12 @@ export async function GET(request: Request) {
       );
     }
 
+    // 4. Return sanitized success response without leaking exact internal row counts
     return NextResponse.json({
       success: true,
       message: 'Supabase instance successfully kept alive',
       latencyMs: `${latencyMs}ms`,
       timestamp: new Date().toISOString(),
-      details: {
-        serverCount: serversRes.count ?? 0,
-        userCount: usersRes.count ?? 0,
-      },
     });
   } catch (err: any) {
     console.error('Unexpected Keep-Alive Cron Error:', err);

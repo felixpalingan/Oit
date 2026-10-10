@@ -233,6 +233,16 @@ export default function ProfileModal({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (!file.type.startsWith('image/')) {
+      alert('Hanya format gambar (PNG, JPG, WEBP, GIF) yang diizinkan untuk avatar profil.');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Ukuran berkas avatar tidak boleh melebihi 5MB.');
+      return;
+    }
+
     setUploading(true);
     try {
       const fileExt = file.name.split('.').pop() || 'png';
