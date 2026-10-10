@@ -776,7 +776,7 @@ export default function Page() {
             {mode === 'register' && (
               <div className="space-y-4 border-b border-zinc-800/80 pb-4 mb-2">
                 <label className="block text-[10px] font-extrabold uppercase tracking-wider text-[#FF5C00] text-center">
-                  UPLOAD PROFIL PICTURE (PFP)
+                  UPLOAD PROFILE PICTURE (PFP)
                 </label>
 
                 <div className="flex justify-center">
@@ -796,7 +796,7 @@ export default function Page() {
                       <>
                         <img src={registerAvatarUrl} alt="PFP" className="w-full h-full object-cover" />
                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-[10px] font-bold">
-                          Ganti
+                          Change
                         </div>
                       </>
                     ) : (
@@ -812,13 +812,13 @@ export default function Page() {
 
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
-                    DISPLAY NAME (NAMA TAMPILAN)
+                    DISPLAY NAME
                   </label>
                   <input
                     type="text"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder="Contoh: Alex Rivers"
+                    placeholder="e.g. Alex Rivers"
                     className="w-full px-4 py-2.5 bg-[#1c1c21] border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#FF5C00] transition-all"
                   />
                 </div>
@@ -827,7 +827,7 @@ export default function Page() {
 
             <div>
               <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
-                USERNAME (TAG UNIK)
+                USERNAME (UNIQUE HANDLE)
               </label>
               <div className="relative">
                 <User className="w-4 h-4 text-zinc-500 absolute left-3.5 top-3" />
@@ -836,7 +836,7 @@ export default function Page() {
                   required
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Contoh: alex_rivers"
+                  placeholder="e.g. alex_rivers"
                   className="w-full pl-10 pr-4 py-2.5 bg-[#1c1c21] border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#FF5C00] transition-all"
                 />
               </div>
@@ -850,10 +850,10 @@ export default function Page() {
                 {mode === 'login' && (
                   <button
                     type="button"
-                    onClick={() => alert('Reset password via admin Supabase.')}
+                    onClick={() => alert('Password reset via Supabase admin.')}
                     className="text-[10px] font-medium text-[#FF5C00] hover:underline"
                   >
-                    Lupa Password?
+                    Forgot Password?
                   </button>
                 )}
               </div>
@@ -874,7 +874,7 @@ export default function Page() {
             {mode === 'register' && (
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
-                  KONFIRMASI PASSWORD
+                  CONFIRM PASSWORD
                 </label>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-zinc-500 absolute left-3.5 top-3" />
@@ -883,7 +883,7 @@ export default function Page() {
                     required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Ulangi password..."
+                    placeholder="Repeat password..."
                     className="w-full pl-10 pr-4 py-2.5 bg-[#1c1c21] border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#FF5C00] transition-all"
                   />
                 </div>
@@ -899,12 +899,12 @@ export default function Page() {
                 <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
               ) : mode === 'login' ? (
                 <>
-                  <span>MASUK (LOGIN)</span>
+                  <span>SIGN IN (LOGIN)</span>
                   <LogIn className="w-4 h-4 stroke-[2.5]" />
                 </>
               ) : (
                 <>
-                  <span>BUAT AKUN BARU (REGISTER)</span>
+                  <span>CREATE ACCOUNT (REGISTER)</span>
                   <UserPlus className="w-4 h-4 stroke-[2.5]" />
                 </>
               )}
@@ -913,10 +913,15 @@ export default function Page() {
 
         </div>
 
-        <div className="mt-6 text-center text-[10px] text-zinc-500 space-x-2">
-          <a href="#" className="hover:text-zinc-400">Privacy Policy</a>
-          <span>•</span>
-          <a href="#" className="hover:text-zinc-400">Terms of Service</a>
+        <div className="mt-6 text-center text-[10px] text-zinc-500 space-y-2">
+          <div className="space-x-2">
+            <a href="#" className="hover:text-zinc-400">Privacy Policy</a>
+            <span>•</span>
+            <a href="#" className="hover:text-zinc-400">Terms of Service</a>
+          </div>
+          <p className="text-zinc-600">
+            Crafted with passion by <span className="text-zinc-400 font-semibold">Almakius Felix Bariq Hekopung</span>
+          </p>
         </div>
 
       </div>
