@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Lock, Key, LogIn } from 'lucide-react';
+import { Lock, Key, LogIn, Hand } from 'lucide-react';
 
 import { createClient } from '@/utils/supabase/client';
 
@@ -9,6 +9,7 @@ interface SecurityCheckModalProps {
   roomId?: string;
   roomTitle: string;
   onSuccess: () => void;
+  onRequestKnock?: () => void;
   onClose: () => void;
 }
 
@@ -16,6 +17,7 @@ export default function SecurityCheckModal({
   roomId,
   roomTitle,
   onSuccess,
+  onRequestKnock,
   onClose,
 }: SecurityCheckModalProps) {
   const supabase = createClient();
@@ -32,6 +34,7 @@ export default function SecurityCheckModal({
 
     if (roomId) {
       setIsVerifying(true);
+      setErrorMsg('');
       try {
         const { data: isValid, error } = await supabase.rpc('verify_channel_password', {
           p_channel_id: roomId,
@@ -40,13 +43,21 @@ export default function SecurityCheckModal({
 
         if (error) {
           console.error('Password verification error:', error);
-        } else if (isValid === false) {
+          setErrorMsg('Gagal memverifikasi password ke server. Pastikan database RLS telah diperbarui.');
+          setIsVerifying(false);
+          return;
+        }
+
+        if (isValid === false) {
           setErrorMsg('Password channel salah. Akses ditolak.');
           setIsVerifying(false);
           return;
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Verify channel password exception:', err);
+        setErrorMsg('Terjadi kesalahan verifikasi: ' + (err?.message || 'Server error'));
+        setIsVerifying(false);
+        return;
       } finally {
         setIsVerifying(false);
       }
@@ -104,10 +115,29 @@ export default function SecurityCheckModal({
             disabled={isVerifying}
             className="w-full py-3.5 bg-[#FF5C00] hover:bg-[#ff701a] disabled:opacity-50 text-white font-extrabold rounded-2xl text-xs flex items-center justify-center gap-2 shadow-xl shadow-[#FF5C00]/25 transition-all active:scale-[0.98]"
           >
-            <span>{isVerifying ? 'Verifying...' : 'Enter Room'}</span>
+            <span>{isVerifying ? 'Verifying...' : 'Unlock & Enter Channel'}</span>
             <LogIn className="w-4 h-4 stroke-[2.5]" />
           </button>
         </form>
+
+        {onRequestKnock && (
+          <div className="w-full pt-1 space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="h-px bg-zinc-800 flex-1" />
+              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Don't have password?</span>
+              <div className="h-px bg-zinc-800 flex-1" />
+            </div>
+
+            <button
+              type="button"
+              onClick={onRequestKnock}
+              className="w-full py-2.5 bg-zinc-800/80 hover:bg-zinc-800 border border-zinc-700/80 text-zinc-200 hover:text-white font-bold rounded-2xl text-xs flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+            >
+              <Hand className="w-4 h-4 text-[#FF5C00]" />
+              <span>Request Access (Door Knock)</span>
+            </button>
+          </div>
+        )}
 
         {/* Secondary Cancel Button */}
         <button

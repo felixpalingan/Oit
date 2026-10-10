@@ -238,6 +238,8 @@ BEGIN
 END;
 $$;
 
+GRANT EXECUTE ON FUNCTION public.verify_channel_password(UUID, TEXT) TO authenticated, anon;
+
 -- --------------------------------------------------------------------
 -- 2. AKTIFKAN RLS PADA SELURUH TABEL INTI
 -- --------------------------------------------------------------------

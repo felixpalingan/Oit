@@ -8,6 +8,7 @@ export interface KnockRequest {
   userAvatar?: string | null;
   roomName: string;
   targetRoomTitle: string;
+  channelType?: 'text' | 'voice';
 }
 
 interface AppState {

@@ -28,7 +28,8 @@ interface ChannelSidebarProps {
   onOpenNewChatModal: () => void;
   lastMessagesMap: Record<string, Message>;
   unreadCountsMap: Record<string, number>;
-  onKnockRoom: (roomId: string, title: string) => void;
+  onKnockRoom: (roomId: string, title: string, channel?: Channel) => void;
+  unlockedChannelIds?: Set<string>;
   onJoinVoiceCall?: (channel: Channel) => void;
   onSelectChannel?: () => void;
   onOpenJoinServer?: () => void;
@@ -49,6 +50,7 @@ export default function ChannelSidebar({
   lastMessagesMap,
   unreadCountsMap,
   onKnockRoom,
+  unlockedChannelIds = new Set(),
   onJoinVoiceCall,
   onSelectChannel,
   onOpenJoinServer,
@@ -72,6 +74,7 @@ export default function ChannelSidebar({
   const [textChannels, setTextChannels] = useState<Channel[]>([]);
   const [voiceChannels, setVoiceChannels] = useState<Channel[]>([]);
   const [serverTitle, setServerTitle] = useState('Server');
+  const [isServerAdminOrOwner, setIsServerAdminOrOwner] = useState(false);
 
   // Supabase Realtime Server-Wide Voice Room Presence State
   const [voiceRoomMembersMap, setVoiceRoomMembersMap] = useState<Record<string, User[]>>({});
@@ -136,11 +139,27 @@ export default function ChannelSidebar({
         .eq('id', activeServerId)
         .single();
 
+      let isAdminOrOwner = false;
       if (srv) {
         setServerTitle(srv.name);
+        if (srv.owner_id === currentUser.id) {
+          isAdminOrOwner = true;
+        }
       } else {
         setServerTitle('Server Oit');
       }
+
+      const { data: myMember } = await supabase
+        .from('server_members')
+        .select('role')
+        .eq('server_id', activeServerId)
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
+
+      if (myMember?.role === 'owner' || myMember?.role === 'admin') {
+        isAdminOrOwner = true;
+      }
+      setIsServerAdminOrOwner(isAdminOrOwner);
 
       const { data, error } = await supabase
         .from('channels')
@@ -156,7 +175,8 @@ export default function ChannelSidebar({
 
         const isValid = data.some((c: Channel) => c.id === activeChannelId);
         if (!isValid && text.length > 0) {
-          setActiveChannel(text[0].id, text[0].name);
+          const firstAccessible = text.find((c: Channel) => !c.is_private || isAdminOrOwner || (unlockedChannelIds && unlockedChannelIds.has(c.id))) || text[0];
+          setActiveChannel(firstAccessible.id, firstAccessible.name);
         }
       } else {
         const defaultChan: Channel = {
@@ -356,6 +376,8 @@ export default function ChannelSidebar({
 
               {textChannels.map((c) => {
                 const isActive = activeChannelId === c.id;
+                const isUnlocked = !c.is_private || isServerAdminOrOwner || (unlockedChannelIds && unlockedChannelIds.has(c.id));
+
                 return (
                   <div
                     key={c.id}
@@ -367,8 +389,12 @@ export default function ChannelSidebar({
                   >
                     <div
                       onClick={() => {
-                        setActiveChannel(c.id, c.name);
-                        if (onSelectChannel) onSelectChannel();
+                        if (isUnlocked) {
+                          setActiveChannel(c.id, c.name);
+                          if (onSelectChannel) onSelectChannel();
+                        } else {
+                          onKnockRoom(c.id, c.name, c);
+                        }
                       }}
                       className="flex items-center gap-2.5 truncate flex-1"
                     >
@@ -376,16 +402,24 @@ export default function ChannelSidebar({
                       <span className="truncate">{c.name}</span>
                     </div>
 
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (onOpenEditChannelModal) onOpenEditChannelModal(c);
-                      }}
-                      title="Edit Channel Settings"
-                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-black/30 rounded-md transition-opacity"
-                    >
-                      <Settings className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      {c.is_private && (
+                        <span title={isUnlocked ? 'Unlocked (Access Granted)' : 'Password Protected Channel'} className="inline-flex">
+                          <Lock className={`w-3.5 h-3.5 ${isUnlocked ? 'text-emerald-400' : 'text-zinc-500'} shrink-0`} />
+                        </span>
+                      )}
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onOpenEditChannelModal) onOpenEditChannelModal(c);
+                        }}
+                        title="Edit Channel Settings"
+                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-black/30 rounded-md transition-opacity"
+                      >
+                        <Settings className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -408,6 +442,7 @@ export default function ChannelSidebar({
                 const vcRoomKey = `vc_${c.id}`;
                 const isVoiceActive = activeCallRoomId === vcRoomKey;
                 const participants = voiceRoomMembersMap[vcRoomKey] || (isVoiceActive ? [currentUser] : []);
+                const isUnlocked = !c.is_private || isServerAdminOrOwner || (unlockedChannelIds && unlockedChannelIds.has(c.id));
 
                 return (
                   <div key={c.id} className="space-y-1">
@@ -421,10 +456,10 @@ export default function ChannelSidebar({
                       <div
                         onClick={() => {
                           if (onSelectChannel) onSelectChannel();
-                          if (c.is_private) {
-                            onKnockRoom(c.id, c.name);
-                          } else if (onJoinVoiceCall) {
-                            onJoinVoiceCall(c);
+                          if (isUnlocked) {
+                            if (onJoinVoiceCall) onJoinVoiceCall(c);
+                          } else {
+                            onKnockRoom(c.id, c.name, c);
                           }
                         }}
                         className="flex items-center gap-2.5 truncate flex-1"
@@ -435,7 +470,9 @@ export default function ChannelSidebar({
 
                       <div className="flex items-center gap-1">
                         {c.is_private && (
-                          <Lock className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                          <span title={isUnlocked ? 'Unlocked (Access Granted)' : 'Password Protected Channel'} className="inline-flex">
+                            <Lock className={`w-3.5 h-3.5 ${isUnlocked ? 'text-emerald-400' : 'text-zinc-500'} shrink-0`} />
+                          </span>
                         )}
 
                         <button

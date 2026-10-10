@@ -31,6 +31,16 @@ export default function CreateChannelModal({
     e.preventDefault();
     if (!channelName.trim()) return;
 
+    if (isPrivate && !password.trim()) {
+      setErrorMsg('Password wajib diisi untuk Private Channel.');
+      return;
+    }
+
+    if (isPrivate && password.trim().length < 3) {
+      setErrorMsg('Password channel minimal 3 karakter.');
+      return;
+    }
+
     setLoading(true);
     setErrorMsg('');
 
@@ -49,33 +59,25 @@ export default function CreateChannelModal({
       const { data, error } = await supabase
         .from('channels')
         .insert([payload])
-        .select()
+        .select('id, server_id, name, type, is_private, created_at')
         .single();
 
+      if (error) throw error;
+
       const createdChannel: Channel = {
-        id: data?.id || fallbackChannelId,
-        server_id: serverId,
-        name: data?.name || cleanName,
-        type: channelType,
-        is_private: isPrivate,
+        id: data.id,
+        server_id: data.server_id,
+        name: data.name,
+        type: data.type as 'text' | 'voice',
+        is_private: data.is_private,
       };
 
       setActiveChannel(createdChannel.id, createdChannel.name);
       onChannelCreated(createdChannel);
       onClose();
     } catch (err: any) {
-      console.warn('Supabase create channel notice:', err);
-      const fallbackChannel: Channel = {
-        id: fallbackChannelId,
-        server_id: serverId,
-        name: cleanName,
-        type: channelType,
-        is_private: isPrivate,
-      };
-
-      setActiveChannel(fallbackChannel.id, fallbackChannel.name);
-      onChannelCreated(fallbackChannel);
-      onClose();
+      console.warn('Supabase create channel error:', err);
+      setErrorMsg(err.message || 'Gagal membuat channel.');
     } finally {
       setLoading(false);
     }

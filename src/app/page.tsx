@@ -97,6 +97,8 @@ export default function Page() {
   const [toastNotification, setToastNotification] = useState<ToastItem | null>(null);
 
   const [securityCheckRoom, setSecurityCheckRoom] = useState<{ id: string; title: string } | null>(null);
+  const [securityCheckTargetChannel, setSecurityCheckTargetChannel] = useState<Channel | null>(null);
+  const [unlockedChannelIds, setUnlockedChannelIds] = useState<Set<string>>(new Set());
   const [incomingCallPrompt, setIncomingCallPrompt] = useState<{ caller: UserType; roomName: string; isVideo: boolean } | null>(null);
 
   const supabase = createClient();
@@ -342,15 +344,38 @@ export default function Page() {
           setKnockNotification({
             id: `knock-${Date.now()}`,
             userId: payload.userId,
-            userName: payload.userName || 'David (34)',
+            userName: payload.userName || 'Guest User',
             roomName: payload.roomId || 'secret-room',
             targetRoomTitle: payload.targetRoomTitle || 'Secret Room',
+            channelType: payload.channelType || 'voice',
           });
         }
       })
       .on('broadcast', { event: 'knock_approved' }, ({ payload }) => {
+        if (payload?.targetUserId === currentUser.id && payload?.roomId) {
+          setUnlockedChannelIds((prev) => new Set(prev).add(payload.roomId));
+          if (payload.channelType === 'text') {
+            setActiveChannel(payload.roomId, payload.targetRoomTitle || 'channel');
+            setActiveChatUser(null);
+          } else {
+            setActiveCall(`vc_${payload.roomId}`, { display_name: payload.targetRoomTitle || 'Voice Channel' }, false);
+          }
+          setToastNotification({
+            id: `toast-${Date.now()}`,
+            type: 'success',
+            title: 'Permintaan Diterima!',
+            message: `Host menyetujui permintaan Anda untuk masuk ke "${payload.targetRoomTitle || 'channel'}".`,
+          });
+        }
+      })
+      .on('broadcast', { event: 'knock_denied' }, ({ payload }) => {
         if (payload?.targetUserId === currentUser.id) {
-          setActiveCall(payload.roomName, null, true);
+          setToastNotification({
+            id: `toast-${Date.now()}`,
+            type: 'warning',
+            title: 'Permintaan Ditolak',
+            message: `Permintaan masuk ke "${payload.targetRoomTitle || 'channel'}" ditolak oleh host/admin.`,
+          });
         }
       })
       .subscribe();
@@ -448,11 +473,41 @@ export default function Page() {
     }
   };
 
-  const handleKnockRoom = (roomId: string, title: string) => {
+  const handleKnockRoom = (roomId: string, title: string, channel?: Channel) => {
     setSecurityCheckRoom({ id: roomId, title });
+    setSecurityCheckTargetChannel(channel || null);
   };
 
   const handleSecurityCheckSuccess = () => {
+    if (!securityCheckRoom || !currentUser) return;
+
+    const targetId = securityCheckRoom.id;
+    const targetTitle = securityCheckRoom.title;
+    const targetType = securityCheckTargetChannel?.type || 'voice';
+
+    // 1. Mark channel unlocked in session memory
+    setUnlockedChannelIds((prev) => new Set(prev).add(targetId));
+
+    // 2. Immediately join room / open channel
+    if (targetType === 'voice') {
+      setActiveCall(`vc_${targetId}`, { display_name: targetTitle }, false);
+    } else {
+      setActiveChannel(targetId, targetTitle);
+      setActiveChatUser(null);
+    }
+
+    setToastNotification({
+      id: `toast-${Date.now()}`,
+      type: 'success',
+      title: 'Akses Diberikan',
+      message: `Berhasil membuka channel "${targetTitle}".`,
+    });
+
+    setSecurityCheckRoom(null);
+    setSecurityCheckTargetChannel(null);
+  };
+
+  const handleSendKnockRequest = () => {
     if (!securityCheckRoom || !currentUser) return;
 
     supabase.channel('room_requests').send({
@@ -463,10 +518,19 @@ export default function Page() {
         userName: currentUser.display_name || currentUser.username,
         roomId: securityCheckRoom.id,
         targetRoomTitle: securityCheckRoom.title,
+        channelType: securityCheckTargetChannel?.type || 'voice',
       },
     });
 
+    setToastNotification({
+      id: `toast-${Date.now()}`,
+      type: 'info',
+      title: 'Permintaan Terkirim',
+      message: `Mengetuk pintu "${securityCheckRoom.title}"... Menunggu persetujuan host/admin.`,
+    });
+
     setSecurityCheckRoom(null);
+    setSecurityCheckTargetChannel(null);
   };
 
   const initiateCall = (chatUser: UserType, isVideo: boolean) => {
@@ -487,20 +551,38 @@ export default function Page() {
   };
 
   const handleApproveKnock = (knock: KnockRequest) => {
-    const roomName = `room_${knock.roomName}`;
     supabase.channel('room_requests').send({
       type: 'broadcast',
       event: 'knock_approved',
       payload: {
         targetUserId: knock.userId,
-        roomName,
+        roomId: knock.roomName,
+        targetRoomTitle: knock.targetRoomTitle,
+        channelType: knock.channelType || 'voice',
       },
     });
-    setActiveCall(roomName, { display_name: knock.userName }, true);
+
+    setToastNotification({
+      id: `toast-${Date.now()}`,
+      type: 'success',
+      title: 'Akses Diberikan',
+      message: `Anda mengizinkan ${knock.userName} masuk ke "${knock.targetRoomTitle}".`,
+    });
+
     setKnockNotification(null);
   };
 
   const handleDenyKnock = (knock: KnockRequest) => {
+    supabase.channel('room_requests').send({
+      type: 'broadcast',
+      event: 'knock_denied',
+      payload: {
+        targetUserId: knock.userId,
+        roomId: knock.roomName,
+        targetRoomTitle: knock.targetRoomTitle,
+      },
+    });
+
     setKnockNotification(null);
   };
 
@@ -889,8 +971,9 @@ export default function Page() {
           }}
           lastMessagesMap={lastMessagesMap}
           unreadCountsMap={unreadCountsMap}
-          onKnockRoom={(id, title) => {
-            handleKnockRoom(id, title);
+          unlockedChannelIds={unlockedChannelIds}
+          onKnockRoom={(id, title, channel) => {
+            handleKnockRoom(id, title, channel);
             setIsMobileDrawerOpen(false);
           }}
           onJoinVoiceCall={(c) => {
@@ -1108,7 +1191,11 @@ export default function Page() {
           roomId={securityCheckRoom.id}
           roomTitle={securityCheckRoom.title}
           onSuccess={handleSecurityCheckSuccess}
-          onClose={() => setSecurityCheckRoom(null)}
+          onRequestKnock={handleSendKnockRequest}
+          onClose={() => {
+            setSecurityCheckRoom(null);
+            setSecurityCheckTargetChannel(null);
+          }}
         />
       )}
 

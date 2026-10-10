@@ -114,10 +114,10 @@ export default function CreateServerModal({
             server_id: createdServerId,
             name: cleanChanName,
             type: channelType,
-            is_private: isPrivate,
+            is_private: false,
           },
         ])
-        .select()
+        .select('id, server_id, name, type, is_private, created_at')
         .single();
 
       const createdChannelId = newChannel?.id || `${createdServerId}-general`;

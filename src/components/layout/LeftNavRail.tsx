@@ -114,13 +114,13 @@ export default function LeftNavRail({
     try {
       const { data: chans } = await supabase
         .from('channels')
-        .select('id, name')
+        .select('id, name, is_private')
         .eq('server_id', srvId)
-        .order('created_at', { ascending: true })
-        .limit(1);
+        .order('created_at', { ascending: true });
 
       if (chans && chans.length > 0) {
-        setActiveChannel(chans[0].id, chans[0].name);
+        const publicChan = chans.find((c) => !c.is_private) || chans[0];
+        setActiveChannel(publicChan.id, publicChan.name);
       } else {
         setActiveChannel(`${srvId}-general`, 'general');
       }

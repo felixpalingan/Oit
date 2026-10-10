@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Edit2, Trash2, Hash, Volume2 } from 'lucide-react';
+import { X, Edit2, Trash2, Hash, Volume2, Lock, Key } from 'lucide-react';
 import { Channel } from '@/types';
 import { createClient } from '@/utils/supabase/client';
 
@@ -19,6 +19,8 @@ export default function EditChannelModal({
   onDeleted,
 }: EditChannelModalProps) {
   const [channelName, setChannelName] = useState(channel.name);
+  const [isPrivate, setIsPrivate] = useState(Boolean(channel.is_private));
+  const [newPassword, setNewPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const supabase = createClient();
@@ -27,21 +29,44 @@ export default function EditChannelModal({
     e.preventDefault();
     if (!channelName.trim()) return;
 
+    if (isPrivate && !channel.is_private && !newPassword.trim()) {
+      setErrorMsg('Password wajib diisi jika channel diubah menjadi Private.');
+      return;
+    }
+
+    if (isPrivate && newPassword.trim() && newPassword.trim().length < 3) {
+      setErrorMsg('Password channel minimal 3 karakter.');
+      return;
+    }
+
     setLoading(true);
+    setErrorMsg('');
     const cleanName = channelName.trim().toLowerCase().replace(/\s+/g, '-');
 
     try {
-      await supabase
+      const updatePayload: Record<string, any> = {
+        name: cleanName,
+        is_private: isPrivate,
+      };
+
+      if (isPrivate && newPassword.trim()) {
+        updatePayload.password = newPassword.trim();
+      } else if (!isPrivate) {
+        updatePayload.password = null;
+      }
+
+      const { error } = await supabase
         .from('channels')
-        .update({ name: cleanName })
+        .update(updatePayload)
         .eq('id', channel.id);
+
+      if (error) throw error;
 
       onUpdated(cleanName);
       onClose();
     } catch (err: any) {
       console.warn('Update channel error:', err);
-      onUpdated(cleanName);
-      onClose();
+      setErrorMsg(err.message || 'Gagal memperbarui channel.');
     } finally {
       setLoading(false);
     }
@@ -103,6 +128,49 @@ export default function EditChannelModal({
                 className="w-full pl-8 pr-4 py-3 bg-[#1c1c21] border border-zinc-800 rounded-2xl text-xs text-white focus:outline-none focus:border-[#FF5C00] transition-colors"
               />
             </div>
+          </div>
+
+          {/* Toggle Private Password Channel */}
+          <div className="pt-2 border-t border-zinc-800/80 space-y-3">
+            <div className="flex items-center justify-between p-3 bg-[#1c1c21] border border-zinc-800/80 rounded-2xl">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-zinc-800 flex items-center justify-center text-[#FF5C00]">
+                  <Lock className="w-4 h-4" />
+                </div>
+                <div>
+                  <h5 className="text-xs font-bold text-white">Private Password Channel</h5>
+                  <p className="text-[10px] text-zinc-400">Require password to enter this channel</p>
+                </div>
+              </div>
+
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isPrivate}
+                  onChange={(e) => setIsPrivate(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#FF5C00]"></div>
+              </label>
+            </div>
+
+            {isPrivate && (
+              <div className="space-y-1.5 animate-in fade-in duration-200">
+                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-zinc-400">
+                  {channel.is_private ? 'CHANGE PASSWORD (OPTIONAL)' : 'SET CHANNEL PASSWORD'}
+                </label>
+                <div className="relative">
+                  <Key className="w-4 h-4 text-zinc-500 absolute left-4 top-3.5" />
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder={channel.is_private ? 'Leave blank to keep existing password' : 'Enter new password'}
+                    className="w-full pl-11 pr-4 py-3 bg-[#1c1c21] border border-zinc-800 rounded-2xl text-xs text-white focus:outline-none focus:border-[#FF5C00] transition-colors"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center justify-between pt-3 border-t border-zinc-800/80">

@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { X, AlertTriangle, AlertCircle } from 'lucide-react';
+import { X, AlertTriangle, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 export interface ToastItem {
   id: string;
-  type?: 'error' | 'warning' | 'info';
+  type?: 'error' | 'warning' | 'info' | 'success';
   title: string;
   message: string;
 }
@@ -34,6 +34,7 @@ export default function ToastNotification({
   if (!toast) return null;
 
   const isWarning = toast.type === 'warning' || toast.title.toLowerCase().includes('large');
+  const isSuccess = toast.type === 'success';
 
   return (
     <div className="fixed top-5 right-5 z-[100] max-w-sm w-full select-none animate-in slide-in-from-top-3 duration-200">
@@ -41,6 +42,8 @@ export default function ToastNotification({
         className={`p-4 rounded-2xl border shadow-2xl backdrop-blur-md flex items-start gap-3 text-white ${
           isWarning
             ? 'bg-[#1c1416]/95 border-red-500/50 shadow-red-950/40'
+            : isSuccess
+            ? 'bg-[#121c16]/95 border-emerald-500/50 shadow-emerald-950/40'
             : 'bg-[#18181c]/95 border-zinc-700 shadow-black/80'
         }`}
       >
@@ -49,10 +52,18 @@ export default function ToastNotification({
           className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
             isWarning
               ? 'bg-red-950/80 text-red-400 border border-red-800/80'
+              : isSuccess
+              ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/80'
               : 'bg-zinc-800 text-zinc-200 border border-zinc-700'
           }`}
         >
-          {isWarning ? <AlertTriangle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5 text-zinc-200" />}
+          {isWarning ? (
+            <AlertTriangle className="w-5 h-5" />
+          ) : isSuccess ? (
+            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+          ) : (
+            <AlertCircle className="w-5 h-5 text-zinc-200" />
+          )}
         </div>
 
         {/* Content Details matching Images 1 & 2 */}
