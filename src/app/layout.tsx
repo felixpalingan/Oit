@@ -31,6 +31,9 @@ const siteUrl = getSiteUrl().replace(/\/$/, '');
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
+  alternates: {
+    canonical: '/',
+  },
   title: {
     default: "Oit — Real-Time Messaging & Voice/Video Rooms",
     template: "%s | Oit",
