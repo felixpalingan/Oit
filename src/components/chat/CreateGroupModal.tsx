@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Friend, UserProfile } from '@/types';
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/utils/supabase/client';
 import { X, Users, Plus, Check } from 'lucide-react';
 
 interface CreateGroupModalProps {

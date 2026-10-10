@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { UserProfile } from '@/types';
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/utils/supabase/client';
 import { X, Search, QrCode, UserPlus, CheckCircle2 } from 'lucide-react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 

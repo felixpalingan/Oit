@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/utils/supabase/client';
 import { LogIn, UserPlus, Flame, AlertCircle } from 'lucide-react';
 
 interface AuthModalProps {
