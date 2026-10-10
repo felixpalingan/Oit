@@ -114,27 +114,55 @@ AS $$
   );
 $$;
 
--- Ambil server_id dari channel id (mendukung cast UUID & TEXT)
+-- Ambil server_id dari channel id (mendukung cast UUID, TEXT, dan fallback virtual <server_id>-general)
 CREATE OR REPLACE FUNCTION public.get_server_id_from_channel(p_channel_id TEXT)
 RETURNS UUID
-LANGUAGE sql
+LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
 SET search_path = ''
 AS $$
-  SELECT server_id FROM public.channels
+DECLARE
+  v_server_id UUID;
+BEGIN
+  IF p_channel_id IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  IF p_channel_id LIKE '%-general' AND length(p_channel_id) >= 36 THEN
+    BEGIN
+      RETURN substring(p_channel_id from 1 for 36)::UUID;
+    EXCEPTION WHEN others THEN
+      NULL;
+    END;
+  END IF;
+
+  SELECT server_id INTO v_server_id 
+  FROM public.channels
   WHERE id::TEXT = p_channel_id
   LIMIT 1;
+
+  RETURN v_server_id;
+END;
 $$;
 
 -- Cek apakah channel dapat diakses oleh user
 CREATE OR REPLACE FUNCTION public.is_channel_accessible(p_channel_id TEXT, p_user_id UUID)
 RETURNS BOOLEAN
-LANGUAGE sql
+LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
 SET search_path = ''
 AS $$
+DECLARE
+  v_server_id UUID;
+  v_accessible BOOLEAN;
+BEGIN
+  IF p_channel_id IS NULL THEN
+    RETURN false;
+  END IF;
+
+  -- 1. Cek jika channel terdaftar di tabel channels
   SELECT EXISTS (
     SELECT 1 FROM public.channels c
     WHERE c.id::TEXT = p_channel_id
@@ -143,8 +171,54 @@ AS $$
         OR public.is_server_member(c.server_id, p_user_id)
       )
       AND NOT public.is_user_banned_from_server(c.server_id, p_user_id)
-  );
+  ) INTO v_accessible;
+
+  IF v_accessible THEN
+    RETURN true;
+  END IF;
+
+  -- 2. Cek fallback format virtual <server_id>-general
+  IF p_channel_id LIKE '%-general' AND length(p_channel_id) >= 36 THEN
+    BEGIN
+      v_server_id := substring(p_channel_id from 1 for 36)::UUID;
+      RETURN (
+        (NOT public.is_server_private(v_server_id) OR public.is_server_member(v_server_id, p_user_id))
+        AND NOT public.is_user_banned_from_server(v_server_id, p_user_id)
+      );
+    EXCEPTION WHEN others THEN
+      RETURN false;
+    END;
+  END IF;
+
+  RETURN false;
+END;
 $$;
+
+-- --------------------------------------------------------------------
+-- TRIGGER OTOMATIS: Buat profil pengguna saat pendaftaran akun di auth.users
+-- --------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.handle_new_user_profile()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.users (id, username, display_name, avatar_url)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1)),
+    COALESCE(NEW.raw_user_meta_data->>'display_name', split_part(NEW.email, '@', 1)),
+    NEW.raw_user_meta_data->>'avatar_url'
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    username = EXCLUDED.username,
+    display_name = COALESCE(EXCLUDED.display_name, public.users.display_name),
+    avatar_url = COALESCE(EXCLUDED.avatar_url, public.users.avatar_url);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created_profile ON auth.users;
+CREATE TRIGGER on_auth_user_created_profile
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user_profile();
 
 -- RPC Aman untuk verifikasi password channel tanpa mengekspos plaintext ke client
 CREATE OR REPLACE FUNCTION public.verify_channel_password(p_channel_id UUID, p_password TEXT)
@@ -206,8 +280,8 @@ CREATE POLICY "users_select_authenticated"
 CREATE POLICY "users_insert_self"
   ON public.users
   FOR INSERT
-  TO authenticated
-  WITH CHECK ((select auth.uid()) = id);
+  TO authenticated, anon
+  WITH CHECK ((select auth.uid()) = id OR (select auth.uid()) IS NULL);
 
 -- User hanya bisa mengubah profil miliknya sendiri
 CREATE POLICY "users_update_self"

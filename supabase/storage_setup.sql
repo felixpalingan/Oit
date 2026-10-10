@@ -17,6 +17,14 @@ FOR INSERT TO authenticated WITH CHECK (
   AND auth.role() = 'authenticated'
 );
 
+-- Izinkan unggah avatar saat form registrasi (sebelum user memiliki sesi login)
+DROP POLICY IF EXISTS "Register Avatar Upload Access" ON storage.objects;
+CREATE POLICY "Register Avatar Upload Access" ON storage.objects 
+FOR INSERT TO anon, authenticated WITH CHECK (
+  bucket_id = 'chat-attachments' 
+  AND name LIKE 'avatars/register_%'
+);
+
 -- Pengguna hanya dapat menghapus atau memperbarui file miliknya sendiri
 DROP POLICY IF EXISTS "Owner Delete Access" ON storage.objects;
 CREATE POLICY "Owner Delete Access" ON storage.objects 
