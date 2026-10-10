@@ -1,16 +1,37 @@
-# ⚡ Oit — High-Performance Real-Time Communication & Community Platform
+<p align="center">
+  <img src="./public/oit_logo.png" alt="Oit Logo" width="160" />
+</p>
 
-[![Production Live App](https://img.shields.io/badge/Production-Live%20App-ff5c00?style=for-the-badge&logo=vercel&logoColor=white)](https://oit-seven.vercel.app)
-[![Next.js 16](https://img.shields.io/badge/Next.js-16.2.12-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
-[![Supabase](https://img.shields.io/badge/Supabase-Database%20%26%20Realtime-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
-[![LiveKit WebRTC](https://img.shields.io/badge/LiveKit-Cloud%20WebRTC-FF4F00?style=for-the-badge&logo=livekit&logoColor=white)](https://livekit.io)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+<h1 align="center">⚡ Oit</h1>
 
-**Oit** is a full-stack, enterprise-grade real-time communication platform engineered for high-concurrency instant messaging, low-latency audio/video WebRTC group calling, granular role-based access control (RBAC), and robust system-wide fault tolerance.
+<p align="center">
+  <strong>High-Performance Real-Time Communication & Community Workspace Platform</strong>
+</p>
 
-Designed with **Oit Signature High-Voltage Dark Aesthetic** (`#000000` base, `#161619` surfaces, and `#FF5C00` Vibrant Orange accent), the application features a single-DOM mobile-first layout engine capable of rendering dynamic community workspaces, rich media streams, and real-time audio visualizers with zero performance degradation.
+<p align="center">
+  Platform komunikasi real-time modern berkemampuan tinggi yang dirancang untuk pengembang dan komunitas teknologi — menghadirkan instant messaging sub-100ms, panggilan audio/video WebRTC latensi rendah (SFU), role-based access control (RBAC) 4 tingkat, serta tema <em>High-Voltage Dark</em> yang responsif dan elegan.
+</p>
 
-🌐 **Production Application**: [https://oit-seven.vercel.app](https://oit-seven.vercel.app)
+<p align="center">
+  <a href="https://oit-seven.vercel.app"><img src="https://img.shields.io/badge/Production-Live%20App-ff5c00?style=for-the-badge&logo=vercel&logoColor=white" alt="Production Live App" /></a>
+  <a href="https://nextjs.org/"><img src="https://img.shields.io/badge/Next.js-16.2.12-black?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js 16" /></a>
+  <a href="https://supabase.com"><img src="https://img.shields.io/badge/Supabase-Database%20%26%20Realtime-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase" /></a>
+  <a href="https://livekit.io"><img src="https://img.shields.io/badge/LiveKit-Cloud%20WebRTC-FF4F00?style=for-the-badge&logo=livekit&logoColor=white" alt="LiveKit WebRTC" /></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" /></a>
+</p>
+
+---
+
+### 📖 Tentang Proyek (About Oit)
+
+**Oit** adalah platform komunikasi real-time *full-stack* tingkat enterprise yang dibangun untuk kolaborasi tim, komunitas developer, dan sinkronisasi proyek harian:
+- **⚡ Super Cepat**: Menggunakan Supabase Realtime CDC via WebSocket dengan latensi sub-100ms dan zero-polling.
+- **🎙️ WebRTC Group Call & Floating Pod**: Panggilan suara & video multi-partisipan berbasis LiveKit SFU, DSP active speaker detection, dan floating call overlay (`● Live`) yang tetap aktif saat berpindah channel.
+- **🛡️ Tata Kelola Komunitas & RBAC Dinamis**: Hierarki peran 4-tingkat (`Owner > Admin > Moderator > Member`), mute sementara (10 menit), kick/ban permanen, dan audit log live.
+- **🔒 Saluran Terproteksi & Door-Knocking**: Akses channel privat dengan proteksi password serta protokol permintaan masuk *door-knocking* real-time.
+- **🎨 High-Voltage Dark Aesthetic**: Didesain dengan palet khas `#000000` base, `#161619` surface, dan aksen oranye menyala `#FF5C00` bergaya glassmorphism modern.
+
+🌐 **Aplikasi Live (Produksi)**: [https://oit-seven.vercel.app](https://oit-seven.vercel.app)
 
 ---
 
