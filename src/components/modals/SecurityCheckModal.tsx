@@ -3,26 +3,55 @@
 import React, { useState } from 'react';
 import { Lock, Key, LogIn } from 'lucide-react';
 
+import { createClient } from '@/utils/supabase/client';
+
 interface SecurityCheckModalProps {
+  roomId?: string;
   roomTitle: string;
   onSuccess: () => void;
   onClose: () => void;
 }
 
 export default function SecurityCheckModal({
+  roomId,
   roomTitle,
   onSuccess,
   onClose,
 }: SecurityCheckModalProps) {
+  const supabase = createClient();
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password.trim()) {
       setErrorMsg('Password wajib diisi untuk verifikasi.');
       return;
     }
+
+    if (roomId) {
+      setIsVerifying(true);
+      try {
+        const { data: isValid, error } = await supabase.rpc('verify_channel_password', {
+          p_channel_id: roomId,
+          p_password: password.trim(),
+        });
+
+        if (error) {
+          console.error('Password verification error:', error);
+        } else if (isValid === false) {
+          setErrorMsg('Password channel salah. Akses ditolak.');
+          setIsVerifying(false);
+          return;
+        }
+      } catch (err) {
+        console.error('Verify channel password exception:', err);
+      } finally {
+        setIsVerifying(false);
+      }
+    }
+
     // Access granted
     onSuccess();
   };
@@ -72,9 +101,10 @@ export default function SecurityCheckModal({
 
           <button
             type="submit"
-            className="w-full py-3.5 bg-[#FF5C00] hover:bg-[#ff701a] text-white font-extrabold rounded-2xl text-xs flex items-center justify-center gap-2 shadow-xl shadow-[#FF5C00]/25 transition-all active:scale-[0.98]"
+            disabled={isVerifying}
+            className="w-full py-3.5 bg-[#FF5C00] hover:bg-[#ff701a] disabled:opacity-50 text-white font-extrabold rounded-2xl text-xs flex items-center justify-center gap-2 shadow-xl shadow-[#FF5C00]/25 transition-all active:scale-[0.98]"
           >
-            <span>Enter Room</span>
+            <span>{isVerifying ? 'Verifying...' : 'Enter Room'}</span>
             <LogIn className="w-4 h-4 stroke-[2.5]" />
           </button>
         </form>

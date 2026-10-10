@@ -114,7 +114,7 @@ export default function LeftNavRail({
     try {
       const { data: chans } = await supabase
         .from('channels')
-        .select('*')
+        .select('id, name')
         .eq('server_id', srvId)
         .order('created_at', { ascending: true })
         .limit(1);

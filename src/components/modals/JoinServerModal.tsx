@@ -116,7 +116,7 @@ export default function JoinServerModal({
       // 4. Fetch first channel
       const { data: chans } = await supabase
         .from('channels')
-        .select('*')
+        .select('id, name')
         .eq('server_id', serverIdToJoin)
         .limit(1);
 

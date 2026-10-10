@@ -9,9 +9,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Missing room or username' }, { status: 400 });
   }
 
-  const apiKey = process.env.LIVEKIT_API_KEY || 'API5AJk4WWX6nnX';
-  const apiSecret = process.env.LIVEKIT_API_SECRET || 'Y5DpGeGCU3fnXf7sIJ60Qdk0OuhPfto1mY36cbitBe9C';
-  const wsUrl = process.env.LIVEKIT_URL || process.env.NEXT_PUBLIC_LIVEKIT_URL || 'wss://oit-8dwd1ca4.livekit.cloud';
+  const apiKey = process.env.LIVEKIT_API_KEY;
+  const apiSecret = process.env.LIVEKIT_API_SECRET;
+  const wsUrl = process.env.LIVEKIT_URL || process.env.NEXT_PUBLIC_LIVEKIT_URL;
+
+  if (!apiKey || !apiSecret || !wsUrl) {
+    return NextResponse.json({ error: 'LiveKit server credentials are not properly configured' }, { status: 500 });
+  }
 
   try {
     const at = new AccessToken(apiKey, apiSecret, {

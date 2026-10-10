@@ -144,7 +144,7 @@ export default function ChannelSidebar({
 
       const { data, error } = await supabase
         .from('channels')
-        .select('*')
+        .select('id, server_id, name, type, is_private, created_at')
         .eq('server_id', activeServerId)
         .order('created_at', { ascending: true });
 

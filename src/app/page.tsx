@@ -1105,6 +1105,7 @@ export default function Page() {
       {/* Glassmorphism Security Check Password Modal */}
       {securityCheckRoom && (
         <SecurityCheckModal
+          roomId={securityCheckRoom.id}
           roomTitle={securityCheckRoom.title}
           onSuccess={handleSecurityCheckSuccess}
           onClose={() => setSecurityCheckRoom(null)}

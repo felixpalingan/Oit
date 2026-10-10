@@ -34,19 +34,19 @@ export async function GET(request: Request) {
     const startTime = Date.now();
 
     // 3. Perform a lightweight ping query across primary tables to keep PostgreSQL warm & active
-    const [serversRes, profilesRes] = await Promise.all([
+    const [serversRes, usersRes] = await Promise.all([
       supabase.from('servers').select('id', { count: 'exact', head: true }),
-      supabase.from('profiles').select('id', { count: 'exact', head: true }),
+      supabase.from('users').select('id', { count: 'exact', head: true }),
     ]);
 
     const latencyMs = Date.now() - startTime;
 
-    if (serversRes.error && profilesRes.error) {
-      console.error('Supabase Cron Ping Error:', serversRes.error || profilesRes.error);
+    if (serversRes.error && usersRes.error) {
+      console.error('Supabase Cron Ping Error:', serversRes.error || usersRes.error);
       return NextResponse.json(
         {
           success: false,
-          error: serversRes.error?.message || profilesRes.error?.message,
+          error: serversRes.error?.message || usersRes.error?.message,
           latencyMs,
           timestamp: new Date().toISOString(),
         },
@@ -61,7 +61,7 @@ export async function GET(request: Request) {
       timestamp: new Date().toISOString(),
       details: {
         serverCount: serversRes.count ?? 0,
-        profileCount: profilesRes.count ?? 0,
+        userCount: usersRes.count ?? 0,
       },
     });
   } catch (err: any) {
