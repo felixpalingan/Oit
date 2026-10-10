@@ -9,6 +9,7 @@ import {
 } from '@livekit/components-react';
 import '@livekit/components-styles';
 import { X, PhoneOff } from 'lucide-react';
+import { createClient } from '@/utils/supabase/client';
 
 interface LiveKitCallModalProps {
   roomName: string;
@@ -24,7 +25,24 @@ export default function LiveKitCallModal({ roomName, username, onLeave }: LiveKi
   useEffect(() => {
     async function fetchToken() {
       try {
-        const res = await fetch(`/api/livekit/token?room=${encodeURIComponent(roomName)}&username=${encodeURIComponent(username)}`);
+        const supabase = createClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        const headers: Record<string, string> = {};
+        if (session?.access_token) {
+          headers['Authorization'] = `Bearer ${session.access_token}`;
+        }
+
+        const res = await fetch(`/api/livekit?room=${encodeURIComponent(roomName)}`, {
+          headers,
+          credentials: 'include',
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          console.error('Failed to get LiveKit token:', errData.error || res.statusText);
+          return;
+        }
+
         const data = await res.json();
         if (data.token) {
           setToken(data.token);

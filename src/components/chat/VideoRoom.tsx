@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { User } from '@/types';
 import { useAppStore } from '@/store/useAppStore';
+import { createClient } from '@/utils/supabase/client';
 
 interface VideoRoomProps {
   roomName: string;
@@ -59,11 +60,28 @@ export default function VideoRoom({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Fetch LiveKit Token
+  // Fetch LiveKit Token with Authenticated Supabase Session
   useEffect(() => {
     async function fetchToken() {
       try {
-        const res = await fetch(`/api/livekit?room=${encodeURIComponent(roomName)}&username=${encodeURIComponent(currentUser.username)}`);
+        const supabase = createClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        const headers: Record<string, string> = {};
+        if (session?.access_token) {
+          headers['Authorization'] = `Bearer ${session.access_token}`;
+        }
+
+        const res = await fetch(`/api/livekit?room=${encodeURIComponent(roomName)}`, {
+          headers,
+          credentials: 'include',
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          console.error('Failed to get LiveKit token:', errData.error || res.statusText);
+          return;
+        }
+
         const data = await res.json();
         if (data.token) {
           setToken(data.token);
@@ -76,7 +94,7 @@ export default function VideoRoom({
       }
     }
     fetchToken();
-  }, [roomName, currentUser.username]);
+  }, [roomName, currentUser.id]);
 
   const targetName = chatUser
     ? (chatUser.display_name || chatUser.username)
