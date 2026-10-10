@@ -21,8 +21,16 @@ export const viewport: Viewport = {
   userScalable: false,
 };
 
+const getSiteUrl = () => {
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return 'https://oit-seven.vercel.app';
+};
+const siteUrl = getSiteUrl().replace(/\/$/, '');
+
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://oit.app"),
+  metadataBase: new URL(siteUrl),
   title: {
     default: "Oit — Real-Time Messaging & Voice/Video Rooms",
     template: "%s | Oit",
@@ -57,7 +65,7 @@ export const metadata: Metadata = {
     title: "Oit — Real-Time Messaging & Voice/Video Rooms",
     description:
       "Fast, lightweight, and modern real-time communication platform with instant chat, encrypted channels, and low-latency voice and video rooms.",
-    url: "https://oit.app",
+    url: siteUrl,
     siteName: "Oit",
     images: [
       {
