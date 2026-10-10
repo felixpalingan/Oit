@@ -31,6 +31,7 @@ export const metadata: Metadata = {
     "Fast, lightweight, and modern real-time communication platform with instant chat, encrypted channels, and low-latency voice and video rooms.",
   keywords: [
     "Oit",
+    "Almakius Felix Bariq Hekopung",
     "instant messaging",
     "realtime chat",
     "voice channels",
@@ -39,9 +40,9 @@ export const metadata: Metadata = {
     "discord alternative",
     "collaboration",
   ],
-  authors: [{ name: "Oit Team" }],
-  creator: "Oit",
-  publisher: "Oit",
+  authors: [{ name: "Almakius Felix Bariq Hekopung", url: "https://github.com/felixpalingan" }],
+  creator: "Almakius Felix Bariq Hekopung",
+  publisher: "Almakius Felix Bariq Hekopung",
   icons: {
     icon: [
       { url: "/oit_logo.png", sizes: "32x32", type: "image/png" },
