@@ -198,6 +198,7 @@ export default function ChannelSidebar({
 
   useEffect(() => {
     if (activeServerId) {
+      setIsServerAdminOrOwner(false);
       fetchChannels();
 
       const channelSub = supabase
@@ -211,11 +212,28 @@ export default function ChannelSidebar({
         )
         .subscribe();
 
+      const memberSub = supabase
+        .channel(`public:server_members_role:${activeServerId}:${currentUser.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'server_members',
+            filter: `server_id=eq.${activeServerId}`,
+          },
+          () => {
+            fetchChannels();
+          }
+        )
+        .subscribe();
+
       return () => {
         supabase.removeChannel(channelSub);
+        supabase.removeChannel(memberSub);
       };
     }
-  }, [activeServerId, refreshChannelsTrigger, supabase]);
+  }, [activeServerId, refreshChannelsTrigger, currentUser.id, supabase]);
 
   const handleCopyInviteCode = () => {
     if (!activeServerId) return;
@@ -270,16 +288,18 @@ export default function ChannelSidebar({
                 <Users className="w-4 h-4 text-zinc-300 hover:text-white" />
               </button>
 
-              {/* Server Settings Button */}
-              <button
-                type="button"
-                onClick={onOpenEditServerModal}
-                title="Server Settings"
-                aria-label="Server settings"
-                className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
-              >
-                <Settings className="w-4 h-4 text-zinc-300 hover:text-white" />
-              </button>
+              {/* Server Settings Button (Admin/Owner only) */}
+              {isServerAdminOrOwner && (
+                <button
+                  type="button"
+                  onClick={onOpenEditServerModal}
+                  title="Server Settings"
+                  aria-label="Server settings"
+                  className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
+                >
+                  <Settings className="w-4 h-4 text-zinc-300 hover:text-white" />
+                </button>
+              )}
 
               {/* Copy Server Invite Code Button */}
               <button
@@ -306,15 +326,18 @@ export default function ChannelSidebar({
                 <Compass className="w-4 h-4 text-zinc-400 hover:text-white" />
               </button>
 
-              <button
-                type="button"
-                onClick={onOpenCreateChannelModal}
-                title="Create Channel"
-                aria-label="Create channel"
-                className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
-              >
-                <Plus className="w-4 h-4 stroke-[2.5]" />
-              </button>
+              {/* Create Channel Button (Admin/Owner only) */}
+              {isServerAdminOrOwner && (
+                <button
+                  type="button"
+                  onClick={onOpenCreateChannelModal}
+                  title="Create Channel"
+                  aria-label="Create channel"
+                  className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
+                >
+                  <Plus className="w-4 h-4 stroke-[2.5]" />
+                </button>
+              )}
             </>
           ) : (
             <button
@@ -379,14 +402,16 @@ export default function ChannelSidebar({
             <div className="space-y-1">
               <div className="flex items-center justify-between px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-zinc-400">
                 <span>TEXT CHANNELS ({textChannels.length})</span>
-                <button
-                  type="button"
-                  onClick={onOpenCreateChannelModal}
-                  aria-label="Create text channel"
-                  className="hover:text-white p-1 rounded focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                </button>
+                {isServerAdminOrOwner && (
+                  <button
+                    type="button"
+                    onClick={onOpenCreateChannelModal}
+                    aria-label="Create text channel"
+                    className="hover:text-white p-1 rounded focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
 
               {textChannels.map((c) => {
@@ -438,18 +463,20 @@ export default function ChannelSidebar({
                         </span>
                       )}
 
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (onOpenEditChannelModal) onOpenEditChannelModal(c);
-                        }}
-                        title={`Edit #${c.name} settings`}
-                        aria-label={`Edit #${c.name} settings`}
-                        className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 hover:bg-black/30 rounded-md transition-opacity focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
-                      >
-                        <Settings className="w-3.5 h-3.5" />
-                      </button>
+                      {isServerAdminOrOwner && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onOpenEditChannelModal) onOpenEditChannelModal(c);
+                          }}
+                          title={`Edit #${c.name} settings`}
+                          aria-label={`Edit #${c.name} settings`}
+                          className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 hover:bg-black/30 rounded-md transition-opacity focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
+                        >
+                          <Settings className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -460,14 +487,16 @@ export default function ChannelSidebar({
             <div className="space-y-1 pt-2">
               <div className="flex items-center justify-between px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-zinc-400">
                 <span>VOICE CHANNELS ({voiceChannels.length})</span>
-                <button
-                  type="button"
-                  onClick={onOpenCreateChannelModal}
-                  aria-label="Create voice channel"
-                  className="hover:text-white p-1 rounded focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                </button>
+                {isServerAdminOrOwner && (
+                  <button
+                    type="button"
+                    onClick={onOpenCreateChannelModal}
+                    aria-label="Create voice channel"
+                    className="hover:text-white p-1 rounded focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
 
               {voiceChannels.map((c) => {
@@ -522,18 +551,20 @@ export default function ChannelSidebar({
                           </span>
                         )}
 
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (onOpenEditChannelModal) onOpenEditChannelModal(c);
-                          }}
-                          title={`Edit ${c.name} settings`}
-                          aria-label={`Edit ${c.name} settings`}
-                          className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 hover:bg-black/30 rounded-md transition-opacity focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
-                        >
-                          <Settings className="w-3.5 h-3.5" />
-                        </button>
+                        {isServerAdminOrOwner && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (onOpenEditChannelModal) onOpenEditChannelModal(c);
+                            }}
+                            title={`Edit ${c.name} settings`}
+                            aria-label={`Edit ${c.name} settings`}
+                            className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 hover:bg-black/30 rounded-md transition-opacity focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
+                          >
+                            <Settings className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </div>
 

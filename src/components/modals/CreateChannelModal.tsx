@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Hash, Volume2, Lock, Key } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { useAppStore } from '@/store/useAppStore';
@@ -29,6 +29,32 @@ export default function CreateChannelModal({
 
   const supabase = createClient();
   const { setActiveChannel } = useAppStore();
+
+  useEffect(() => {
+    async function checkPermission() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: srv } = await supabase
+        .from('servers')
+        .select('owner_id')
+        .eq('id', serverId)
+        .single();
+
+      const { data: member } = await supabase
+        .from('server_members')
+        .select('role')
+        .eq('server_id', serverId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      const isPermitted = srv?.owner_id === user.id || member?.role === 'admin' || member?.role === 'owner';
+      if (!isPermitted) {
+        onClose();
+      }
+    }
+    checkPermission();
+  }, [serverId, supabase, onClose]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

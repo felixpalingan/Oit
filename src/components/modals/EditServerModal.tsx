@@ -62,6 +62,23 @@ export default function EditServerModal({
           .single();
 
         if (srv) {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const isOwner = srv.owner_id === user.id;
+            const { data: member } = await supabase
+              .from('server_members')
+              .select('role')
+              .eq('server_id', serverId)
+              .eq('user_id', user.id)
+              .maybeSingle();
+
+            const isAdminOrOwner = isOwner || member?.role === 'admin' || member?.role === 'owner';
+            if (!isAdminOrOwner) {
+              onClose();
+              return;
+            }
+          }
+
           setServerName(srv.name || '');
           setIconUrl(srv.icon_url || null);
           setIsPrivate(srv.is_private || false);
@@ -73,7 +90,7 @@ export default function EditServerModal({
       }
     }
     fetchServerDetails();
-  }, [serverId, supabase]);
+  }, [serverId, supabase, onClose]);
 
   // Ticket 12: Fetch & Realtime Listen Audit Logs
   useEffect(() => {

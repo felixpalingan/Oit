@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Edit2, Trash2, Hash, Volume2, Lock, Key } from 'lucide-react';
 import { Channel } from '@/types';
 import { createClient } from '@/utils/supabase/client';
@@ -27,6 +27,32 @@ export default function EditChannelModal({
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const supabase = createClient();
+
+  useEffect(() => {
+    async function checkPermission() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: srv } = await supabase
+        .from('servers')
+        .select('owner_id')
+        .eq('id', channel.server_id)
+        .single();
+
+      const { data: member } = await supabase
+        .from('server_members')
+        .select('role')
+        .eq('server_id', channel.server_id)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      const isPermitted = srv?.owner_id === user.id || member?.role === 'admin' || member?.role === 'owner';
+      if (!isPermitted) {
+        onClose();
+      }
+    }
+    checkPermission();
+  }, [channel.server_id, supabase, onClose]);
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
