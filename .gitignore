@@ -28,6 +28,8 @@ build/
 .agents/
 .impeccable/
 .codex/
+.claude/
+agent/
 skills-lock.json
 *.tsbuildinfo
 
