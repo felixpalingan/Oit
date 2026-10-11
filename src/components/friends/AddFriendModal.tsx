@@ -3,24 +3,24 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile } from '@/types';
 import { createClient } from '@/utils/supabase/client';
-import { X, Search, QrCode, UserPlus, CheckCircle2 } from 'lucide-react';
+import { X, Search, QrCode, MessageSquare, CheckCircle2 } from 'lucide-react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { useModalA11y } from '@/hooks/useModalA11y';
 
 interface AddFriendModalProps {
   currentUserId: string;
   onClose: () => void;
-  onFriendAdded: () => void;
+  onFriendAdded?: () => void;
+  onStartChat?: (user: UserProfile) => void;
 }
 
-export default function AddFriendModal({ currentUserId, onClose, onFriendAdded }: AddFriendModalProps) {
+export default function AddFriendModal({ currentUserId, onClose, onFriendAdded, onStartChat }: AddFriendModalProps) {
   useModalA11y(true, onClose);
 
   const [activeMode, setActiveMode] = useState<'search' | 'scan'>('search');
   const [searchUsername, setSearchUsername] = useState('');
   const [foundUser, setFoundUser] = useState<UserProfile | null>(null);
   const [searching, setSearching] = useState(false);
-  const [requestSent, setRequestSent] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   const supabase = createClient();
@@ -32,11 +32,10 @@ export default function AddFriendModal({ currentUserId, onClose, onFriendAdded }
     setSearching(true);
     setErrorMsg('');
     setFoundUser(null);
-    setRequestSent(false);
 
     try {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('users')
         .select('*')
         .eq('username', searchUsername.trim().toLowerCase())
         .neq('id', currentUserId)
@@ -45,7 +44,7 @@ export default function AddFriendModal({ currentUserId, onClose, onFriendAdded }
       if (error || !data) {
         setErrorMsg('No user found with that username.');
       } else {
-        setFoundUser(data);
+        setFoundUser(data as UserProfile);
       }
     } catch (err) {
       console.error(err);
@@ -55,29 +54,15 @@ export default function AddFriendModal({ currentUserId, onClose, onFriendAdded }
     }
   };
 
-  // Add friend API
-  const handleAddFriend = async (targetUserId: string) => {
-    try {
-      const { error } = await supabase.from('friends').insert({
-        user_id: currentUserId,
-        friend_id: targetUserId,
-        status: 'accepted', // Auto accept for demo simplicity
-      });
-
-      if (error) {
-        if (error.code === '23505') {
-          setErrorMsg('You are already friends or have already sent a request to this user.');
-        } else {
-          throw error;
-        }
-      } else {
-        setRequestSent(true);
-        onFriendAdded();
-      }
-    } catch (err) {
-      console.error(err);
-      setErrorMsg('Failed to add friend.');
+  // Start chat with user
+  const handleStartChat = (user: UserProfile) => {
+    if (onStartChat) {
+      onStartChat(user);
     }
+    if (onFriendAdded) {
+      onFriendAdded();
+    }
+    onClose();
   };
 
   // QR Scanner Initialization
@@ -99,12 +84,12 @@ export default function AddFriendModal({ currentUserId, onClose, onFriendAdded }
               setActiveMode('search');
               // Auto search
               const { data: user } = await supabase
-                .from('profiles')
+                .from('users')
                 .select('*')
                 .eq('id', data.id)
                 .single();
               if (user) {
-                setFoundUser(user);
+                setFoundUser(user as UserProfile);
               }
             }
           } catch (e) {
@@ -218,20 +203,14 @@ export default function AddFriendModal({ currentUserId, onClose, onFriendAdded }
                   </div>
                 </div>
 
-                {requestSent ? (
-                  <span className="flex items-center gap-1 text-xs text-[#ff6b00] font-semibold">
-                    <CheckCircle2 className="w-4 h-4" aria-hidden="true" /> Friends!
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => handleAddFriend(foundUser.id)}
-                    aria-label={`Add ${foundUser.display_name || foundUser.username} as friend`}
-                    className="btn-orange px-3 py-1.5 rounded-lg text-xs flex items-center gap-1 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#ff6b00] outline-none"
-                  >
-                    <UserPlus className="w-4 h-4" aria-hidden="true" /> Add
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => handleStartChat(foundUser)}
+                  aria-label={`Start chat with ${foundUser.display_name || foundUser.username}`}
+                  className="btn-orange px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#ff6b00] outline-none shadow-md shadow-[#ff6b00]/20"
+                >
+                  <MessageSquare className="w-4 h-4" aria-hidden="true" /> Chat
+                </button>
               </div>
             )}
           </div>

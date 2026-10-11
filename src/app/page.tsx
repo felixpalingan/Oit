@@ -1124,11 +1124,16 @@ export default function Page() {
         />
       )}
 
-      {showAddFriendModal && (
+      {showAddFriendModal && currentUser && (
         <AddFriendModal
           currentUserId={currentUser.id}
           onClose={() => setShowAddFriendModal(false)}
-          onFriendAdded={() => {}}
+          onFriendAdded={() => setRefreshServersKey((prev) => prev + 1)}
+          onStartChat={(targetUser) => {
+            setActiveChatUser(targetUser);
+            setActiveServer(null);
+            setShowAddFriendModal(false);
+          }}
         />
       )}
 
