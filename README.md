@@ -83,6 +83,7 @@
 
 ### 🛡️ 2. Role-Based Access Control (RBAC) & Moderation System
 - **4-Tier Role Hierarchy**: Enforces role weights (`Owner (4) > Admin (3) > Moderator (2) > Member (1)`) across all moderation privileges.
+- **Role-Gated Interface Visibility**: Server configuration, channel management, and moderation controls are dynamically hidden from standard members, ensuring zero clutter and strict UI-level permission enforcement.
 - **Time-Bound User Muting**: Restricts users for 10 minutes (`muted_until`), disabling text inputs, emoji pickers, and file attachment buttons on the client.
 - **Room Ejection (Kick) & Permanent Bans**: Ejects members or registers permanent bans in `server_bans`, strictly rejecting rejoin attempts.
 - **Instant Eviction & Navigation Rail Sync**: Leverages PostgreSQL `REPLICA IDENTITY FULL` to propagate `DELETE` and `INSERT` events, immediately removing server icons from sidebar rails without browser reloads.
