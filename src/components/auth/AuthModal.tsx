@@ -56,8 +56,8 @@ export default function AuthModal({ onSuccess }: AuthModalProps) {
         }
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Terjadi kesalahan saat otentikasi.';
-      setErrorMsg(msg.includes('Invalid login') ? 'Username atau password salah.' : msg);
+      const msg = err instanceof Error ? err.message : 'An error occurred during authentication.';
+      setErrorMsg(msg.includes('Invalid login') ? 'Incorrect username or password.' : msg);
     } finally {
       setLoading(false);
     }
@@ -65,102 +65,111 @@ export default function AuthModal({ onSuccess }: AuthModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-      <div className="w-full max-w-md bg-[#0f0f11] border border-zinc-800 rounded-2xl p-8 shadow-2xl shadow-orange-950/20 text-zinc-100">
+      <div 
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="auth-modal-title"
+        className="w-full max-w-md bg-[#0f0f11] border border-zinc-800 rounded-2xl p-8 shadow-2xl shadow-orange-950/20 text-zinc-100"
+      >
         
         {/* Header Branding */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#ff6b00] to-[#ea580c] flex items-center justify-center shadow-lg shadow-orange-600/30 mb-3">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#ff6b00] to-[#ea580c] flex items-center justify-center shadow-lg shadow-orange-600/30 mb-3" aria-hidden="true">
             <Flame className="w-10 h-10 text-white animate-pulse" />
           </div>
-          <h1 className="text-3xl font-black tracking-tight text-white">
+          <h1 id="auth-modal-title" className="text-3xl font-black tracking-tight text-white">
             Oit<span className="text-[#ff6b00]">.</span>
           </h1>
           <p className="text-xs text-zinc-400 mt-1">
-            {isRegister ? 'Buat akun baru Oit Anda' : 'Masuk ke akun Oit Anda'}
+            {isRegister ? 'Create your new Oit account' : 'Sign in to your Oit account'}
           </p>
         </div>
 
         {/* Error Alert */}
         {errorMsg && (
-          <div className="mb-4 p-3 bg-red-950/40 border border-red-800/60 rounded-xl flex items-center gap-2 text-xs text-red-300">
-            <AlertCircle className="w-4 h-4 shrink-0" />
+          <div role="alert" className="mb-4 p-3 bg-red-950/40 border border-red-800/60 rounded-xl flex items-center gap-2 text-xs text-red-300">
+            <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
             <span>{errorMsg}</span>
           </div>
         )}
 
         <form onSubmit={handleAuth} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">
+            <label htmlFor="auth-username-input" className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">
               Username
             </label>
             <input
+              id="auth-username-input"
               type="text"
               required
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="cth: alex123"
-              className="w-full px-4 py-3 bg-[#18181b] border border-zinc-800 rounded-xl text-sm focus:outline-none focus:border-[#ff6b00] transition-colors"
+              placeholder="e.g. alex123"
+              className="w-full px-4 py-3 bg-[#18181b] border border-zinc-800 rounded-xl text-sm focus:outline-none focus:border-[#ff6b00] focus-visible:ring-2 focus-visible:ring-[#ff6b00] transition-colors"
             />
           </div>
 
           {isRegister && (
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">
+              <label htmlFor="auth-display-name-input" className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">
                 Display Name
               </label>
               <input
+                id="auth-display-name-input"
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="cth: Alex Mercer"
-                className="w-full px-4 py-3 bg-[#18181b] border border-zinc-800 rounded-xl text-sm focus:outline-none focus:border-[#ff6b00] transition-colors"
+                placeholder="e.g. Alex Mercer"
+                className="w-full px-4 py-3 bg-[#18181b] border border-zinc-800 rounded-xl text-sm focus:outline-none focus:border-[#ff6b00] focus-visible:ring-2 focus-visible:ring-[#ff6b00] transition-colors"
               />
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">
+            <label htmlFor="auth-password-input" className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">
               Password
             </label>
             <input
+              id="auth-password-input"
               type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full px-4 py-3 bg-[#18181b] border border-zinc-800 rounded-xl text-sm focus:outline-none focus:border-[#ff6b00] transition-colors"
+              className="w-full px-4 py-3 bg-[#18181b] border border-zinc-800 rounded-xl text-sm focus:outline-none focus:border-[#ff6b00] focus-visible:ring-2 focus-visible:ring-[#ff6b00] transition-colors"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full btn-orange flex items-center justify-center gap-2 py-3 text-sm font-semibold rounded-xl transition-transform active:scale-[0.98] disabled:opacity-50 mt-6"
+            className="w-full btn-orange flex items-center justify-center gap-2 py-3 text-sm font-semibold rounded-xl transition-transform active:scale-[0.98] disabled:opacity-50 mt-6 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#ff6b00] outline-none"
           >
             {loading ? (
               <span className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
             ) : isRegister ? (
               <>
-                <UserPlus className="w-4 h-4" /> Daftar Akun Oit
+                <UserPlus className="w-4 h-4" aria-hidden="true" /> Sign Up for Oit
               </>
             ) : (
               <>
-                <LogIn className="w-4 h-4" /> Masuk
+                <LogIn className="w-4 h-4" aria-hidden="true" /> Sign In
               </>
             )}
           </button>
         </form>
 
         <div className="mt-6 text-center text-xs text-zinc-400">
-          {isRegister ? 'Sudah punya akun Oit?' : 'Belum punya akun?'}{' '}
+          {isRegister ? 'Already have an Oit account?' : "Don't have an account?"}{' '}
           <button
+            type="button"
             onClick={() => {
               setIsRegister(!isRegister);
               setErrorMsg('');
             }}
-            className="text-[#ff6b00] hover:underline font-semibold"
+            className="text-[#ff6b00] hover:underline font-semibold focus-visible:ring-2 focus-visible:ring-[#ff6b00] outline-none rounded p-0.5"
           >
-            {isRegister ? 'Masuk di sini' : 'Daftar sekarang'}
+            {isRegister ? 'Sign in here' : 'Sign up now'}
           </button>
         </div>
 

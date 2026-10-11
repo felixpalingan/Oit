@@ -5,6 +5,7 @@ import { X, Settings, Mic, Video, VideoOff, Save, LogOut, Bell, BellOff } from '
 import { UserProfile } from '@/types';
 import { createClient } from '@/utils/supabase/client';
 import { useAppStore } from '@/store/useAppStore';
+import { useModalA11y } from '@/hooks/useModalA11y';
 
 interface ProfileModalProps {
   profile: UserProfile;
@@ -19,6 +20,8 @@ export default function ProfileModal({
   onUpdate,
   onLogout,
 }: ProfileModalProps) {
+  useModalA11y(true, onClose);
+
   const {
     selectedAudioDeviceId,
     selectedVideoDeviceId,
@@ -339,6 +342,9 @@ export default function ProfileModal({
       
       {/* User Settings Modal Container */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="user-settings-title"
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-2xl bg-[#161619] border border-zinc-800 rounded-3xl p-5 sm:p-7 shadow-2xl flex flex-col space-y-6 text-white max-h-[92vh] overflow-y-auto relative z-10"
       >
@@ -346,15 +352,16 @@ export default function ProfileModal({
         {/* Top Header */}
         <div className="flex items-center justify-between border-b border-zinc-800/80 pb-4">
           <div className="flex items-center gap-2">
-            <Settings className="w-5 h-5 text-[#FF5C00]" />
-            <h3 className="text-base sm:text-lg font-black text-white tracking-tight">
+            <Settings className="w-5 h-5 text-[#FF5C00]" aria-hidden="true" />
+            <h3 id="user-settings-title" className="text-base sm:text-lg font-black text-white tracking-tight">
               User Settings
             </h3>
           </div>
           <button
             type="button"
             onClick={handleSafeClose}
-            className="p-2 text-zinc-400 hover:text-white rounded-xl hover:bg-zinc-800 transition-colors cursor-pointer"
+            aria-label="Close dialog"
+            className="p-2 text-zinc-400 hover:text-white rounded-xl hover:bg-zinc-800 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
           >
             <X className="w-5 h-5" />
           </button>
@@ -364,7 +371,7 @@ export default function ProfileModal({
         <div className="space-y-4">
           <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-[#FF5C00] flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-[#FF5C00]" />
-            PEMBARUAN PROFIL & IDENTITAS
+            PROFILE & IDENTITY SETTINGS
           </h4>
 
           {/* Avatar Upload Box */}
@@ -375,11 +382,21 @@ export default function ProfileModal({
               onChange={handleAvatarUpload}
               accept="image/*"
               className="hidden"
+              aria-label="Upload profile image file"
             />
 
             <div
+              role="button"
+              tabIndex={0}
               onClick={() => fileInputRef.current?.click()}
-              className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-zinc-800 border-2 border-dashed border-[#FF5C00] overflow-hidden flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity shrink-0 relative group"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  fileInputRef.current?.click();
+                }
+              }}
+              aria-label="Change profile picture"
+              className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-zinc-800 border-2 border-dashed border-[#FF5C00] overflow-hidden flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity shrink-0 relative group focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
             >
               {avatarUrl ? (
                 <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
@@ -396,44 +413,46 @@ export default function ProfileModal({
             <div className="flex-1">
               <h5 className="text-xs font-bold text-[#FFFFFF]">Avatar PFP</h5>
               <p className="text-[10px] sm:text-[11px] text-zinc-400 mt-1 leading-relaxed">
-                Klik lingkaran avatar untuk mengunggah foto profil baru. Otomatis diperbarui ke Supabase Storage & state aplikasi.
+                Click avatar circle to upload a new profile picture. Automatically updated to storage and application state.
               </p>
             </div>
           </div>
 
           {/* Display Name Input */}
           <div>
-            <label className="block text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mb-2">
-              DISPLAY NAME (NAMA TAMPILAN)
+            <label htmlFor="user-display-name-input" className="block text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mb-2">
+              DISPLAY NAME
             </label>
             <input
+              id="user-display-name-input"
               type="text"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              className="w-full px-4 py-3 bg-[#1c1c21] border border-zinc-800 rounded-2xl text-xs text-white focus:outline-none focus:border-[#FF5C00] transition-colors font-medium"
+              className="w-full px-4 py-3 bg-[#1c1c21] border border-zinc-800 rounded-2xl text-xs text-white focus:outline-none focus:border-[#FF5C00] focus-visible:ring-2 focus-visible:ring-[#FF5C00] transition-colors font-medium"
             />
           </div>
 
           {/* About Me Textarea */}
           <div>
-            <label className="block text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mb-2">
-              ABOUT ME (BIO PENGGUNA)
+            <label htmlFor="user-bio-input" className="block text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mb-2">
+              ABOUT ME
             </label>
             <textarea
+              id="user-bio-input"
               rows={3}
               value={aboutMe}
               onChange={(e) => setAboutMe(e.target.value)}
-              placeholder="Tulis deskripsi atau bio Anda di sini..."
-              className="w-full px-4 py-3 bg-[#1c1c21] border border-zinc-800 rounded-2xl text-xs text-white focus:outline-none focus:border-[#FF5C00] transition-colors resize-none font-medium"
+              placeholder="Write a short bio about yourself..."
+              className="w-full px-4 py-3 bg-[#1c1c21] border border-zinc-800 rounded-2xl text-xs text-white focus:outline-none focus:border-[#FF5C00] focus-visible:ring-2 focus-visible:ring-[#FF5C00] transition-colors resize-none font-medium"
             />
           </div>
         </div>
 
-        {/* SECTION 2: WEB PUSH NOTIFICATIONS (TICKET 9) */}
+        {/* SECTION 2: WEB PUSH NOTIFICATIONS */}
         <div className="space-y-3 border-t border-zinc-800/80 pt-4">
           <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-[#FF5C00] flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-[#FF5C00]" />
-            WEB PUSH NOTIFICATIONS (TICKET 9)
+            WEB PUSH NOTIFICATIONS
           </h4>
 
           <div className="flex items-center justify-between p-4 bg-[#1c1c21] border border-zinc-800 rounded-2xl">
@@ -569,9 +588,9 @@ export default function ProfileModal({
           <button
             type="button"
             onClick={handleLogoutAction}
-            className="px-4 sm:px-5 py-2.5 sm:py-3 bg-red-950/60 hover:bg-red-900 border border-red-800 text-red-300 font-extrabold rounded-2xl text-xs flex items-center gap-2 transition-colors cursor-pointer"
+            className="px-4 sm:px-5 py-2.5 sm:py-3 bg-red-950/60 hover:bg-red-900 border border-red-800 text-red-300 font-extrabold rounded-2xl text-xs flex items-center gap-2 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-red-500 outline-none"
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-4 h-4" aria-hidden="true" />
             <span>Log Out</span>
           </button>
 
@@ -579,7 +598,7 @@ export default function ProfileModal({
             <button
               type="button"
               onClick={handleSafeClose}
-              className="px-4 sm:px-5 py-2.5 sm:py-3 bg-[#26262a] hover:bg-[#303036] text-zinc-200 font-extrabold rounded-2xl text-xs transition-colors cursor-pointer"
+              className="px-4 sm:px-5 py-2.5 sm:py-3 bg-[#26262a] hover:bg-[#303036] text-zinc-200 font-extrabold rounded-2xl text-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
             >
               Cancel
             </button>
@@ -588,9 +607,9 @@ export default function ProfileModal({
               type="button"
               onClick={handleSave}
               disabled={uploading || saving}
-              className="px-5 sm:px-6 py-2.5 sm:py-3 bg-[#FF5C00] hover:bg-[#ff701a] text-white font-extrabold rounded-2xl text-xs shadow-lg shadow-[#FF5C00]/25 transition-all active:scale-[0.98] flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+              className="px-5 sm:px-6 py-2.5 sm:py-3 bg-[#FF5C00] hover:bg-[#ff701a] text-white font-extrabold rounded-2xl text-xs shadow-lg shadow-[#FF5C00]/25 transition-all active:scale-[0.98] flex items-center gap-2 disabled:opacity-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
             >
-              <Save className="w-4 h-4" />
+              <Save className="w-4 h-4" aria-hidden="true" />
               <span>{saving ? 'Saving...' : uploading ? 'Uploading...' : 'Save Changes'}</span>
             </button>
           </div>

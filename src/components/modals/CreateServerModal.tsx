@@ -5,6 +5,7 @@ import { X, Upload, Hash, Volume2, Lock } from 'lucide-react';
 import { User } from '@/types';
 import { createClient } from '@/utils/supabase/client';
 import { useAppStore } from '@/store/useAppStore';
+import { useModalA11y } from '@/hooks/useModalA11y';
 
 interface CreateServerModalProps {
   currentUser: User;
@@ -28,6 +29,8 @@ export default function CreateServerModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
   const { setActiveServer, setActiveChannel } = useAppStore();
+
+  useModalA11y(true, onClose);
 
   const handleIconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -148,18 +151,25 @@ export default function CreateServerModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 select-none animate-in fade-in duration-200">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="create-server-title"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 select-none animate-in fade-in duration-200"
+    >
       
       {/* Create Server Container */}
       <div className="w-full max-w-lg bg-[#161619] border border-zinc-800 rounded-3xl p-7 shadow-2xl flex flex-col space-y-6 text-white relative">
         
         {/* Top Header */}
         <div className="flex items-center justify-between border-b border-zinc-800/80 pb-4">
-          <h3 className="text-lg font-black text-white tracking-tight">
+          <h3 id="create-server-title" className="text-lg font-black text-white tracking-tight">
             Create a Server
           </h3>
           <button
+            type="button"
             onClick={onClose}
+            aria-label="Close dialog"
             className="p-2 text-zinc-400 hover:text-white rounded-xl hover:bg-zinc-800 transition-colors"
           >
             <X className="w-5 h-5" />
@@ -187,12 +197,21 @@ export default function CreateServerModal({
             />
 
             <div
+              role="button"
+              tabIndex={0}
+              aria-label="Upload server icon"
               onClick={() => fileInputRef.current?.click()}
-              className="w-24 h-24 bg-[#1c1c21] border-2 border-dashed border-zinc-700 hover:border-[#FF5C00] rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-colors group relative overflow-hidden"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  fileInputRef.current?.click();
+                }
+              }}
+              className="w-24 h-24 bg-[#1c1c21] border-2 border-dashed border-zinc-700 hover:border-[#FF5C00] rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-colors group relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-[#FF5C00]"
             >
               {iconUrl ? (
                 <>
-                  <img src={iconUrl} alt="Server Icon" className="w-full h-full object-cover rounded-2xl" />
+                  <img src={iconUrl} alt="Server Icon Preview" className="w-full h-full object-cover rounded-2xl" />
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-[10px] font-bold">
                     Change Icon
                   </div>
@@ -210,10 +229,11 @@ export default function CreateServerModal({
 
           {/* Server Name */}
           <div>
-            <label className="block text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mb-2">
+            <label htmlFor="create-server-name" className="block text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mb-2">
               SERVER NAME
             </label>
             <input
+              id="create-server-name"
               type="text"
               required
               value={serverName}
@@ -232,10 +252,13 @@ export default function CreateServerModal({
             </h4>
 
             {/* Channel Type Selector */}
-            <div className="grid grid-cols-2 gap-3">
-              <div
+            <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Initial Channel Type">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={channelType === 'text'}
                 onClick={() => setChannelType('text')}
-                className={`p-4 rounded-2xl border cursor-pointer transition-all ${
+                className={`p-4 rounded-2xl border cursor-pointer text-left transition-all ${
                   channelType === 'text'
                     ? 'bg-[#FF5C00]/10 border-[#FF5C00] text-white shadow-md'
                     : 'bg-[#1c1c21] border-zinc-800 text-zinc-400 hover:border-zinc-700'
@@ -248,11 +271,14 @@ export default function CreateServerModal({
                 <p className="text-[10px] opacity-80 leading-relaxed">
                   Post messages, images, links, and emojis.
                 </p>
-              </div>
+              </button>
 
-              <div
+              <button
+                type="button"
+                role="radio"
+                aria-checked={channelType === 'voice'}
                 onClick={() => setChannelType('voice')}
-                className={`p-4 rounded-2xl border cursor-pointer transition-all ${
+                className={`p-4 rounded-2xl border cursor-pointer text-left transition-all ${
                   channelType === 'voice'
                     ? 'bg-[#FF5C00]/10 border-[#FF5C00] text-white shadow-md'
                     : 'bg-[#1c1c21] border-zinc-800 text-zinc-400 hover:border-zinc-700'
@@ -265,17 +291,18 @@ export default function CreateServerModal({
                 <p className="text-[10px] opacity-80 leading-relaxed">
                   Hang out together with voice, video, and screen share.
                 </p>
-              </div>
+              </button>
             </div>
 
             {/* Channel Name Input */}
             <div>
-              <label className="block text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mb-2">
+              <label htmlFor="create-channel-name" className="block text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mb-2">
                 CHANNEL NAME
               </label>
               <div className="relative">
-                <span className="text-zinc-500 absolute left-4 top-3 text-xs font-bold">#</span>
+                <span className="text-zinc-500 absolute left-4 top-3 text-xs font-bold" aria-hidden="true">#</span>
                 <input
+                  id="create-channel-name"
                   type="text"
                   required
                   value={channelName}
@@ -287,17 +314,19 @@ export default function CreateServerModal({
 
             {/* Private Server & Channel Toggle */}
             <div className="p-4 bg-[#1c1c21] border border-zinc-800 rounded-2xl flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Lock className="w-5 h-5 text-[#FF5C00]" />
+              <label htmlFor="create-server-private" className="flex items-center gap-3 cursor-pointer select-none flex-1">
+                <Lock className="w-5 h-5 text-[#FF5C00] shrink-0" />
                 <div>
                   <h5 className="text-xs font-bold text-white">Private Server & Channel</h5>
                   <p className="text-[10px] text-zinc-400">
                     Hide from public discovery. Require Invite Code to join.
                   </p>
                 </div>
-              </div>
+              </label>
               <input
+                id="create-server-private"
                 type="checkbox"
+                aria-label="Private Server & Channel"
                 checked={isPrivate}
                 onChange={(e) => setIsPrivate(e.target.checked)}
                 className="w-4 h-4 accent-[#FF5C00] cursor-pointer"

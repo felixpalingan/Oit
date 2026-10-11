@@ -5,6 +5,7 @@ import { X, Hash, Volume2, Lock, Key } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { useAppStore } from '@/store/useAppStore';
 import { Channel } from '@/types';
+import { useModalA11y } from '@/hooks/useModalA11y';
 
 interface CreateChannelModalProps {
   serverId: string;
@@ -17,6 +18,8 @@ export default function CreateChannelModal({
   onClose,
   onChannelCreated,
 }: CreateChannelModalProps) {
+  useModalA11y(true, onClose);
+
   const [channelName, setChannelName] = useState('new-channel');
   const [channelType, setChannelType] = useState<'text' | 'voice'>('text');
   const [isPrivate, setIsPrivate] = useState(false);
@@ -32,12 +35,12 @@ export default function CreateChannelModal({
     if (!channelName.trim()) return;
 
     if (isPrivate && !password.trim()) {
-      setErrorMsg('Password wajib diisi untuk Private Channel.');
+      setErrorMsg('Password is required for private channels.');
       return;
     }
 
     if (isPrivate && password.trim().length < 3) {
-      setErrorMsg('Password channel minimal 3 karakter.');
+      setErrorMsg('Channel password must be at least 3 characters.');
       return;
     }
 
@@ -87,31 +90,48 @@ export default function CreateChannelModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 select-none animate-in fade-in duration-200">
       
       {/* Create Channel Modal Box */}
-      <div className="w-full max-w-md bg-[#161619] border border-zinc-800 rounded-3xl p-7 shadow-2xl flex flex-col space-y-5 text-white relative">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-channel-title"
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md bg-[#161619] border border-zinc-800 rounded-3xl p-7 shadow-2xl flex flex-col space-y-5 text-white relative"
+      >
         
         <div className="flex items-center justify-between border-b border-zinc-800/80 pb-4">
-          <h3 className="text-lg font-black text-white tracking-tight">
+          <h3 id="create-channel-title" className="text-lg font-black text-white tracking-tight">
             Create Channel
           </h3>
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 text-zinc-400 hover:text-white rounded-xl hover:bg-zinc-800 transition-colors"
+            aria-label="Close dialog"
+            className="p-2 text-zinc-400 hover:text-white rounded-xl hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {errorMsg && (
-          <p className="text-xs text-red-400 font-semibold">{errorMsg}</p>
+          <p role="alert" className="text-xs text-red-400 font-semibold">{errorMsg}</p>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           
           {/* Channel Type Selector */}
-          <div className="grid grid-cols-2 gap-3">
+          <div role="radiogroup" aria-label="Channel Type" className="grid grid-cols-2 gap-3">
             <div
+              role="radio"
+              aria-checked={channelType === 'text'}
+              tabIndex={0}
               onClick={() => setChannelType('text')}
-              className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setChannelType('text');
+                }
+              }}
+              className={`p-3.5 rounded-2xl border cursor-pointer transition-all focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none ${
                 channelType === 'text'
                   ? 'bg-[#FF5C00]/10 border-[#FF5C00] text-white shadow-md'
                   : 'bg-[#1c1c21] border-zinc-800 text-zinc-400 hover:border-zinc-700'
@@ -127,8 +147,17 @@ export default function CreateChannelModal({
             </div>
 
             <div
+              role="radio"
+              aria-checked={channelType === 'voice'}
+              tabIndex={0}
               onClick={() => setChannelType('voice')}
-              className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setChannelType('voice');
+                }
+              }}
+              className={`p-3.5 rounded-2xl border cursor-pointer transition-all focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none ${
                 channelType === 'voice'
                   ? 'bg-[#FF5C00]/10 border-[#FF5C00] text-white shadow-md'
                   : 'bg-[#1c1c21] border-zinc-800 text-zinc-400 hover:border-zinc-700'
@@ -146,18 +175,19 @@ export default function CreateChannelModal({
 
           {/* Channel Name */}
           <div>
-            <label className="block text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mb-2">
+            <label htmlFor="create-channel-name-input" className="block text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mb-2">
               CHANNEL NAME
             </label>
             <div className="relative">
-              <span className="text-zinc-500 absolute left-4 top-3 text-xs font-bold">#</span>
+              <span className="text-zinc-500 absolute left-4 top-3 text-xs font-bold" aria-hidden="true">#</span>
               <input
+                id="create-channel-name-input"
                 type="text"
                 required
                 value={channelName}
                 onChange={(e) => setChannelName(e.target.value)}
                 placeholder="new-channel"
-                className="w-full pl-8 pr-4 py-3 bg-[#1c1c21] border border-zinc-800 rounded-2xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#FF5C00] transition-colors"
+                className="w-full pl-8 pr-4 py-3 bg-[#1c1c21] border border-zinc-800 rounded-2xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#FF5C00] focus-visible:ring-2 focus-visible:ring-[#FF5C00] transition-colors"
               />
             </div>
           </div>
@@ -165,32 +195,34 @@ export default function CreateChannelModal({
           {/* Private Channel Toggle */}
           <div className="p-4 bg-[#1c1c21] border border-zinc-800 rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <Lock className="w-4 h-4 text-zinc-400" />
+              <label htmlFor="create-channel-private-toggle" className="flex items-center gap-2.5 cursor-pointer flex-1 mr-3">
+                <Lock className="w-4 h-4 text-zinc-400 shrink-0" />
                 <div>
                   <h5 className="text-xs font-bold text-white">Private Password Channel</h5>
                   <p className="text-[10px] text-zinc-400">
                     Require a password to enter this channel.
                   </p>
                 </div>
-              </div>
+              </label>
               <input
+                id="create-channel-private-toggle"
                 type="checkbox"
                 checked={isPrivate}
                 onChange={(e) => setIsPrivate(e.target.checked)}
-                className="w-4 h-4 accent-[#FF5C00] cursor-pointer"
+                className="w-4 h-4 accent-[#FF5C00] cursor-pointer focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
               />
             </div>
 
             {isPrivate && (
               <div className="relative pt-1 animate-in fade-in duration-150">
-                <Key className="w-4 h-4 text-zinc-500 absolute left-3.5 top-5" />
+                <Key className="w-4 h-4 text-zinc-500 absolute left-3.5 top-5 pointer-events-none" aria-hidden="true" />
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Set channel password"
-                  className="w-full pl-10 pr-4 py-2.5 bg-[#121215] border border-zinc-700 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#FF5C00]"
+                  aria-label="Set channel password"
+                  className="w-full pl-10 pr-4 py-2.5 bg-[#121215] border border-zinc-700 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#FF5C00] focus-visible:ring-2 focus-visible:ring-[#FF5C00]"
                 />
               </div>
             )}
@@ -201,14 +233,14 @@ export default function CreateChannelModal({
             <button
               type="button"
               onClick={onClose}
-              className="text-xs font-bold text-zinc-400 hover:text-white px-4 py-2"
+              className="text-xs font-bold text-zinc-400 hover:text-white px-4 py-2 rounded-xl focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="py-3 px-6 bg-[#FF5C00] hover:bg-[#ff701a] text-white font-extrabold rounded-2xl text-xs shadow-lg shadow-[#FF5C00]/25 transition-all disabled:opacity-50"
+              className="py-3 px-6 bg-[#FF5C00] hover:bg-[#ff701a] text-white font-extrabold rounded-2xl text-xs shadow-lg shadow-[#FF5C00]/25 transition-all disabled:opacity-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
             >
               {loading ? 'Creating...' : 'Create Channel'}
             </button>

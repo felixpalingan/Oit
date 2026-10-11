@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react';
 import { User } from '@/types';
 import { Phone, PhoneOff, Video } from 'lucide-react';
+import { useModalA11y } from '@/hooks/useModalA11y';
 
 interface IncomingCallModalProps {
   caller: User;
@@ -17,6 +18,8 @@ export default function IncomingCallModal({
   onAccept,
   onDecline,
 }: IncomingCallModalProps) {
+  useModalA11y(true, onDecline);
+
   const callerName = caller.display_name || caller.username;
 
   // Ringtone Generator & Browser Push Notification
@@ -27,8 +30,8 @@ export default function IncomingCallModal({
     // Trigger Browser Push Notification
     if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
       try {
-        new Notification(`📞 Panggilan Masuk Oit`, {
-          body: `${callerName} sedang memanggil panggilan ${isVideo ? 'Video' : 'Suara'}...`,
+        new Notification(`📞 Incoming Oit Call`, {
+          body: `${callerName} is calling with ${isVideo ? 'Video' : 'Voice'}...`,
           icon: caller.avatar_url || '/oit_logo.png',
         });
       } catch (err) {
@@ -90,7 +93,12 @@ export default function IncomingCallModal({
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 select-none animate-in fade-in duration-200">
-      <div className="w-full max-w-sm bg-[#161619] border border-zinc-800 rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center space-y-5 text-white">
+      <div 
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="incoming-call-title"
+        className="w-full max-w-sm bg-[#161619] border border-zinc-800 rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center space-y-5 text-white"
+      >
         
         {/* Animated Ringing Avatar Container */}
         <div className="relative my-2">
@@ -112,12 +120,12 @@ export default function IncomingCallModal({
 
         {/* Incoming Call Details */}
         <div>
-          <h3 className="text-lg font-black text-white">
+          <h3 id="incoming-call-title" className="text-lg font-black text-white">
             {callerName}
           </h3>
           <p className="text-xs text-[#FF5C00] font-semibold mt-1 flex items-center justify-center gap-1.5">
-            {isVideo ? <Video className="w-3.5 h-3.5" /> : <Phone className="w-3.5 h-3.5" />}
-            <span>Memanggil Panggilan {isVideo ? 'Video' : 'Suara'} Oit...</span>
+            {isVideo ? <Video className="w-3.5 h-3.5" aria-hidden="true" /> : <Phone className="w-3.5 h-3.5" aria-hidden="true" />}
+            <span>Incoming {isVideo ? 'Video' : 'Voice'} Call...</span>
           </p>
         </div>
 
@@ -127,22 +135,22 @@ export default function IncomingCallModal({
           <button
             type="button"
             onClick={onDecline}
-            aria-label="Tolak Panggilan"
-            className="flex-1 py-3 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/40 font-bold rounded-2xl text-xs flex items-center justify-center gap-2 transition-all active:scale-[0.97] min-h-[44px] cursor-pointer"
+            aria-label="Decline call"
+            className="flex-1 py-3 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/40 font-bold rounded-2xl text-xs flex items-center justify-center gap-2 transition-all active:scale-[0.97] min-h-[44px] cursor-pointer focus-visible:ring-2 focus-visible:ring-red-500 outline-none"
           >
-            <PhoneOff className="w-4 h-4" />
-            <span>Tolak</span>
+            <PhoneOff className="w-4 h-4" aria-hidden="true" />
+            <span>Decline</span>
           </button>
 
           {/* Accept Button */}
           <button
             type="button"
             onClick={onAccept}
-            aria-label="Terima Panggilan"
-            className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/30 transition-all active:scale-[0.97] hover:scale-[1.02] min-h-[44px] cursor-pointer"
+            aria-label="Accept call"
+            className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/30 transition-all active:scale-[0.97] hover:scale-[1.02] min-h-[44px] cursor-pointer focus-visible:ring-2 focus-visible:ring-emerald-400 outline-none"
           >
-            <Phone className="w-4 h-4" />
-            <span>Terima</span>
+            <Phone className="w-4 h-4" aria-hidden="true" />
+            <span>Accept</span>
           </button>
         </div>
 

@@ -858,9 +858,9 @@ export default function ChatWindow({
           <div className="w-16 h-16 bg-[#FF5C00]/20 rounded-full flex items-center justify-center mb-3 shadow-xl shadow-[#FF5C00]/30">
             <UploadCloud className="w-8 h-8 text-[#FF5C00]" />
           </div>
-          <h3 className="text-lg font-extrabold text-white">Lepaskan File di Sini</h3>
+          <h3 className="text-lg font-extrabold text-white">Drop Files Here</h3>
           <p className="text-xs text-zinc-400 mt-1">
-            File akan otomatis diunggah ke <span className="text-[#FF5C00] font-bold">{currentTitle}</span> (Maks 25MB)
+            Files will be automatically uploaded to <span className="text-[#FF5C00] font-bold">{currentTitle}</span> (Max 25MB)
           </p>
         </div>
       )}
@@ -1070,7 +1070,7 @@ export default function ChatWindow({
                   </span>
 
                   {msg.is_edited && !msg.is_deleted && (
-                    <span className="text-[9px] text-zinc-500 italic font-medium">(diedit)</span>
+                    <span className="text-[9px] text-zinc-500 italic font-medium">(edited)</span>
                   )}
                 </div>
 
@@ -1078,7 +1078,7 @@ export default function ChatWindow({
                 {parentMsg && (
                   <div className="mb-1.5 p-2 bg-[#18181c] border border-zinc-700/60 rounded-xl text-[10px] text-zinc-400 max-w-full overflow-hidden">
                     <span className="font-bold text-[#FF5C00] mr-1">Replying to @{parentSenderName}:</span>
-                    <span className="truncate block italic">{parentMsg.is_deleted ? 'Pesan telah dihapus' : (parentMsg.content || 'Attachment')}</span>
+                    <span className="truncate block italic">{parentMsg.is_deleted ? 'Message has been deleted' : (parentMsg.content || 'Attachment')}</span>
                   </div>
                 )}
 
@@ -1113,9 +1113,9 @@ export default function ChatWindow({
                         <button
                           type="button"
                           onClick={() => handleStartEdit(msg)}
-                          aria-label="Edit Pesan"
-                          title="Edit Pesan"
-                          className="p-1.5 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer min-h-[32px] min-w-[32px] flex items-center justify-center"
+                          aria-label="Edit message"
+                          title="Edit message"
+                          className="p-1.5 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer min-h-[32px] min-w-[32px] flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
@@ -1125,9 +1125,9 @@ export default function ChatWindow({
                         <button
                           type="button"
                           onClick={() => handleDeleteMessage(msg.id)}
-                          aria-label={isMe ? 'Hapus Pesan' : 'Hapus Pesan (Moderator)'}
-                          title={isMe ? 'Hapus Pesan' : 'Hapus Pesan (Moderator)'}
-                          className="p-1.5 text-zinc-400 hover:text-red-400 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer min-h-[32px] min-w-[32px] flex items-center justify-center"
+                          aria-label={isMe ? 'Delete message' : 'Delete message (Moderator)'}
+                          title={isMe ? 'Delete message' : 'Delete message (Moderator)'}
+                          className="p-1.5 text-zinc-400 hover:text-red-400 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer min-h-[32px] min-w-[32px] flex items-center justify-center focus-visible:ring-2 focus-visible:ring-red-500 outline-none"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -1154,16 +1154,16 @@ export default function ChatWindow({
                         <button
                           type="button"
                           onClick={() => setEditingMessageId(null)}
-                          className="px-2 py-1 text-zinc-300 hover:text-white font-bold min-h-[32px]"
+                          className="px-2 py-1 text-zinc-300 hover:text-white font-bold min-h-[32px] rounded focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
                         >
-                          Batal
+                          Cancel
                         </button>
                         <button
                           type="button"
                           onClick={() => handleSaveEdit(msg.id)}
-                          className="px-2.5 py-1 bg-white text-black rounded-lg font-bold hover:bg-zinc-200 min-h-[32px]"
+                          className="px-2.5 py-1 bg-white text-black rounded-lg font-bold hover:bg-zinc-200 min-h-[32px] focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
                         >
-                          Simpan
+                          Save
                         </button>
                       </div>
                     </div>
@@ -1323,8 +1323,8 @@ export default function ChatWindow({
           <button
             type="button"
             onClick={() => setReplyingToMessage(null)}
-            aria-label="Batal Balas Pesan"
-            className="p-1 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer shrink-0 min-h-[32px] min-w-[32px] flex items-center justify-center"
+            aria-label="Cancel reply"
+            className="p-1 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer shrink-0 min-h-[32px] min-w-[32px] flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
           >
             <X className="w-4 h-4" />
           </button>
@@ -1394,8 +1394,8 @@ export default function ChatWindow({
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading || isCurrentlyMuted}
-          aria-label="Unggah berkas lampiran"
-          className="w-9 h-9 md:w-10 md:h-10 bg-[#1c1c21] hover:bg-[#25252b] text-zinc-400 hover:text-white border border-zinc-800 rounded-full flex items-center justify-center shrink-0 transition-colors active:scale-95 disabled:opacity-40 cursor-pointer min-h-[36px] min-w-[36px]"
+          aria-label="Upload attachment"
+          className="w-9 h-9 md:w-10 md:h-10 bg-[#1c1c21] hover:bg-[#25252b] text-zinc-400 hover:text-white border border-zinc-800 rounded-full flex items-center justify-center shrink-0 transition-colors active:scale-95 disabled:opacity-40 cursor-pointer min-h-[36px] min-w-[36px] focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
         >
           <Plus className="w-4 h-4 md:w-5 md:h-5 stroke-[2.5]" />
         </button>
@@ -1408,6 +1408,7 @@ export default function ChatWindow({
             onKeyDown={handleKeyDown}
             readOnly={isCurrentlyMuted}
             disabled={isUploading || isCurrentlyMuted}
+            aria-label={isCurrentlyMuted ? 'Muted in this channel' : `Message ${currentTitle}`}
             placeholder={
               isCurrentlyMuted
                 ? 'You are currently muted in this server...'
@@ -1420,8 +1421,8 @@ export default function ChatWindow({
             type="button"
             onClick={() => setMessageText((prev) => prev + ' 😊')}
             disabled={isUploading || isCurrentlyMuted}
-            aria-label="Pilih Emoji"
-            className="text-zinc-400 hover:text-white transition-colors shrink-0 disabled:opacity-40 cursor-pointer p-1 min-h-[32px] min-w-[32px] flex items-center justify-center"
+            aria-label="Insert emoji"
+            className="text-zinc-400 hover:text-white transition-colors shrink-0 disabled:opacity-40 cursor-pointer p-1 min-h-[32px] min-w-[32px] flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none rounded-lg"
           >
             <Smile className="w-4 h-4 md:w-5 md:h-5" />
           </button>
@@ -1431,8 +1432,8 @@ export default function ChatWindow({
           type="button"
           onClick={handleSendMessage}
           disabled={!messageText.trim() || isUploading || isCurrentlyMuted}
-          aria-label="Kirim Pesan"
-          className="w-9 h-9 md:w-10 md:h-10 bg-[#FF5C00] hover:bg-[#ff701a] text-white rounded-2xl flex items-center justify-center shrink-0 shadow-lg shadow-[#FF5C00]/25 transition-all disabled:opacity-40 active:scale-95 cursor-pointer min-h-[36px] min-w-[36px]"
+          aria-label="Send message"
+          className="w-9 h-9 md:w-10 md:h-10 bg-[#FF5C00] hover:bg-[#ff701a] text-white rounded-2xl flex items-center justify-center shrink-0 shadow-lg shadow-[#FF5C00]/25 transition-all disabled:opacity-40 active:scale-95 cursor-pointer min-h-[36px] min-w-[36px] focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
         >
           <Send className="w-4 h-4 fill-current stroke-[2.5]" />
         </button>

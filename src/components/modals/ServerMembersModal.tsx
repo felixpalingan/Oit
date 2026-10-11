@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Users, Crown, Shield, ShieldAlert, VolumeX, UserX, Ban, MoreVertical } from 'lucide-react';
 import { User as UserType } from '@/types';
 import { createClient } from '@/utils/supabase/client';
+import { useModalA11y } from '@/hooks/useModalA11y';
 
 interface ServerMembersModalProps {
   serverId: string;
@@ -31,6 +32,8 @@ export default function ServerMembersModal({
   onClose,
   onOpenUserProfile,
 }: ServerMembersModalProps) {
+  useModalA11y(true, onClose);
+
   const [members, setMembers] = useState<MemberItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeMenuMemberId, setActiveMenuMemberId] = useState<string | null>(null);
@@ -256,6 +259,9 @@ export default function ServerMembersModal({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 select-none animate-in fade-in duration-200"
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="server-members-title"
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-md bg-[#161619] border border-zinc-800 rounded-3xl p-6 shadow-2xl flex flex-col space-y-5 text-white relative z-10"
       >
@@ -263,15 +269,16 @@ export default function ServerMembersModal({
         {/* Top Header */}
         <div className="flex items-center justify-between border-b border-zinc-800/80 pb-4">
           <div className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-[#FF5C00]" />
-            <h3 className="text-base font-black text-white truncate max-w-[240px]">
+            <Users className="w-5 h-5 text-[#FF5C00]" aria-hidden="true" />
+            <h3 id="server-members-title" className="text-base font-black text-white truncate max-w-[240px]">
               MEMBERS — {members.length}
             </h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-2 text-zinc-400 hover:text-white rounded-xl hover:bg-zinc-800 transition-colors cursor-pointer"
+            aria-label="Close dialog"
+            className="p-2 text-zinc-400 hover:text-white rounded-xl hover:bg-zinc-800 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
           >
             <X className="w-5 h-5" />
           </button>
@@ -296,8 +303,17 @@ export default function ServerMembersModal({
                   className="p-3 bg-[#1c1c21] border border-zinc-800/80 hover:border-zinc-700 rounded-2xl flex items-center justify-between relative transition-all group"
                 >
                   <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => onOpenUserProfile && onOpenUserProfile(m.user)}
-                    className="flex items-center gap-3 cursor-pointer flex-1 overflow-hidden"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onOpenUserProfile && onOpenUserProfile(m.user);
+                      }
+                    }}
+                    aria-label={`View profile of ${m.user.display_name || m.user.username}`}
+                    className="flex items-center gap-3 cursor-pointer flex-1 overflow-hidden focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none rounded-xl p-1"
                   >
                     <div className="relative shrink-0">
                       <div className="w-9 h-9 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center font-bold text-xs text-[#FF5C00] group-hover:border-[#FF5C00] transition-colors">
@@ -354,7 +370,8 @@ export default function ServerMembersModal({
                             e.stopPropagation();
                             setActiveMenuMemberId(activeMenuMemberId === m.id ? null : m.id);
                           }}
-                          className="p-1.5 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer"
+                          aria-label={`Moderation actions for @${m.user.username}`}
+                          className="p-1.5 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
                         >
                           <MoreVertical className="w-4 h-4" />
                         </button>

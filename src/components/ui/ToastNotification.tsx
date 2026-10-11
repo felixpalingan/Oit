@@ -37,7 +37,11 @@ export default function ToastNotification({
   const isSuccess = toast.type === 'success';
 
   return (
-    <div className="fixed top-5 right-5 z-[100] max-w-sm w-full select-none animate-in slide-in-from-top-3 duration-200">
+    <div 
+      role="status" 
+      aria-live={isWarning ? "assertive" : "polite"} 
+      className="fixed top-5 right-5 z-[100] max-w-sm w-full select-none animate-in slide-in-from-top-3 duration-200"
+    >
       <div
         className={`p-4 rounded-2xl border shadow-2xl backdrop-blur-md flex items-start gap-3 text-white ${
           isWarning
@@ -49,6 +53,7 @@ export default function ToastNotification({
       >
         {/* Icon Circle */}
         <div
+          aria-hidden="true"
           className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
             isWarning
               ? 'bg-red-950/80 text-red-400 border border-red-800/80'
@@ -88,8 +93,8 @@ export default function ToastNotification({
         <button
           type="button"
           onClick={onClose}
-          aria-label="Tutup Notifikasi"
-          className="p-1 text-zinc-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors shrink-0 cursor-pointer min-h-[32px] min-w-[32px] flex items-center justify-center"
+          aria-label="Dismiss notification"
+          className="p-1 text-zinc-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors shrink-0 cursor-pointer min-h-[32px] min-w-[32px] flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
         >
           <X className="w-4 h-4" />
         </button>

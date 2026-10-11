@@ -5,6 +5,7 @@ import { X, Settings, Upload, Trash2, Save, Lock, ShieldAlert, Edit, Clock, Filt
 import { createClient } from '@/utils/supabase/client';
 import { useAppStore } from '@/store/useAppStore';
 import { AuditLog, User as UserType } from '@/types';
+import { useModalA11y } from '@/hooks/useModalA11y';
 
 interface EditServerModalProps {
   serverId: string;
@@ -19,6 +20,8 @@ export default function EditServerModal({
   onUpdated,
   onDeleted,
 }: EditServerModalProps) {
+  useModalA11y(true, onClose);
+
   const [activeTab, setActiveTab] = useState<'general' | 'audit_log'>('general');
   const [serverName, setServerName] = useState('');
   const [iconUrl, setIconUrl] = useState<string | null>(null);
@@ -239,19 +242,23 @@ export default function EditServerModal({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 select-none animate-in fade-in duration-200"
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="edit-server-title"
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-xl bg-[#161619] border border-zinc-800 rounded-3xl p-6 sm:p-7 shadow-2xl flex flex-col space-y-5 text-white relative z-10"
       >
         
         {/* Top Header matching Image 4 */}
         <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3">
-          <h3 className="text-base font-extrabold text-white tracking-tight">
+          <h3 id="edit-server-title" className="text-base font-extrabold text-white tracking-tight">
             Server Settings
           </h3>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 text-zinc-400 hover:text-white rounded-xl hover:bg-zinc-800 transition-colors cursor-pointer"
+            aria-label="Close dialog"
+            className="p-1.5 text-zinc-400 hover:text-white rounded-xl hover:bg-zinc-800 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
           >
             <X className="w-5 h-5" />
           </button>
@@ -262,7 +269,7 @@ export default function EditServerModal({
           <button
             type="button"
             onClick={() => setActiveTab('general')}
-            className={`text-xs font-black uppercase tracking-wider transition-all relative pb-2 ${
+            className={`text-xs font-black uppercase tracking-wider transition-all relative pb-2 focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none rounded ${
               activeTab === 'general'
                 ? 'text-[#FF5C00]'
                 : 'text-zinc-400 hover:text-zinc-200'
@@ -277,7 +284,7 @@ export default function EditServerModal({
           <button
             type="button"
             onClick={() => setActiveTab('audit_log')}
-            className={`text-xs font-black uppercase tracking-wider transition-all relative pb-2 ${
+            className={`text-xs font-black uppercase tracking-wider transition-all relative pb-2 focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none rounded ${
               activeTab === 'audit_log'
                 ? 'text-[#FF5C00]'
                 : 'text-zinc-400 hover:text-zinc-200'
@@ -291,7 +298,7 @@ export default function EditServerModal({
         </div>
 
         {errorMsg && (
-          <p className="text-xs text-red-400 font-semibold text-center">{errorMsg}</p>
+          <p role="alert" className="text-xs text-red-400 font-semibold text-center">{errorMsg}</p>
         )}
 
         {/* TAB 1: GENERAL SERVER SETTINGS */}
@@ -306,15 +313,25 @@ export default function EditServerModal({
                 onChange={handleIconUpload}
                 accept="image/*"
                 className="hidden"
+                aria-label="Upload server icon file"
               />
 
               <div
+                role="button"
+                tabIndex={0}
                 onClick={() => fileInputRef.current?.click()}
-                className="w-24 h-24 bg-[#1c1c21] border-2 border-dashed border-zinc-700 hover:border-[#FF5C00] rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-colors group relative overflow-hidden"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    fileInputRef.current?.click();
+                  }
+                }}
+                aria-label="Choose server icon"
+                className="w-24 h-24 bg-[#1c1c21] border-2 border-dashed border-zinc-700 hover:border-[#FF5C00] rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-colors group relative overflow-hidden focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
               >
                 {iconUrl ? (
                   <>
-                    <img src={iconUrl} alt="Server Icon" className="w-full h-full object-cover rounded-2xl" />
+                    <img src={iconUrl} alt="Server Icon Preview" className="w-full h-full object-cover rounded-2xl" />
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-[10px] font-bold">
                       Change Icon
                     </div>
@@ -332,34 +349,36 @@ export default function EditServerModal({
 
             {/* Server Name Input */}
             <div>
-              <label className="block text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mb-2">
+              <label htmlFor="edit-server-name-input" className="block text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mb-2">
                 SERVER NAME
               </label>
               <input
+                id="edit-server-name-input"
                 type="text"
                 required
                 value={serverName}
                 onChange={(e) => setServerName(e.target.value)}
-                className="w-full px-4 py-3 bg-[#1c1c21] border border-zinc-800 rounded-2xl text-xs text-white focus:outline-none focus:border-[#FF5C00] transition-colors"
+                className="w-full px-4 py-3 bg-[#1c1c21] border border-zinc-800 rounded-2xl text-xs text-white focus:outline-none focus:border-[#FF5C00] focus-visible:ring-2 focus-visible:ring-[#FF5C00] transition-colors"
               />
             </div>
 
             {/* Private Server Toggle */}
             <div className="p-4 bg-[#1c1c21] border border-zinc-800 rounded-2xl flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Lock className="w-5 h-5 text-[#FF5C00]" />
+              <label htmlFor="edit-private-server-toggle" className="flex items-center gap-3 cursor-pointer flex-1 mr-3">
+                <Lock className="w-5 h-5 text-[#FF5C00] shrink-0" />
                 <div>
                   <h5 className="text-xs font-bold text-white">Private Server</h5>
                   <p className="text-[10px] text-zinc-400">
                     Hide from public discovery. Require Invite Code to join.
                   </p>
                 </div>
-              </div>
+              </label>
               <input
+                id="edit-private-server-toggle"
                 type="checkbox"
                 checked={isPrivate}
                 onChange={(e) => setIsPrivate(e.target.checked)}
-                className="w-4 h-4 accent-[#FF5C00] cursor-pointer"
+                className="w-4 h-4 accent-[#FF5C00] cursor-pointer focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
               />
             </div>
 
@@ -368,28 +387,28 @@ export default function EditServerModal({
               <button
                 type="button"
                 onClick={handleDeleteServer}
-                className="px-4 py-2.5 bg-red-950/60 hover:bg-red-900 border border-red-800 text-red-300 font-extrabold rounded-2xl text-xs flex items-center gap-2 transition-colors cursor-pointer"
+                className="px-4 py-2.5 bg-red-950/60 hover:bg-red-900 border border-red-800 text-red-300 font-extrabold rounded-2xl text-xs flex items-center gap-2 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-red-500 outline-none"
               >
                 <Trash2 className="w-4 h-4" />
-                <span>Hapus Server</span>
+                <span>Delete Server</span>
               </button>
 
               <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2.5 bg-[#26262a] hover:bg-[#303036] text-zinc-200 font-extrabold rounded-2xl text-xs transition-colors cursor-pointer"
+                  className="px-4 py-2.5 bg-[#26262a] hover:bg-[#303036] text-zinc-200 font-extrabold rounded-2xl text-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
                 >
-                  Batal
+                  Cancel
                 </button>
 
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-5 py-2.5 bg-[#FF5C00] hover:bg-[#ff701a] text-white font-extrabold rounded-2xl text-xs shadow-lg shadow-[#FF5C00]/25 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                  className="px-5 py-2.5 bg-[#FF5C00] hover:bg-[#ff701a] text-white font-extrabold rounded-2xl text-xs shadow-lg shadow-[#FF5C00]/25 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
                 >
                   <Save className="w-4 h-4" />
-                  <span>{saving ? 'Simpan...' : 'Simpan'}</span>
+                  <span>{saving ? 'Saving...' : 'Save'}</span>
                 </button>
               </div>
             </div>

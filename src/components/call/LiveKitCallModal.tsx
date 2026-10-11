@@ -10,6 +10,7 @@ import {
 import '@livekit/components-styles';
 import { X, PhoneOff } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
+import { useModalA11y } from '@/hooks/useModalA11y';
 
 interface LiveKitCallModalProps {
   roomName: string;
@@ -18,6 +19,8 @@ interface LiveKitCallModalProps {
 }
 
 export default function LiveKitCallModal({ roomName, username, onLeave }: LiveKitCallModalProps) {
+  useModalA11y(true, onLeave);
+
   const [token, setToken] = useState<string>('');
   const [wsUrl, setWsUrl] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
@@ -82,18 +85,25 @@ export default function LiveKitCallModal({ roomName, username, onLeave }: LiveKi
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black text-white">
+    <div 
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="livekit-call-title"
+      className="fixed inset-0 z-50 flex flex-col bg-black text-white"
+    >
       {/* Header bar */}
       <div className="flex items-center justify-between p-4 bg-[#0f0f11] border-b border-zinc-800">
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-[#ff6b00] animate-ping" />
-          <span className="text-sm font-bold tracking-tight">Oit Call Room: {roomName}</span>
+          <div className="w-3 h-3 rounded-full bg-[#ff6b00] animate-ping" aria-hidden="true" />
+          <span id="livekit-call-title" className="text-sm font-bold tracking-tight">Oit Call Room: {roomName}</span>
         </div>
         <button
+          type="button"
           onClick={onLeave}
-          className="p-2 bg-red-600 hover:bg-red-700 rounded-xl transition-colors text-white flex items-center gap-1 text-xs font-bold"
+          aria-label="End call"
+          className="p-2 bg-red-600 hover:bg-red-700 rounded-xl transition-colors text-white flex items-center gap-1 text-xs font-bold cursor-pointer focus-visible:ring-2 focus-visible:ring-red-400 outline-none"
         >
-          <PhoneOff className="w-4 h-4" /> Akhiri Call
+          <PhoneOff className="w-4 h-4" aria-hidden="true" /> End Call
         </button>
       </div>
 

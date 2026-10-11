@@ -261,27 +261,33 @@ export default function ChannelSidebar({
             <>
               {/* Server Members List Button */}
               <button
+                type="button"
                 onClick={onOpenMembersModal}
-                title="Daftar Anggota Server"
-                className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+                title="Server Members"
+                aria-label="Server members"
+                className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
               >
                 <Users className="w-4 h-4 text-zinc-300 hover:text-white" />
               </button>
 
               {/* Server Settings Button */}
               <button
+                type="button"
                 onClick={onOpenEditServerModal}
-                title="Pengaturan Detail Server"
-                className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+                title="Server Settings"
+                aria-label="Server settings"
+                className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
               >
                 <Settings className="w-4 h-4 text-zinc-300 hover:text-white" />
               </button>
 
               {/* Copy Server Invite Code Button */}
               <button
+                type="button"
                 onClick={handleCopyInviteCode}
                 title="Copy Server Invite Code"
-                className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors relative"
+                aria-label="Copy server invite code"
+                className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors relative focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
               >
                 {copiedInvite ? (
                   <Check className="w-4 h-4 text-emerald-400 stroke-[3]" />
@@ -291,26 +297,32 @@ export default function ChannelSidebar({
               </button>
 
               <button
+                type="button"
                 onClick={onOpenJoinServer}
                 title="Join or Explore Servers"
-                className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+                aria-label="Join or explore servers"
+                className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
               >
                 <Compass className="w-4 h-4 text-zinc-400 hover:text-white" />
               </button>
 
               <button
+                type="button"
                 onClick={onOpenCreateChannelModal}
                 title="Create Channel"
-                className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+                aria-label="Create channel"
+                className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
               >
                 <Plus className="w-4 h-4 stroke-[2.5]" />
               </button>
             </>
           ) : (
             <button
+              type="button"
               onClick={onOpenNewChatModal}
               title="New Chat"
-              className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+              aria-label="New chat"
+              className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
             >
               <UserPlus className="w-4 h-4" />
             </button>
@@ -322,13 +334,14 @@ export default function ChannelSidebar({
       {!isServerMode && (
         <div className="px-4 pt-3 pb-2 space-y-3 border-b border-zinc-800/60">
           <div className="relative">
-            <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-2.5" />
+            <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-2.5 pointer-events-none" aria-hidden="true" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search chats..."
-              className="w-full pl-9 pr-3 py-2 bg-[#121215] border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#FF5C00] transition-colors"
+              aria-label="Search chats"
+              className="w-full pl-9 pr-3 py-2 bg-[#121215] border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#FF5C00] focus-visible:ring-2 focus-visible:ring-[#FF5C00] transition-colors"
             />
           </div>
 
@@ -367,8 +380,10 @@ export default function ChannelSidebar({
               <div className="flex items-center justify-between px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-zinc-400">
                 <span>TEXT CHANNELS ({textChannels.length})</span>
                 <button
+                  type="button"
                   onClick={onOpenCreateChannelModal}
-                  className="hover:text-white"
+                  aria-label="Create text channel"
+                  className="hover:text-white p-1 rounded focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
                 >
                   <Plus className="w-3.5 h-3.5" />
                 </button>
@@ -381,13 +396,15 @@ export default function ChannelSidebar({
                 return (
                   <div
                     key={c.id}
-                    className={`flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer text-xs font-bold transition-all group ${
+                    className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all group ${
                       isActive
                         ? 'bg-[#FF5C00] text-white shadow-md shadow-[#FF5C00]/20'
                         : 'text-zinc-400 hover:text-white hover:bg-[#1c1c21]'
                     }`}
                   >
                     <div
+                      role="button"
+                      tabIndex={0}
                       onClick={() => {
                         if (isUnlocked) {
                           setActiveChannel(c.id, c.name);
@@ -396,7 +413,19 @@ export default function ChannelSidebar({
                           onKnockRoom(c.id, c.name, c);
                         }
                       }}
-                      className="flex items-center gap-2.5 truncate flex-1"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          if (isUnlocked) {
+                            setActiveChannel(c.id, c.name);
+                            if (onSelectChannel) onSelectChannel();
+                          } else {
+                            onKnockRoom(c.id, c.name, c);
+                          }
+                        }
+                      }}
+                      aria-label={`Channel #${c.name}${c.is_private ? (isUnlocked ? ' (unlocked)' : ' (locked)') : ''}`}
+                      className="flex items-center gap-2.5 truncate flex-1 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none rounded-lg p-0.5"
                     >
                       <Hash className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-zinc-500'}`} />
                       <span className="truncate">{c.name}</span>
@@ -410,12 +439,14 @@ export default function ChannelSidebar({
                       )}
 
                       <button
+                        type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           if (onOpenEditChannelModal) onOpenEditChannelModal(c);
                         }}
-                        title="Edit Channel Settings"
-                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-black/30 rounded-md transition-opacity"
+                        title={`Edit #${c.name} settings`}
+                        aria-label={`Edit #${c.name} settings`}
+                        className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 hover:bg-black/30 rounded-md transition-opacity focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
                       >
                         <Settings className="w-3.5 h-3.5" />
                       </button>
@@ -430,8 +461,10 @@ export default function ChannelSidebar({
               <div className="flex items-center justify-between px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-zinc-400">
                 <span>VOICE CHANNELS ({voiceChannels.length})</span>
                 <button
+                  type="button"
                   onClick={onOpenCreateChannelModal}
-                  className="hover:text-white"
+                  aria-label="Create voice channel"
+                  className="hover:text-white p-1 rounded focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
                 >
                   <Plus className="w-3.5 h-3.5" />
                 </button>
@@ -447,13 +480,15 @@ export default function ChannelSidebar({
                 return (
                   <div key={c.id} className="space-y-1">
                     <div
-                      className={`flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer text-xs font-bold transition-all group ${
+                      className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all group ${
                         isActive || isVoiceActive
                           ? 'bg-[#FF5C00] text-white shadow-md shadow-[#FF5C00]/20'
                           : 'text-zinc-400 hover:text-white hover:bg-[#1c1c21]'
                       }`}
                     >
                       <div
+                        role="button"
+                        tabIndex={0}
                         onClick={() => {
                           if (onSelectChannel) onSelectChannel();
                           if (isUnlocked) {
@@ -462,7 +497,19 @@ export default function ChannelSidebar({
                             onKnockRoom(c.id, c.name, c);
                           }
                         }}
-                        className="flex items-center gap-2.5 truncate flex-1"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            if (onSelectChannel) onSelectChannel();
+                            if (isUnlocked) {
+                              if (onJoinVoiceCall) onJoinVoiceCall(c);
+                            } else {
+                              onKnockRoom(c.id, c.name, c);
+                            }
+                          }
+                        }}
+                        aria-label={`Voice channel ${c.name}${c.is_private ? (isUnlocked ? ' (unlocked)' : ' (locked)') : ''}`}
+                        className="flex items-center gap-2.5 truncate flex-1 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none rounded-lg p-0.5"
                       >
                         <Volume2 className={`w-4 h-4 shrink-0 ${isActive || isVoiceActive ? 'text-white' : 'text-[#FF5C00]'}`} />
                         <span className="truncate">{c.name}</span>
@@ -476,12 +523,14 @@ export default function ChannelSidebar({
                         )}
 
                         <button
+                          type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             if (onOpenEditChannelModal) onOpenEditChannelModal(c);
                           }}
-                          title="Edit Channel Settings"
-                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-black/30 rounded-md transition-opacity"
+                          title={`Edit ${c.name} settings`}
+                          aria-label={`Edit ${c.name} settings`}
+                          className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 hover:bg-black/30 rounded-md transition-opacity focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
                         >
                           <Settings className="w-3.5 h-3.5" />
                         </button>
@@ -532,8 +581,17 @@ export default function ChannelSidebar({
                 return (
                   <div
                     key={u.id}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => onSelectUser(u)}
-                    className={`p-3 rounded-2xl cursor-pointer flex items-center gap-3 transition-all ${
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onSelectUser(u);
+                      }
+                    }}
+                    aria-label={`Chat with ${u.display_name || u.username}`}
+                    className={`p-3 rounded-2xl cursor-pointer flex items-center gap-3 transition-all focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none ${
                       isSelected
                         ? 'bg-[#1c1c21] border border-zinc-800 text-white shadow-sm'
                         : 'hover:bg-[#1c1c21]/60 text-zinc-300'

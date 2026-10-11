@@ -353,8 +353,8 @@ export default function ServerMembersSidebar({
                         e.stopPropagation();
                         setActiveMenuMemberId(activeMenuMemberId === m.id ? null : m.id);
                       }}
-                      aria-label={`Aksi Moderasi untuk @${m.user.username}`}
-                      className="opacity-0 group-hover:opacity-100 p-1.5 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-all cursor-pointer min-h-[32px] min-w-[32px] flex items-center justify-center"
+                      aria-label={`Moderation actions for @${m.user.username}`}
+                      className="opacity-0 group-hover:opacity-100 focus:opacity-100 focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none p-1.5 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-all cursor-pointer min-h-[32px] min-w-[32px] flex items-center justify-center"
                     >
                       <MoreVertical className="w-3.5 h-3.5" />
                     </button>

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Friend, UserProfile } from '@/types';
 import { createClient } from '@/utils/supabase/client';
 import { X, Users, Plus, Check } from 'lucide-react';
+import { useModalA11y } from '@/hooks/useModalA11y';
 
 interface CreateGroupModalProps {
   currentProfile: UserProfile;
@@ -18,6 +19,8 @@ export default function CreateGroupModal({
   onClose,
   onGroupCreated,
 }: CreateGroupModalProps) {
+  useModalA11y(true, onClose);
+
   const [groupName, setGroupName] = useState('');
   const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
@@ -72,43 +75,59 @@ export default function CreateGroupModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-      <div className="w-full max-w-md bg-[#0f0f11] border border-zinc-800 rounded-2xl p-6 shadow-2xl text-zinc-100 relative">
+    <div 
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
+    >
+      <div 
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-group-title"
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md bg-[#0f0f11] border border-zinc-800 rounded-2xl p-6 shadow-2xl text-zinc-100 relative"
+      >
         
         <button
+          type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-white rounded-full bg-zinc-900/60 hover:bg-zinc-800 transition-colors"
+          aria-label="Close dialog"
+          className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-white rounded-full bg-zinc-900/60 hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-[#ff6b00] outline-none"
         >
           <X className="w-5 h-5" />
         </button>
 
-        <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-          <Users className="w-5 h-5 text-[#ff6b00]" /> Buat Ruang Grup Baru
+        <h2 id="create-group-title" className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <Users className="w-5 h-5 text-[#ff6b00]" aria-hidden="true" /> Create New Group Room
         </h2>
 
         <form onSubmit={handleCreateGroup} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1">
-              Nama Grup
+            <label htmlFor="create-group-name" className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1">
+              Group Name
             </label>
             <input
+              id="create-group-name"
               type="text"
               required
               value={groupName}
               onChange={(e) => setGroupName(e.target.value)}
-              placeholder="cth: Tim Oit Squad"
-              className="w-full px-4 py-2.5 bg-[#18181b] border border-zinc-800 rounded-xl text-sm focus:outline-none focus:border-[#ff6b00]"
+              placeholder="e.g. Oit Squad Team"
+              className="w-full px-4 py-2.5 bg-[#18181b] border border-zinc-800 rounded-xl text-sm focus:outline-none focus:border-[#ff6b00] focus-visible:ring-2 focus-visible:ring-[#ff6b00]"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-2">
-              Pilih Anggota Teman ({selectedFriendIds.length} dipilih)
-            </label>
+            <span className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-2">
+              Select Friends ({selectedFriendIds.length} selected)
+            </span>
 
-            <div className="max-h-48 overflow-y-auto space-y-2 border border-zinc-800 rounded-xl p-2 bg-[#141417]">
+            <div 
+              role="group" 
+              aria-label="Select friends for group" 
+              className="max-h-48 overflow-y-auto space-y-2 border border-zinc-800 rounded-xl p-2 bg-[#141417]"
+            >
               {friends.length === 0 ? (
-                <p className="text-xs text-zinc-500 text-center py-4">Belum ada daftar teman untuk ditambahkan.</p>
+                <p className="text-xs text-zinc-500 text-center py-4">No friends available to add.</p>
               ) : (
                 friends.map((f) => {
                   const p = f.profile;
@@ -118,8 +137,17 @@ export default function CreateGroupModal({
                   return (
                     <div
                       key={p.id}
+                      role="checkbox"
+                      aria-checked={isSelected}
+                      tabIndex={0}
                       onClick={() => toggleSelectFriend(p.id)}
-                      className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all ${
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          toggleSelectFriend(p.id);
+                        }
+                      }}
+                      className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all focus-visible:ring-2 focus-visible:ring-[#ff6b00] outline-none ${
                         isSelected ? 'bg-[#ff6b00]/20 border border-[#ff6b00]' : 'hover:bg-zinc-800'
                       }`}
                     >
@@ -133,7 +161,7 @@ export default function CreateGroupModal({
                         </div>
                       </div>
 
-                      {isSelected && <Check className="w-4 h-4 text-[#ff6b00]" />}
+                      {isSelected && <Check className="w-4 h-4 text-[#ff6b00]" aria-hidden="true" />}
                     </div>
                   );
                 })
@@ -144,9 +172,9 @@ export default function CreateGroupModal({
           <button
             type="submit"
             disabled={creating || !groupName.trim() || selectedFriendIds.length === 0}
-            className="w-full btn-orange flex items-center justify-center gap-2 py-3 text-sm font-semibold rounded-xl mt-4 disabled:opacity-40"
+            className="w-full btn-orange flex items-center justify-center gap-2 py-3 text-sm font-semibold rounded-xl mt-4 disabled:opacity-40 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#ff6b00] outline-none"
           >
-            <Plus className="w-4 h-4" /> {creating ? 'Membuat...' : 'Buat Grup Oit'}
+            <Plus className="w-4 h-4" aria-hidden="true" /> {creating ? 'Creating...' : 'Create Group Room'}
           </button>
         </form>
 

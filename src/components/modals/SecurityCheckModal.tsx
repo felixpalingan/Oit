@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Lock, Key, LogIn, Hand } from 'lucide-react';
 
 import { createClient } from '@/utils/supabase/client';
+import { useModalA11y } from '@/hooks/useModalA11y';
 
 interface SecurityCheckModalProps {
   roomId?: string;
@@ -20,6 +21,8 @@ export default function SecurityCheckModal({
   onRequestKnock,
   onClose,
 }: SecurityCheckModalProps) {
+  useModalA11y(true, onClose);
+
   const supabase = createClient();
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -28,7 +31,7 @@ export default function SecurityCheckModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password.trim()) {
-      setErrorMsg('Password wajib diisi untuk verifikasi.');
+      setErrorMsg('Password is required to verify access.');
       return;
     }
 
@@ -71,16 +74,22 @@ export default function SecurityCheckModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 select-none animate-in fade-in duration-200">
       
       {/* Glassmorphism Security Card matching image_1.png */}
-      <div className="w-full max-w-md bg-[#161619]/90 border border-zinc-800 rounded-3xl p-8 shadow-2xl backdrop-blur-xl flex flex-col items-center text-center space-y-6 text-white relative">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="security-check-title"
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md bg-[#161619]/90 border border-zinc-800 rounded-3xl p-8 shadow-2xl backdrop-blur-xl flex flex-col items-center text-center space-y-6 text-white relative"
+      >
         
         {/* Lock Icon Badge */}
-        <div className="w-14 h-14 bg-zinc-800/90 border border-zinc-700/80 rounded-2xl flex items-center justify-center text-[#FF5C00] shadow-lg">
+        <div className="w-14 h-14 bg-zinc-800/90 border border-zinc-700/80 rounded-2xl flex items-center justify-center text-[#FF5C00] shadow-lg" aria-hidden="true">
           <Lock className="w-7 h-7" />
         </div>
 
         {/* Title & Description */}
         <div>
-          <h3 className="text-xl font-extrabold text-white tracking-tight">
+          <h3 id="security-check-title" className="text-xl font-extrabold text-white tracking-tight">
             Security Check
           </h3>
           <p className="text-xs text-zinc-400 mt-2 leading-relaxed max-w-xs">
@@ -92,11 +101,11 @@ export default function SecurityCheckModal({
         <form onSubmit={handleSubmit} className="w-full space-y-4">
           
           {errorMsg && (
-            <p className="text-xs text-red-400 font-semibold">{errorMsg}</p>
+            <p role="alert" className="text-xs text-red-400 font-semibold">{errorMsg}</p>
           )}
 
           <div className="relative">
-            <Key className="w-4 h-4 text-zinc-500 absolute left-4 top-3.5" />
+            <Key className="w-4 h-4 text-zinc-500 absolute left-4 top-3.5 pointer-events-none" aria-hidden="true" />
             <input
               type="password"
               autoFocus
@@ -106,17 +115,18 @@ export default function SecurityCheckModal({
                 setErrorMsg('');
               }}
               placeholder="Enter password"
-              className="w-full pl-11 pr-4 py-3 bg-[#1c1c21] border border-zinc-800 rounded-2xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#FF5C00] transition-colors"
+              aria-label="Channel password"
+              className="w-full pl-11 pr-4 py-3 bg-[#1c1c21] border border-zinc-800 rounded-2xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#FF5C00] focus-visible:ring-2 focus-visible:ring-[#FF5C00] transition-colors"
             />
           </div>
 
           <button
             type="submit"
             disabled={isVerifying}
-            className="w-full py-3.5 bg-[#FF5C00] hover:bg-[#ff701a] disabled:opacity-50 text-white font-extrabold rounded-2xl text-xs flex items-center justify-center gap-2 shadow-xl shadow-[#FF5C00]/25 transition-all active:scale-[0.98]"
+            className="w-full py-3.5 bg-[#FF5C00] hover:bg-[#ff701a] disabled:opacity-50 text-white font-extrabold rounded-2xl text-xs flex items-center justify-center gap-2 shadow-xl shadow-[#FF5C00]/25 transition-all active:scale-[0.98] cursor-pointer focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
           >
             <span>{isVerifying ? 'Verifying...' : 'Unlock & Enter Channel'}</span>
-            <LogIn className="w-4 h-4 stroke-[2.5]" />
+            <LogIn className="w-4 h-4 stroke-[2.5]" aria-hidden="true" />
           </button>
         </form>
 
@@ -131,9 +141,9 @@ export default function SecurityCheckModal({
             <button
               type="button"
               onClick={onRequestKnock}
-              className="w-full py-2.5 bg-zinc-800/80 hover:bg-zinc-800 border border-zinc-700/80 text-zinc-200 hover:text-white font-bold rounded-2xl text-xs flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+              className="w-full py-2.5 bg-zinc-800/80 hover:bg-zinc-800 border border-zinc-700/80 text-zinc-200 hover:text-white font-bold rounded-2xl text-xs flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
             >
-              <Hand className="w-4 h-4 text-[#FF5C00]" />
+              <Hand className="w-4 h-4 text-[#FF5C00]" aria-hidden="true" />
               <span>Request Access (Door Knock)</span>
             </button>
           </div>
@@ -143,7 +153,7 @@ export default function SecurityCheckModal({
         <button
           type="button"
           onClick={onClose}
-          className="text-xs font-semibold text-zinc-400 hover:text-white transition-colors"
+          className="text-xs font-semibold text-zinc-400 hover:text-white transition-colors rounded-lg px-3 py-1.5 focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
         >
           Cancel & Return
         </button>

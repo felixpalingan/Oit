@@ -5,6 +5,7 @@ import { UserProfile } from '@/types';
 import { createClient } from '@/utils/supabase/client';
 import { X, Search, QrCode, UserPlus, CheckCircle2 } from 'lucide-react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
+import { useModalA11y } from '@/hooks/useModalA11y';
 
 interface AddFriendModalProps {
   currentUserId: string;
@@ -13,6 +14,8 @@ interface AddFriendModalProps {
 }
 
 export default function AddFriendModal({ currentUserId, onClose, onFriendAdded }: AddFriendModalProps) {
+  useModalA11y(true, onClose);
+
   const [activeMode, setActiveMode] = useState<'search' | 'scan'>('search');
   const [searchUsername, setSearchUsername] = useState('');
   const [foundUser, setFoundUser] = useState<UserProfile | null>(null);
@@ -120,39 +123,56 @@ export default function AddFriendModal({ currentUserId, onClose, onFriendAdded }
   }, [activeMode, supabase]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-      <div className="w-full max-w-md bg-[#0f0f11] border border-zinc-800 rounded-2xl p-6 shadow-2xl text-zinc-100 relative">
+    <div 
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
+    >
+      <div 
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-friend-title"
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md bg-[#0f0f11] border border-zinc-800 rounded-2xl p-6 shadow-2xl text-zinc-100 relative"
+      >
         
         <button
+          type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-white rounded-full bg-zinc-900/60 hover:bg-zinc-800 transition-colors"
+          aria-label="Close dialog"
+          className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-white rounded-full bg-zinc-900/60 hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-[#ff6b00] outline-none"
         >
           <X className="w-5 h-5" />
         </button>
 
-        <h2 className="text-lg font-bold text-white mb-4">Add New Friend</h2>
+        <h2 id="add-friend-title" className="text-lg font-bold text-white mb-4">Add New Friend</h2>
 
         {/* Switch mode */}
-        <div className="flex gap-2 p-1 bg-[#18181b] rounded-xl mb-6">
+        <div role="tablist" aria-label="Friend Finder Modes" className="flex gap-2 p-1 bg-[#18181b] rounded-xl mb-6">
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeMode === 'search'}
             onClick={() => setActiveMode('search')}
-            className={`flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-2 transition-all ${
+            className={`flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-2 transition-all focus-visible:ring-2 focus-visible:ring-[#ff6b00] outline-none ${
               activeMode === 'search'
                 ? 'bg-[#ff6b00] text-white shadow-md'
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
-            <Search className="w-4 h-4" /> Search Username
+            <Search className="w-4 h-4" aria-hidden="true" /> Search Username
           </button>
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeMode === 'scan'}
             onClick={() => setActiveMode('scan')}
-            className={`flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-2 transition-all ${
+            className={`flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-2 transition-all focus-visible:ring-2 focus-visible:ring-[#ff6b00] outline-none ${
               activeMode === 'scan'
                 ? 'bg-[#ff6b00] text-white shadow-md'
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
-            <QrCode className="w-4 h-4" /> Scan QR Code
+            <QrCode className="w-4 h-4" aria-hidden="true" /> Scan QR Code
           </button>
         </div>
 
@@ -164,19 +184,20 @@ export default function AddFriendModal({ currentUserId, onClose, onFriendAdded }
                 value={searchUsername}
                 onChange={(e) => setSearchUsername(e.target.value)}
                 placeholder="Enter exact username..."
-                className="flex-1 px-4 py-2.5 bg-[#18181b] border border-zinc-800 rounded-xl text-sm focus:outline-none focus:border-[#ff6b00]"
+                aria-label="Username to search"
+                className="flex-1 px-4 py-2.5 bg-[#18181b] border border-zinc-800 rounded-xl text-sm focus:outline-none focus:border-[#ff6b00] focus-visible:ring-2 focus-visible:ring-[#ff6b00]"
               />
               <button
                 type="submit"
                 disabled={searching}
-                className="btn-orange px-4 py-2.5 rounded-xl text-xs font-semibold"
+                className="btn-orange px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer focus-visible:ring-2 focus-visible:ring-[#ff6b00] outline-none"
               >
                 {searching ? 'Searching...' : 'Search'}
               </button>
             </form>
 
             {errorMsg && (
-              <p className="text-xs text-red-400 mb-4">{errorMsg}</p>
+              <p role="alert" className="text-xs text-red-400 mb-4">{errorMsg}</p>
             )}
 
             {foundUser && (
@@ -199,14 +220,16 @@ export default function AddFriendModal({ currentUserId, onClose, onFriendAdded }
 
                 {requestSent ? (
                   <span className="flex items-center gap-1 text-xs text-[#ff6b00] font-semibold">
-                    <CheckCircle2 className="w-4 h-4" /> Friends!
+                    <CheckCircle2 className="w-4 h-4" aria-hidden="true" /> Friends!
                   </span>
                 ) : (
                   <button
+                    type="button"
                     onClick={() => handleAddFriend(foundUser.id)}
-                    className="btn-orange px-3 py-1.5 rounded-lg text-xs flex items-center gap-1"
+                    aria-label={`Add ${foundUser.display_name || foundUser.username} as friend`}
+                    className="btn-orange px-3 py-1.5 rounded-lg text-xs flex items-center gap-1 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#ff6b00] outline-none"
                   >
-                    <UserPlus className="w-4 h-4" /> Add
+                    <UserPlus className="w-4 h-4" aria-hidden="true" /> Add
                   </button>
                 )}
               </div>

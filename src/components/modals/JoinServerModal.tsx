@@ -5,6 +5,7 @@ import { X, Compass, PlusCircle, CheckCircle2, Lock, Share2 } from 'lucide-react
 import { User, Server } from '@/types';
 import { createClient } from '@/utils/supabase/client';
 import { useAppStore } from '@/store/useAppStore';
+import { useModalA11y } from '@/hooks/useModalA11y';
 
 interface JoinServerModalProps {
   currentUser: User;
@@ -17,6 +18,8 @@ export default function JoinServerModal({
   onClose,
   onJoined,
 }: JoinServerModalProps) {
+  useModalA11y(true, onClose);
+
   const [inviteCode, setInviteCode] = useState('');
   const [publicServers, setPublicServers] = useState<Server[]>([]);
   const [joinedServerIds, setJoinedServerIds] = useState<Set<string>>(new Set());
@@ -147,28 +150,36 @@ export default function JoinServerModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 select-none animate-in fade-in duration-200">
       
       {/* Join Server Modal Box */}
-      <div className="w-full max-w-lg bg-[#161619] border border-zinc-800 rounded-3xl p-7 shadow-2xl flex flex-col space-y-6 text-white relative">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="join-server-title"
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-lg bg-[#161619] border border-zinc-800 rounded-3xl p-7 shadow-2xl flex flex-col space-y-6 text-white relative"
+      >
         
         {/* Top Header */}
         <div className="flex items-center justify-between border-b border-zinc-800/80 pb-4">
           <div className="flex items-center gap-2">
-            <Compass className="w-5 h-5 text-[#FF5C00]" />
-            <h3 className="text-lg font-black text-white tracking-tight">
+            <Compass className="w-5 h-5 text-[#FF5C00]" aria-hidden="true" />
+            <h3 id="join-server-title" className="text-lg font-black text-white tracking-tight">
               Join or Explore Servers
             </h3>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 text-zinc-400 hover:text-white rounded-xl hover:bg-zinc-800 transition-colors"
+            aria-label="Close dialog"
+            className="p-2 text-zinc-400 hover:text-white rounded-xl hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {errorMsg && <p className="text-xs text-red-400 font-semibold">{errorMsg}</p>}
+        {errorMsg && <p role="alert" className="text-xs text-red-400 font-semibold">{errorMsg}</p>}
         {joinedMsg && (
-          <p className="text-xs text-emerald-400 font-semibold flex items-center gap-1.5">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          <p role="status" className="text-xs text-emerald-400 font-semibold flex items-center gap-1.5">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" aria-hidden="true" />
             {joinedMsg}
           </p>
         )}
@@ -176,26 +187,27 @@ export default function JoinServerModal({
         {/* SECTION 1: JOIN PRIVATE OR PUBLIC SERVER VIA INVITATION CODE */}
         <form onSubmit={handleCustomInvite} className="space-y-3">
           <div className="flex items-center justify-between">
-            <label className="block text-[10px] font-extrabold uppercase tracking-wider text-zinc-400">
+            <label htmlFor="join-server-code-input" className="block text-[10px] font-extrabold uppercase tracking-wider text-zinc-400">
               ENTER SERVER ID / INVITATION CODE
             </label>
             <span className="text-[10px] text-[#FF5C00] font-semibold flex items-center gap-1">
-              <Lock className="w-3 h-3" /> Private Servers Allowed
+              <Lock className="w-3 h-3" aria-hidden="true" /> Private Servers Allowed
             </span>
           </div>
 
           <div className="flex gap-2">
             <input
+              id="join-server-code-input"
               type="text"
               value={inviteCode}
               onChange={(e) => setInviteCode(e.target.value)}
               placeholder="e.g. srv-1785293 or server_id"
-              className="flex-1 px-4 py-3 bg-[#1c1c21] border border-zinc-800 rounded-2xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#FF5C00]"
+              className="flex-1 px-4 py-3 bg-[#1c1c21] border border-zinc-800 rounded-2xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#FF5C00] focus-visible:ring-2 focus-visible:ring-[#FF5C00]"
             />
             <button
               type="submit"
               disabled={!inviteCode.trim() || loading}
-              className="px-5 py-3 bg-[#FF5C00] hover:bg-[#ff701a] text-white font-extrabold rounded-2xl text-xs shadow-md shadow-[#FF5C00]/25 transition-all disabled:opacity-40"
+              className="px-5 py-3 bg-[#FF5C00] hover:bg-[#ff701a] text-white font-extrabold rounded-2xl text-xs shadow-md shadow-[#FF5C00]/25 transition-all disabled:opacity-40 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
             >
               Join
             </button>
@@ -214,7 +226,7 @@ export default function JoinServerModal({
         <div className="space-y-2 max-h-56 overflow-y-auto no-scrollbar">
           {publicServers.length === 0 ? (
             <p className="text-xs text-zinc-500 text-center py-6">
-              Belum ada server publik. Buat server pertama Anda!
+              No public community servers found yet. Create your first server!
             </p>
           ) : (
             publicServers.map((srv) => {
@@ -239,7 +251,7 @@ export default function JoinServerModal({
 
                   {isAlreadyJoined ? (
                     <div className="px-3 py-1.5 bg-emerald-950/60 border border-emerald-800 text-emerald-400 font-bold rounded-xl text-xs flex items-center gap-1.5">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
                       <span>Joined</span>
                     </div>
                   ) : (
@@ -247,9 +259,10 @@ export default function JoinServerModal({
                       type="button"
                       onClick={() => handleJoinById(srv.id, srv.name)}
                       disabled={loading}
-                      className="px-4 py-2 bg-[#FF5C00]/15 hover:bg-[#FF5C00] text-[#FF5C00] hover:text-white font-bold rounded-xl text-xs transition-colors flex items-center gap-1.5"
+                      aria-label={`Join ${srv.name}`}
+                      className="px-4 py-2 bg-[#FF5C00]/15 hover:bg-[#FF5C00] text-[#FF5C00] hover:text-white font-bold rounded-xl text-xs transition-colors flex items-center gap-1.5 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
                     >
-                      <PlusCircle className="w-3.5 h-3.5" />
+                      <PlusCircle className="w-3.5 h-3.5" aria-hidden="true" />
                       <span>Join</span>
                     </button>
                   )}

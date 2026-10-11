@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { X, MessageSquare, Phone, Video, ShieldCheck } from 'lucide-react';
 import { User as UserType } from '@/types';
 import { createClient } from '@/utils/supabase/client';
+import { useModalA11y } from '@/hooks/useModalA11y';
 
 interface UserProfileCardModalProps {
   targetUser: UserType;
@@ -20,6 +21,8 @@ export default function UserProfileCardModal({
   onSendMessage,
   onStartCall,
 }: UserProfileCardModalProps) {
+  useModalA11y(true, onClose);
+
   const [userProfile, setUserProfile] = useState<UserType>(targetUser);
   const [loading, setLoading] = useState(true);
 
@@ -56,6 +59,9 @@ export default function UserProfileCardModal({
       
       {/* Profile Card Container */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="user-profile-card-title"
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-sm bg-[#161619] border border-zinc-800 rounded-3xl p-6 shadow-2xl flex flex-col space-y-5 text-white relative overflow-hidden z-10"
       >
@@ -70,7 +76,8 @@ export default function UserProfileCardModal({
             e.stopPropagation();
             onClose();
           }}
-          className="absolute top-4 right-4 z-20 p-2 text-zinc-300 hover:text-white rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md transition-colors cursor-pointer active:scale-95 border border-white/10"
+          aria-label="Close dialog"
+          className="absolute top-4 right-4 z-20 p-2 text-zinc-300 hover:text-white rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md transition-colors cursor-pointer active:scale-95 border border-white/10 focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
         >
           <X className="w-4 h-4 stroke-[2.5]" />
         </button>
@@ -94,7 +101,7 @@ export default function UserProfileCardModal({
             />
           </div>
 
-          <h3 className="text-lg font-black text-white leading-tight">
+          <h3 id="user-profile-card-title" className="text-lg font-black text-white leading-tight">
             {userProfile.display_name || userProfile.username}
           </h3>
 
@@ -128,7 +135,7 @@ export default function UserProfileCardModal({
                 onSendMessage();
                 onClose();
               }}
-              className="flex-1 py-3 bg-[#FF5C00] hover:bg-[#ff701a] text-white font-extrabold rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-[#FF5C00]/25 transition-all active:scale-[0.98] cursor-pointer"
+              className="flex-1 py-3 bg-[#FF5C00] hover:bg-[#ff701a] text-white font-extrabold rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-[#FF5C00]/25 transition-all active:scale-[0.98] cursor-pointer focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
             >
               <MessageSquare className="w-4 h-4" />
               <span>Send Message</span>
@@ -144,7 +151,8 @@ export default function UserProfileCardModal({
                   onClose();
                 }}
                 title="Voice Call"
-                className="p-3 bg-[#26262a] hover:bg-zinc-700 text-zinc-200 hover:text-white font-bold rounded-2xl text-xs transition-colors shrink-0 cursor-pointer"
+                aria-label="Start voice call"
+                className="p-3 bg-[#26262a] hover:bg-zinc-700 text-zinc-200 hover:text-white font-bold rounded-2xl text-xs transition-colors shrink-0 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
               >
                 <Phone className="w-4 h-4" />
               </button>
@@ -156,7 +164,8 @@ export default function UserProfileCardModal({
                   onClose();
                 }}
                 title="Video Call"
-                className="p-3 bg-[#26262a] hover:bg-zinc-700 text-zinc-200 hover:text-white font-bold rounded-2xl text-xs transition-colors shrink-0 cursor-pointer"
+                aria-label="Start video call"
+                className="p-3 bg-[#26262a] hover:bg-zinc-700 text-zinc-200 hover:text-white font-bold rounded-2xl text-xs transition-colors shrink-0 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
               >
                 <Video className="w-4 h-4" />
               </button>

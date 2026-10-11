@@ -37,13 +37,14 @@ export default function TopNavbar({
       {/* Center: Search Bar */}
       <div className="flex-1 max-w-md mx-4">
         <div className="relative">
-          <Search className="w-4 h-4 text-zinc-500 absolute left-3.5 top-2.5" />
+          <Search className="w-4 h-4 text-zinc-500 absolute left-3.5 top-2.5 pointer-events-none" aria-hidden="true" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search chats..."
-            className="w-full pl-10 pr-4 py-2 bg-[#1c1c21] border border-zinc-800/90 rounded-full text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#FF5C00] transition-colors"
+            aria-label="Search chats"
+            className="w-full pl-10 pr-4 py-2 bg-[#1c1c21] border border-zinc-800/90 rounded-full text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#FF5C00] focus-visible:ring-2 focus-visible:ring-[#FF5C00] transition-colors"
           />
         </div>
       </div>
@@ -53,26 +54,29 @@ export default function TopNavbar({
         <button
           onClick={onOpenQR}
           title="QR Code Scanner & Code"
-          className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800/80 rounded-xl transition-colors"
+          aria-label="QR Code Scanner & Code"
+          className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800/80 rounded-xl transition-colors focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
         >
-          <QrCode className="w-5 h-5" />
+          <QrCode className="w-5 h-5" aria-hidden="true" />
         </button>
 
         <button
           onClick={() => alert('Settings Oit')}
           title="Settings"
-          className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800/80 rounded-xl transition-colors"
+          aria-label="Settings"
+          className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800/80 rounded-xl transition-colors focus-visible:ring-2 focus-visible:ring-[#FF5C00] outline-none"
         >
-          <Settings className="w-5 h-5" />
+          <Settings className="w-5 h-5" aria-hidden="true" />
         </button>
 
         <div className="flex items-center gap-2 pl-2 border-l border-zinc-800">
           <div
             title={`@${currentUser.username}`}
+            aria-label={`Current user: @${currentUser.username}`}
             className="w-9 h-9 rounded-full bg-zinc-800 border border-[#FF5C00] flex items-center justify-center font-bold text-[#FF5C00] overflow-hidden shadow-md"
           >
             {currentUser.avatar_url ? (
-              <img src={currentUser.avatar_url} alt="" className="w-full h-full object-cover" />
+              <img src={currentUser.avatar_url} alt={`Avatar for ${currentUser.username}`} className="w-full h-full object-cover" />
             ) : (
               currentUser.username[0]?.toUpperCase() || 'U'
             )}
@@ -81,9 +85,10 @@ export default function TopNavbar({
           <button
             onClick={onLogout}
             title="Logout"
-            className="p-2 text-zinc-400 hover:text-red-400 hover:bg-zinc-800/80 rounded-xl transition-colors"
+            aria-label="Log out"
+            className="p-2 text-zinc-400 hover:text-red-400 hover:bg-zinc-800/80 rounded-xl transition-colors focus-visible:ring-2 focus-visible:ring-red-500 outline-none"
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
       </div>
