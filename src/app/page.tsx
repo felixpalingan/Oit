@@ -690,8 +690,21 @@ export default function Page() {
 
   if (authChecking) {
     return (
-      <div className="h-screen w-screen bg-[#000000] flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-[#FF5C00] border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen w-full bg-[#000000] flex flex-col items-center justify-center p-4">
+        <div className="flex flex-col items-center text-center">
+          <img
+            src="/oit_logo.png"
+            alt="Oit Logo"
+            className="w-16 h-16 md:w-20 md:h-20 rounded-3xl object-cover shadow-2xl shadow-[#FF5C00]/25 mb-3 border border-zinc-800"
+          />
+          <h1 className="text-3xl md:text-4xl font-extrabold text-[#FF5C00] tracking-tight">
+            Oit
+          </h1>
+          <p className="text-xs text-zinc-400 font-medium tracking-wide mt-1">
+            High-Voltage Communication Platform
+          </p>
+          <div className="w-8 h-8 border-3 border-[#FF5C00] border-t-transparent rounded-full animate-spin mt-5"></div>
+        </div>
       </div>
     );
   }
@@ -913,16 +926,47 @@ export default function Page() {
 
         </div>
 
-        <div className="mt-6 text-center text-[10px] text-zinc-500 space-y-2">
-          <div className="space-x-2">
-            <a href="#" className="hover:text-zinc-400">Privacy Policy</a>
+        <footer className="mt-8 text-center text-[11px] text-zinc-500 space-y-2.5 pb-6 max-w-md w-full">
+          <div className="flex justify-center items-center gap-3 text-xs">
+            <a
+              href="https://portfolio-felix-bariq.vercel.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-zinc-400 hover:text-[#FF5C00] transition-colors font-medium"
+            >
+              Portfolio Hub
+            </a>
             <span>•</span>
-            <a href="#" className="hover:text-zinc-400">Terms of Service</a>
+            <a
+              href="https://github.com/felixpalingan/Oit"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-zinc-400 hover:text-[#FF5C00] transition-colors font-medium"
+            >
+              GitHub Repository
+            </a>
+            <span>•</span>
+            <a
+              href="https://www.linkedin.com/in/almakius-felix-bariq-hekopung/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-zinc-400 hover:text-[#FF5C00] transition-colors font-medium"
+            >
+              LinkedIn
+            </a>
           </div>
-          <p className="text-zinc-600">
-            Crafted with passion by <span className="text-zinc-400 font-semibold">Almakius Felix Bariq Hekopung</span>
+          <p className="text-zinc-500">
+            Crafted with passion by{" "}
+            <a
+              href="https://portfolio-felix-bariq.vercel.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-zinc-300 font-semibold hover:text-[#FF5C00] underline underline-offset-2 transition-colors"
+            >
+              Almakius Felix Bariq Hekopung
+            </a>
           </p>
-        </div>
+        </footer>
 
       </div>
     );
