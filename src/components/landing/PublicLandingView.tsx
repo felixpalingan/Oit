@@ -156,6 +156,9 @@ export default function PublicLandingView({ children }: PublicLandingViewProps) 
             <a href="#faq" className="hover:text-[#FF5C00] transition-colors">
               FAQ
             </a>
+            <a href="/about" className="text-[#FF5C00] hover:text-white transition-colors">
+              About
+            </a>
           </nav>
 
           {/* Right Action Buttons */}
@@ -574,6 +577,9 @@ export default function PublicLandingView({ children }: PublicLandingViewProps) 
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-5 text-xs text-zinc-400">
+            <a href="/about" className="hover:text-[#FF5C00] transition-colors font-medium">
+              About Oit
+            </a>
             <a
               href="https://portfolio-felix-bariq.vercel.app"
               target="_blank"
