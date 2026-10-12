@@ -23,6 +23,7 @@ import EditServerModal from '@/components/modals/EditServerModal';
 import CreateChannelModal from '@/components/modals/CreateChannelModal';
 import EditChannelModal from '@/components/modals/EditChannelModal';
 import ToastNotification, { ToastItem } from '@/components/ui/ToastNotification';
+import PublicLandingView from '@/components/landing/PublicLandingView';
 import { useAppStore, KnockRequest } from '@/store/useAppStore';
 import { User as UserType, Message, Channel } from '@/types';
 
@@ -709,30 +710,31 @@ export default function Page() {
     );
   }
 
-  // --- RENDER DEDICATED AUTH PAGE ---
+  // --- RENDER DEDICATED AUTH PAGE & PUBLIC LANDING CONTENT ---
   if (!currentUser) {
     return (
-      <div className="min-h-screen w-full bg-[#000000] flex flex-col items-center justify-center p-4 selection:bg-[#FF5C00] selection:text-white select-none">
-        
-        {/* Top Logo & Title */}
-        <div className="flex flex-col items-center mb-6 text-center">
-          <img
-            src="/oit_logo.png"
-            alt="Oit Logo"
-            className="w-16 h-16 md:w-20 md:h-20 rounded-3xl object-cover shadow-2xl shadow-[#FF5C00]/25 mb-3 border border-zinc-800"
-          />
-
-          <h1 className="text-3xl md:text-4xl font-extrabold text-[#FF5C00] tracking-tight">
-            Oit
-          </h1>
-          
-          <p className="text-xs text-zinc-400 font-medium tracking-wide mt-1">
-            High-Voltage Communication Platform
-          </p>
-        </div>
-
+      <PublicLandingView>
         {/* Auth Form Container */}
         <div className="w-full max-w-md bg-[#121215] border border-zinc-800 rounded-3xl p-6 sm:p-7 shadow-2xl text-zinc-100 relative">
+          
+          {/* Card Top Header */}
+          <div className="flex items-center gap-3 mb-6 border-b border-zinc-800/80 pb-4">
+            <img
+              src="/oit_logo.png"
+              alt="Oit Logo"
+              className="w-11 h-11 rounded-2xl object-cover shadow-md shadow-[#FF5C00]/25 border border-zinc-800 shrink-0"
+            />
+            <div>
+              <h2 className="text-base font-extrabold text-white tracking-tight">
+                {mode === 'login' ? 'Welcome Back to Oit' : 'Create Your Oit Account'}
+              </h2>
+              <p className="text-[11px] text-zinc-400">
+                {mode === 'login'
+                  ? 'Sign in to access your servers & channels'
+                  : 'Get started instantly in your browser'}
+              </p>
+            </div>
+          </div>
           
           {/* Mode Switch Tabs (LOGIN vs REGISTER) */}
           <div className="flex p-1 bg-[#1a1a1e] rounded-2xl border border-zinc-800/80 mb-6">
@@ -925,50 +927,7 @@ export default function Page() {
           </form>
 
         </div>
-
-        <footer className="mt-8 text-center text-[11px] text-zinc-500 space-y-2.5 pb-6 max-w-md w-full">
-          <div className="flex justify-center items-center gap-3 text-xs">
-            <a
-              href="https://portfolio-felix-bariq.vercel.app"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-zinc-400 hover:text-[#FF5C00] transition-colors font-medium"
-            >
-              Portfolio Hub
-            </a>
-            <span>•</span>
-            <a
-              href="https://github.com/felixpalingan/Oit"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-zinc-400 hover:text-[#FF5C00] transition-colors font-medium"
-            >
-              GitHub Repository
-            </a>
-            <span>•</span>
-            <a
-              href="https://www.linkedin.com/in/almakius-felix-bariq-hekopung/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-zinc-400 hover:text-[#FF5C00] transition-colors font-medium"
-            >
-              LinkedIn
-            </a>
-          </div>
-          <p className="text-zinc-500">
-            Crafted with passion by{" "}
-            <a
-              href="https://portfolio-felix-bariq.vercel.app"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-zinc-300 font-semibold hover:text-[#FF5C00] underline underline-offset-2 transition-colors"
-            >
-              Almakius Felix Bariq Hekopung
-            </a>
-          </p>
-        </footer>
-
-      </div>
+      </PublicLandingView>
     );
   }
 

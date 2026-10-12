@@ -1,0 +1,25 @@
+# Oit — Real-Time Messaging & Voice/Video Rooms
+> High-performance, lightweight real-time communication platform engineered for developer teams and tech communities.
+
+## Overview
+Oit (https://oit-seven.vercel.app) is an open-source, web-first communication platform combining instant text messaging, low-latency group voice and HD video rooms, and encrypted channels with zero bloat and zero installation required.
+
+## Key Capabilities
+- **Sub-Millisecond Real-Time Chat**: Optimistic local state updates synchronized over PostgreSQL Write-Ahead Log (WAL) replication and Supabase Realtime WebSockets.
+- **Ultra Low-Latency Voice & Video**: WebRTC audio/video rooms powered by LiveKit Cloud Selective Forwarding Unit (SFU) infrastructure, featuring persistent floating calls, screen sharing, and active speaker DSP audio metering.
+- **PIN-Locked Encrypted Channels**: Granular room-level security enforced by custom numeric PIN verification and database-level Row-Level Security (RLS) policies.
+- **4-Tier Server Hierarchy**: Community spaces with Owner, Admin, Moderator, and Member permissions, invite links, and live presence signaling.
+- **Instant Browser PWA**: Fully installable Progressive Web App across iOS, Android, macOS, and Windows.
+
+## Technical Architecture
+- **Client Layer**: Next.js 16 (App Router), React 19, Zustand state management, Tailwind CSS dark glassmorphic design system.
+- **Database & Auth Layer**: Supabase Auth (JWT session claims), PostgreSQL with strict RLS policies, Supabase Storage for chat attachments.
+- **Real-Time Media & Signaling**: Supabase Realtime CDC engine for presence & chat; LiveKit Cloud SFU for low-latency WebRTC media streams.
+
+## Creator & Attribution
+- **Creator & Lead Engineer**: Almakius Felix Bariq Hekopung (Felix Palingan)
+- **Portfolio Hub**: https://portfolio-felix-bariq.vercel.app
+- **GitHub Profile**: https://github.com/felixpalingan
+- **LinkedIn**: https://www.linkedin.com/in/almakius-felix-bariq-hekopung/
+- **Project Repository**: https://github.com/felixpalingan/Oit
+- **License**: MIT License
