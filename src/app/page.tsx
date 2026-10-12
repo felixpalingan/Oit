@@ -67,7 +67,7 @@ export default function Page() {
   const [currentUser, setCurrentUser] = useState<UserType | null>(null);
   const [usersList, setUsersList] = useState<UserType[]>([]);
   const [activeChatUser, setActiveChatUser] = useState<UserType | null>(null);
-  const [authChecking, setAuthChecking] = useState(true);
+  const [authChecking, setAuthChecking] = useState(false);
 
   // Global Online Presence Set (Set of active User IDs)
   const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set());
@@ -689,26 +689,6 @@ export default function Page() {
     }
   };
 
-  if (authChecking) {
-    return (
-      <div className="min-h-screen w-full bg-[#000000] flex flex-col items-center justify-center p-4">
-        <div className="flex flex-col items-center text-center">
-          <img
-            src="/oit_logo.png"
-            alt="Oit Logo"
-            className="w-16 h-16 md:w-20 md:h-20 rounded-3xl object-cover shadow-2xl shadow-[#FF5C00]/25 mb-3 border border-zinc-800"
-          />
-          <h1 className="text-3xl md:text-4xl font-extrabold text-[#FF5C00] tracking-tight">
-            Oit
-          </h1>
-          <p className="text-xs text-zinc-400 font-medium tracking-wide mt-1">
-            High-Voltage Communication Platform
-          </p>
-          <div className="w-8 h-8 border-3 border-[#FF5C00] border-t-transparent rounded-full animate-spin mt-5"></div>
-        </div>
-      </div>
-    );
-  }
 
   // --- RENDER DEDICATED AUTH PAGE & PUBLIC LANDING CONTENT ---
   if (!currentUser) {
