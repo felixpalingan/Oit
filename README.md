@@ -20,6 +20,12 @@
   <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" /></a>
 </p>
 
+<p align="center">
+  <a href="https://oit-seven.vercel.app">
+    <img src="./public/og-image.png" alt="Oit Platform Dashboard Preview" width="100%" />
+  </a>
+</p>
+
 ---
 
 ## 📖 Overview

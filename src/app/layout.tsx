@@ -48,7 +48,8 @@ const jsonLd = {
       },
       "description":
         "Fast, lightweight, and modern real-time communication platform with instant chat, encrypted channels, and low-latency voice and video rooms.",
-      "image": `${siteUrl}/oit_logo.png`,
+      "image": `${siteUrl}/og-image.png`,
+      "screenshot": `${siteUrl}/og-image.png`,
       "featureList": [
         "Real-Time Instant Messaging with Optimistic UI",
         "Ultra Low-Latency LiveKit WebRTC Voice & Video Rooms",
@@ -190,10 +191,10 @@ export const metadata: Metadata = {
     siteName: "Oit",
     images: [
       {
-        url: "/oit_logo.png",
-        width: 512,
-        height: 512,
-        alt: "Oit Logo",
+        url: "/og-image.png",
+        width: 1864,
+        height: 928,
+        alt: "Oit Platform Dashboard — Real-Time Messaging & Voice/Video Rooms",
       },
     ],
     locale: "en_US",
@@ -204,7 +205,7 @@ export const metadata: Metadata = {
     title: "Oit — Real-Time Messaging & Voice/Video Rooms",
     description:
       "Fast, lightweight, and modern real-time communication platform with instant chat, encrypted channels, and low-latency voice and video rooms.",
-    images: ["/oit_logo.png"],
+    images: ["/og-image.png"],
     creator: "@felixpalingan",
   },
   robots: {
